@@ -1,20 +1,46 @@
 # Solana Ontology SDK
 
-> Solana Data-Logic-Action by using Ontology System
+> Independent Semantic Ontology Layer for Solana Programs
 
-A concept-centric SDK for building Solana applications inspired by Palantir's ontology-driven development approach. Define your on-chain concepts as YAML, validate them against a JSON Schema, generate typed SDK code, and interact with them at runtime using `@solana/kit` or `web3.js`.
+A concept-centric SDK for building Solana applications with a **fully independent** ontology system. Define your on-chain concepts as YAML, validate them against a JSON Schema, generate typed SDK code, and interact with them at runtime using `@solana/kit` or `web3.js`. Includes an independent Ontology Metadata Service (OMS), MCP server for LLM agents, Yellowstone gRPC ingestion, and Helm deployment configs.
+
+**Not dependent on Palantir Foundry or any external platform.**
 
 ## Architecture
 
 ```
-ontology/                    YAML concept definitions + JSON Schema
+ontology/                        YAML concept definitions + JSON Schema
 packages/
-  ontology-core/             Types, loader, validator, graph builder
-  generator-ts/              TypeScript code generator (interfaces, decoders, actions, queries)
-  generator-rust/            Rust code generator stub (structs, PDA helpers)
-  sdk/                       Runtime SDK (Kit client + web3.js adapter)
-  cli/                       solana-ontology CLI (validate, generate, list, graph)
+  ontology-core/               Types, loader, validator, graph builder
+  idl-parser/                  Anchor IDL v0/v1 parser + codemod + concept generator
+  sdk/                         Runtime SDK (Kit client + web3.js adapter + Kinetic Action Layer)
+  ingestion/                   Yellowstone gRPC client, state manager, reorg handling
+  ontology-oms/                Independent Ontology Metadata Service (REST API)
+  mcp-server/                  MCP server for LLM agents (resources + tools + OAuth)
+  generator-client/            Typed React/TypeScript client library generator
+  generator-ts/                TypeScript code generator (interfaces, decoders, actions, queries)
+  generator-rust/              Rust code generator stub (structs, PDA helpers)
+  cli/                         solana-ontology CLI (validate, generate, list, graph, idl)
+  deploy/                      Helm chart + K8s deployment configs
 ```
+
+## Packages
+
+| Package | Description | Tests |
+|---------|-------------|-------|
+| `@solana-ontology/core` | Core types, validator, loader, graph builder | ✅ |
+| `@solana-ontology/idl-parser` | Anchor IDL v0/v1 parser + codemod + concept generator | 10 |
+| `@solana-ontology/sdk` | Runtime SDK: ActionBuilder, TransactionLifecycle, signers, Borsh encoder | 17 |
+| `@solana-ontology/ingestion` | Yellowstone gRPC client, state manager with reorg handling | 14 |
+| `@solana-ontology/oms` | Independent OMS — REST API, registries, pluggable storage | 10 |
+| `@solana-ontology/mcp-server` | MCP server exposing ontology as LLM-callable resources and tools | 14 |
+| `@solana-ontology/generator-client` | Typed React/TypeScript client library generator | 6 |
+| `@solana-ontology/generator-ts` | TypeScript code generator | ✅ |
+| `@solana-ontology/generator-rust` | Rust code generator | ✅ |
+| `@solana-ontology/cli` | CLI: validate, generate, list, graph, idl | ✅ |
+| `@solana-ontology/deploy` | Helm chart + K8s configs (devnet/testnet/mainnet) | — |
+
+**Total: 71 tests passing across 6 new test suites.**
 
 ## Concept Categories
 
@@ -33,6 +59,17 @@ packages/
 
 ```bash
 pnpm install
+pnpm --filter @solana-ontology/core build
+```
+
+### Parse an Anchor IDL
+
+```bash
+# Codemod only (v0 → v1)
+pnpm --filter @solana-ontology/cli start -- idl ./idl.json --codemod-only
+
+# Full concept generation
+pnpm --filter @solana-ontology/cli start -- idl ./idl.json --out ./ontology/concepts
 ```
 
 ### Validate the ontology
@@ -63,6 +100,55 @@ pnpm --filter @solana-ontology/cli start -- generate rust
 
 ```bash
 pnpm --filter @solana-ontology/cli start -- graph
+```
+
+### Start the OMS Server
+
+```typescript
+import { OntologyOmsServer } from "@solana-ontology/oms";
+import { loadConcepts } from "@solana-ontology/core";
+
+const server = new OntologyOmsServer({ port: 3000 });
+const concepts = loadConcepts("./ontology/concepts", "./ontology");
+await server.registerConcepts(concepts);
+await server.start();
+// REST API at http://localhost:3000/api/v1/
+```
+
+### Start the MCP Server
+
+```typescript
+import { OntologyMcpServer } from "@solana-ontology/mcp-server";
+import { loadConcepts } from "@solana-ontology/core";
+
+const mcp = new OntologyMcpServer({ transport: "stdio" });
+const concepts = loadConcepts("./ontology/concepts", "./ontology");
+mcp.registerConcepts(concepts);
+// MCP resources and tools now available to LLM agents
+```
+
+### Use the Kinetic Action Layer
+
+```typescript
+import {
+  ActionBuilder,
+  TransactionLifecycle,
+  KeypairSigner,
+} from "@solana-ontology/sdk";
+
+const signer = new KeypairSigner(keypair);
+const lifecycle = new TransactionLifecycle({
+  connection,
+  signer,
+  feePayer: signer.getPublicKey(),
+});
+
+const builder = new ActionBuilder()
+  .setComputeUnits(200_000)
+  .setComputeUnitPrice(1000);
+
+const result = await lifecycle.execute(builder);
+// build → simulate → sign → dispatch → confirm
 ```
 
 ## Using the Runtime SDK
@@ -123,6 +209,19 @@ links:
 pnpm test
 ```
 
+## Deployment
+
+```bash
+# Devnet
+helm install solana-ontology ./packages/deploy -f ./packages/deploy/values-devnet.yaml
+
+# Testnet
+helm install solana-ontology ./packages/deploy -f ./packages/deploy/values-testnet.yaml
+
+# Mainnet
+helm install solana-ontology ./packages/deploy -f ./packages/deploy/values-mainnet.yaml
+```
+
 ## Tech Stack
 
 - **Monorepo**: pnpm workspaces + Turborepo
@@ -131,6 +230,19 @@ pnpm test
 - **Testing**: Vitest
 - **Solana SDKs**: `@solana/kit` v7+ (primary), `@solana/web3.js` v1 (adapter)
 - **CLI**: Commander.js
+- **OMS**: Node.js built-in HTTP (no Express dependency)
+- **MCP**: JSON-RPC 2.0 over stdio/HTTP
+- **Ingestion**: Yellowstone gRPC (interface-based, pluggable)
+- **Deploy**: Helm + Kubernetes
+
+## Independence Statement
+
+This ontology SDK is **fully independent** and does not depend on:
+- Palantir Foundry or any external ontology platform
+- Any proprietary metadata service
+- Any external database (in-memory storage by default)
+
+The OMS is a standalone REST API built with Node.js's built-in HTTP module. External adapters (webhook, Kafka) are optional plugins.
 
 ## License
 

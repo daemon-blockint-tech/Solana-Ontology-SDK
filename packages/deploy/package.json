@@ -1,0 +1,11 @@
+{
+  "name": "@solana-ontology/deploy",
+  "version": "0.1.0",
+  "description": "Helm charts and Kubernetes deployment configs for the Solana Ontology SDK",
+  "private": true,
+  "scripts": {
+    "lint": "echo 'No lint for deploy configs'",
+    "test": "echo 'No tests for deploy configs'",
+    "clean": "echo 'No clean for deploy configs'"
+  }
+}

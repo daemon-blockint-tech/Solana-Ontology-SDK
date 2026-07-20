@@ -6,6 +6,9 @@ import { generateCommand } from "./commands/generate.js";
 import { listCommand } from "./commands/list.js";
 import { graphCommand } from "./commands/graph.js";
 import { idlCommand } from "./commands/idl.js";
+import { omsCommand } from "./commands/oms.js";
+import { mcpCommand } from "./commands/mcp.js";
+import { generateClientCommand } from "./commands/generate-client.js";
 
 const program = new Command();
 
@@ -73,6 +76,60 @@ program
       opts.path ? { ontologyRoot: opts.path, conceptsDir: `${opts.path}/concepts` } : {},
     );
     idlCommand(idlPath, config, opts.out, opts.codemodOnly);
+  });
+
+program
+  .command("oms")
+  .description("Start the Ontology Metadata Service REST API server")
+  .option("--port <port>", "Port to listen on", "3000")
+  .option("--auth-token <token>", "Authentication token for write access")
+  .option("--path <path>", "Custom ontology root path")
+  .action(async (opts) => {
+    const config = resolveConfig(
+      opts.path ? { ontologyRoot: opts.path, conceptsDir: `${opts.path}/concepts` } : {},
+    );
+    await omsCommand(config, {
+      port: parseInt(opts.port, 10),
+      authToken: opts.authToken,
+    });
+  });
+
+program
+  .command("mcp")
+  .description("Start the MCP server for LLM agent interaction")
+  .option("--transport <type>", "Transport type: stdio or http", "stdio")
+  .option("--port <port>", "Port for HTTP transport", "3001")
+  .option("--auth-required", "Require OAuth token for access")
+  .option("--path <path>", "Custom ontology root path")
+  .action(async (opts) => {
+    const config = resolveConfig(
+      opts.path ? { ontologyRoot: opts.path, conceptsDir: `${opts.path}/concepts` } : {},
+    );
+    await mcpCommand(config, {
+      transport: opts.transport as "stdio" | "http",
+      port: parseInt(opts.port, 10),
+      authRequired: !!opts.authRequired,
+    });
+  });
+
+program
+  .command("generate-client")
+  .description("Generate a typed client library from ontology concepts")
+  .option("--out <path>", "Output directory", "./generated/client")
+  .option("--package-name <name>", "NPM package name for generated client", "@my-org/ontology-client")
+  .option("--react", "Generate React hooks")
+  .option("--no-queries", "Skip query builders")
+  .option("--path <path>", "Custom ontology root path")
+  .action((opts) => {
+    const config = resolveConfig(
+      opts.path ? { ontologyRoot: opts.path, conceptsDir: `${opts.path}/concepts` } : {},
+    );
+    generateClientCommand(config, {
+      out: opts.out,
+      packageName: opts.packageName,
+      react: !!opts.react,
+      queries: opts.queries !== false,
+    });
   });
 
 program.parse();

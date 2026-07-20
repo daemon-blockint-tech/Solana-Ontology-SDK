@@ -52,6 +52,22 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.43)
 
+  packages/generator-client:
+    dependencies:
+      '@solana-ontology/core':
+        specifier: workspace:*
+        version: link:../ontology-core
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.0
+        version: 20.19.43
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.43)
+
   packages/generator-rust:
     dependencies:
       '@solana-ontology/core':
@@ -100,6 +116,41 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.43)
 
+  packages/ingestion:
+    dependencies:
+      '@solana-ontology/core':
+        specifier: workspace:*
+        version: link:../ontology-core
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.0
+        version: 20.19.43
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.43)
+
+  packages/mcp-server:
+    dependencies:
+      '@solana-ontology/core':
+        specifier: workspace:*
+        version: link:../ontology-core
+      '@solana-ontology/sdk':
+        specifier: workspace:*
+        version: link:../sdk
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.0
+        version: 20.19.43
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.43)
+
   packages/ontology-core:
     dependencies:
       ajv:
@@ -111,6 +162,22 @@ importers:
       yaml:
         specifier: ^2.4.0
         version: 2.9.0
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.0
+        version: 20.19.43
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.43)
+
+  packages/ontology-oms:
+    dependencies:
+      '@solana-ontology/core':
+        specifier: workspace:*
+        version: link:../ontology-core
     devDependencies:
       '@types/node':
         specifier: ^20.14.0

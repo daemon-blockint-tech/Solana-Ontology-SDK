@@ -1,0 +1,44 @@
+# Mainnet overrides
+image:
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+ingestion:
+  replicas: 3
+  grpcEndpoint: "http://mainnet-yellowstone:10000"
+  env:
+    COMMITMENT_LEVEL: "finalized"
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 1Gi
+    limits:
+      cpu: 4000m
+      memory: 4Gi
+
+oms:
+  replicas: 3
+  storage: "postgres"
+  dbPath: "postgresql://oms:5432/ontology"
+
+mcp:
+  replicas: 2
+  authRequired: true
+
+hpa:
+  minReplicas: 3
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 60
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: oms.solana-ontology.io
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: oms-tls
+      hosts:
+        - oms.solana-ontology.io

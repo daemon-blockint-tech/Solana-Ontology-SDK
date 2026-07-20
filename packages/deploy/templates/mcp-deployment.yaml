@@ -1,0 +1,50 @@
+{{- if .Values.mcp.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "solana-ontology.fullname" . }}-mcp
+  labels:
+    app: solana-ontology-mcp
+    component: mcp
+spec:
+  replicas: {{ .Values.mcp.replicas }}
+  selector:
+    matchLabels:
+      app: solana-ontology-mcp
+  template:
+    metadata:
+      labels:
+        app: solana-ontology-mcp
+        component: mcp
+    spec:
+      containers:
+        - name: mcp
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}-mcp:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.mcp.port }}
+          env:
+            - name: MCP_TRANSPORT
+              value: {{ .Values.mcp.transport | quote }}
+            - name: MCP_PORT
+              value: {{ .Values.mcp.port | quote }}
+            - name: MCP_AUTH_REQUIRED
+              value: {{ .Values.mcp.authRequired | quote }}
+          resources:
+            {{- toYaml .Values.mcp.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "solana-ontology.fullname" . }}-mcp
+  labels:
+    app: solana-ontology-mcp
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.mcp.port }}
+      targetPort: {{ .Values.mcp.port }}
+      protocol: TCP
+  selector:
+    app: solana-ontology-mcp
+{{- end }}

@@ -1,0 +1,57 @@
+{{- if .Values.oms.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "solana-ontology.fullname" . }}-oms
+  labels:
+    app: solana-ontology-oms
+    component: oms
+spec:
+  replicas: {{ .Values.oms.replicas }}
+  selector:
+    matchLabels:
+      app: solana-ontology-oms
+  template:
+    metadata:
+      labels:
+        app: solana-ontology-oms
+        component: oms
+    spec:
+      containers:
+        - name: oms
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}-oms:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.oms.port }}
+          env:
+            - name: OMS_PORT
+              value: {{ .Values.oms.port | quote }}
+            - name: OMS_STORAGE
+              value: {{ .Values.oms.storage | quote }}
+            {{- if .Values.oms.dbPath }}
+            - name: OMS_DB_PATH
+              value: {{ .Values.oms.dbPath | quote }}
+            {{- end }}
+            - name: OMS_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "solana-ontology.fullname" . }}-secrets
+                  key: omsAuthToken
+          resources:
+            {{- toYaml .Values.oms.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "solana-ontology.fullname" . }}-oms
+  labels:
+    app: solana-ontology-oms
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.oms.port }}
+      targetPort: {{ .Values.oms.port }}
+      protocol: TCP
+  selector:
+    app: solana-ontology-oms
+{{- end }}

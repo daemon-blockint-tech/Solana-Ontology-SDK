@@ -26,3 +26,46 @@ export {
   normalizeWeb3Account,
   type NormalizedAccount,
 } from "./web3js/compat.js";
+
+// ── Kinetic Action Layer ───────────────────────────────────────────────────
+
+export {
+  TransactionLifecycle,
+  type TransactionLifecycleOptions,
+  type SimulationResult,
+  type DispatchResult,
+} from "./kit/transaction-lifecycle.js";
+
+export {
+  KeypairSigner,
+  KmsSigner,
+  MpcSigner,
+  type SignerProvider,
+  type SignedTransaction,
+} from "./kit/signer.js";
+
+export {
+  compileInstruction,
+  encodeInstructionData,
+  encodeBorshValue,
+  resolveAccounts,
+  type IdlInstructionDef,
+  type CompiledAccount,
+} from "./kit/instruction-compiler.js";
+
+export {
+  BlockhashCache,
+  fetchLatestBlockhash,
+  type BlockhashInfo,
+} from "./kit/blockhash.js";
+
+export {
+  ConfirmationTracker,
+  type PendingTransaction,
+  type TransactionStatus,
+} from "./kit/confirmation.js";
+
+export {
+  TransactionEventEmitter,
+  type TransactionEventName,
+} from "./kit/event-emitter.js";

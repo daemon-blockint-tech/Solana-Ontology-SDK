@@ -1,0 +1,18 @@
+# Devnet overrides
+image:
+  tag: "0.1.0-dev"
+
+ingestion:
+  grpcEndpoint: "http://devnet-yellowstone:10000"
+  env:
+    COMMITMENT_LEVEL: "processed"
+
+oms:
+  storage: "memory"
+
+mcp:
+  authRequired: false
+
+hpa:
+  minReplicas: 1
+  maxReplicas: 3

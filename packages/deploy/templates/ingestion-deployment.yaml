@@ -1,0 +1,38 @@
+{{- if .Values.ingestion.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "solana-ontology.fullname" . }}-ingestion
+  labels:
+    app: solana-ontology-ingestion
+    component: ingestion
+spec:
+  replicas: {{ .Values.ingestion.replicas }}
+  selector:
+    matchLabels:
+      app: solana-ontology-ingestion
+  template:
+    metadata:
+      labels:
+        app: solana-ontology-ingestion
+        component: ingestion
+    spec:
+      containers:
+        - name: ingestion
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}-ingestion:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: GRPC_ENDPOINT
+              value: {{ .Values.ingestion.grpcEndpoint | quote }}
+            {{- range $key, $val := .Values.ingestion.env }}
+            - name: {{ $key }}
+              value: {{ $val | quote }}
+            {{- end }}
+            - name: RPC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "solana-ontology.fullname" . }}-secrets
+                  key: rpcApiKey
+          resources:
+            {{- toYaml .Values.ingestion.resources | nindent 12 }}
+{{- end }}

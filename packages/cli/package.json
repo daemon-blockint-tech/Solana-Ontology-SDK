@@ -18,6 +18,9 @@
     "@solana-ontology/generator-ts": "workspace:*",
     "@solana-ontology/generator-rust": "workspace:*",
     "@solana-ontology/idl-parser": "workspace:*",
+    "@solana-ontology/oms": "workspace:*",
+    "@solana-ontology/mcp-server": "workspace:*",
+    "@solana-ontology/generator-client": "workspace:*",
     "commander": "^12.1.0",
     "yaml": "^2.4.0"
   },

@@ -1,7 +1,7 @@
 {
-  "name": "@solana-ontology/core",
+  "name": "@solana-ontology/oms",
   "version": "0.1.0",
-  "description": "Core types, loader, and validator for the Solana Ontology SDK",
+  "description": "Independent Ontology Metadata Service — REST API for managing Object Types, Link Types, and Action Types",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -18,9 +18,7 @@
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
-    "yaml": "^2.4.0",
-    "ajv": "^8.13.0",
-    "ajv-formats": "^3.0.1"
+    "@solana-ontology/core": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.4.0",

@@ -1,0 +1,19 @@
+# Testnet overrides
+image:
+  tag: "0.1.0-test"
+
+ingestion:
+  grpcEndpoint: "http://testnet-yellowstone:10000"
+  env:
+    COMMITMENT_LEVEL: "confirmed"
+
+oms:
+  storage: "sqlite"
+  dbPath: "/data/ontology.db"
+
+mcp:
+  authRequired: true
+
+hpa:
+  minReplicas: 2
+  maxReplicas: 5

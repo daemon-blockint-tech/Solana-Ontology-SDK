@@ -1,0 +1,42 @@
+services:
+  oms:
+    build:
+      context: .
+      dockerfile: packages/ontology-oms/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - OMS_PORT=3000
+      - OMS_STORAGE=memory
+    volumes:
+      - ./ontology:/app/ontology:ro
+    restart: unless-stopped
+
+  mcp:
+    build:
+      context: .
+      dockerfile: packages/mcp-server/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - MCP_TRANSPORT=http
+      - MCP_PORT=3001
+      - MCP_AUTH_REQUIRED=false
+    volumes:
+      - ./ontology:/app/ontology:ro
+    depends_on:
+      - oms
+    restart: unless-stopped
+
+  ingestion:
+    build:
+      context: .
+      dockerfile: packages/ingestion/Dockerfile
+    environment:
+      - YELLOWSTONE_ENDPOINT=grpc://localhost:10000
+      - SOLANA_RPC_URL=https://api.devnet.solana.com
+    volumes:
+      - ./ontology:/app/ontology:ro
+    depends_on:
+      - oms
+    restart: unless-stopped

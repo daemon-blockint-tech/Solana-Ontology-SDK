@@ -1,0 +1,11 @@
+apiVersion: v2
+name: solana-ontology
+description: Helm chart for deploying the Solana Ontology SDK infrastructure
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - solana
+  - ontology
+  - blockchain
+  - semantic
