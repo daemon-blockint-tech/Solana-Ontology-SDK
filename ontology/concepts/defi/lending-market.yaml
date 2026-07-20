@@ -1,0 +1,75 @@
+canonicalName: LendingMarket
+aliases:
+  - LendingPool
+  - BorrowMarket
+purpose: "On-chain lending market enabling users to supply assets as collateral and borrow against it with interest accrual"
+category: defi
+version: 1.0.0
+owner: defi-team
+properties:
+  - name: marketAddress
+    type: Address
+    required: true
+    description: "PDA of the lending market"
+  - name: reserveToken
+    type: Address
+    required: true
+    description: "Token mint accepted as supply/borrow asset"
+  - name: collateralToken
+    type: Address
+    required: true
+    description: "cToken or receipt token representing supplied collateral"
+  - name: totalDeposits
+    type: u64
+    required: true
+    description: "Total supplied amount"
+  - name: totalBorrows
+    type: u64
+    required: true
+    description: "Total borrowed amount"
+  - name: utilizationRate
+    type: f64
+    required: true
+    description: "Borrows / Deposits ratio"
+  - name: borrowRate
+    type: f64
+    required: true
+    description: "Current annualized borrow rate"
+  - name: supplyRate
+    type: f64
+    required: true
+    description: "Current annualized supply rate"
+  - name: liquidationThreshold
+    type: u8
+    required: true
+    description: "LTV percentage triggering liquidation"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+    description: "Market is owned by a lending program (Kamino, MarginFi, Solend)"
+  - type: references
+    target: OracleFeed
+    cardinality: "1:1"
+    description: "Market requires a price oracle for collateral valuation"
+  - type: references
+    target: TokenMint
+    cardinality: "1:1"
+    description: "Market operates on one reserve token"
+stateMachine:
+  states: [Active, Frozen, Liquidating]
+  transitions:
+    - from: Active
+      to: Frozen
+      via: "Admin freezes market during emergency"
+    - from: Active
+      to: Liquidating
+      via: "Position LTV exceeds liquidation threshold"
+constraints:
+  - expression: "totalBorrows <= totalDeposits"
+    description: "Borrows cannot exceed total deposits"
+  - expression: "utilizationRate <= 1.0"
+    description: "Utilization rate cannot exceed 100%"
+links:
+  docs:
+    - "https://docs.kamino.finance/lending"

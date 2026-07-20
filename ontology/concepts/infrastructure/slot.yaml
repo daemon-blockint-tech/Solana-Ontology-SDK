@@ -1,0 +1,44 @@
+canonicalName: Slot
+aliases:
+  - BlockSlot
+  - SlotNumber
+purpose: "Sequential unit of time in Solana consensus representing a potential block, produced by a leader on a schedule"
+category: infrastructure
+version: 1.0.0
+owner: core
+properties:
+  - name: slot
+    type: u64
+    required: true
+    description: "Slot number (monotonically increasing)"
+  - name: parent
+    type: u64
+    required: false
+    description: "Parent slot number"
+  - name: blockhash
+    type: Hash
+    required: true
+    description: "Blockhash at this slot"
+  - name: blockHeight
+    type: u64
+    required: false
+    description: "Distance from the genesis block"
+  - name: timestamp
+    type: i64
+    required: false
+    description: "Estimated wall-clock timestamp"
+relationships:
+  - type: ownedBy
+    target: Cluster
+    cardinality: "many:1"
+    description: "Slots belong to a cluster"
+  - type: references
+    target: Epoch
+    cardinality: "many:1"
+    description: "Each slot falls within an epoch"
+constraints:
+  - expression: "slot > parent"
+    description: "Slot number must be greater than parent"
+links:
+  docs:
+    - "https://solana.com/docs/rpc/http/getslot"

@@ -1,0 +1,62 @@
+canonicalName: Account
+aliases:
+  - SolanaAccount
+  - DataAccount
+purpose: "Universal addressable state container on Solana storing lamports, data, owner, and executable flag"
+category: primitive
+version: 1.0.0
+owner: core
+properties:
+  - name: pubkey
+    type: Address
+    required: true
+    description: "32-byte Ed25519 public key identifying this account"
+  - name: lamports
+    type: u64
+    required: true
+    description: "Balance in lamports (1 SOL = 1e9 lamports)"
+  - name: data
+    type: bytes
+    required: true
+    description: "Raw account data bytes"
+  - name: owner
+    type: Address
+    required: true
+    description: "Program that owns this account"
+  - name: executable
+    type: bool
+    required: true
+    description: "Whether this account contains program code"
+  - name: rentEpoch
+    type: u64
+    required: true
+    description: "Epoch at which rent was last assessed"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+    description: "Every account has exactly one owning program"
+  - type: derivedFrom
+    target: PDA
+    cardinality: "0:1"
+    description: "May be a program-derived address"
+stateMachine:
+  states: [Uninitialized, Initialized, RentExempt, Closed]
+  transitions:
+    - from: Uninitialized
+      to: Initialized
+      via: "System program create_account or program initialization"
+    - from: Initialized
+      to: RentExempt
+      via: "Deposit sufficient lamports to exceed rent-exempt minimum"
+    - from: Initialized
+      to: Closed
+      via: "Program close instruction drains lamports and clears data"
+constraints:
+  - expression: "data.length <= 10MB"
+    description: "Account data cannot exceed 10 megabytes"
+  - expression: "owner == SystemProgram || executable == false || owner != SystemProgram"
+    description: "System program can only own non-executable accounts or itself"
+links:
+  docs:
+    - "https://solana.com/docs/core/accounts"

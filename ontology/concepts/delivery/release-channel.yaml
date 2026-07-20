@@ -1,0 +1,44 @@
+canonicalName: ReleaseChannel
+aliases:
+  - DeploymentChannel
+  - PromotionPipeline
+purpose: "Named promotion pipeline (canary, stable) governing how program releases flow between environments with gating constraints"
+category: delivery
+version: 1.0.0
+owner: delivery-team
+properties:
+  - name: name
+    type: string
+    required: true
+    description: "Channel name (e.g., canary, stable, beta)"
+  - name: currentRelease
+    type: string
+    required: true
+    description: "Version currently deployed on this channel"
+  - name: promotionRules
+    type: string[]
+    required: true
+    description: "Named constraints that must pass before promotion"
+  - name: rollbackRelease
+    type: string
+    required: false
+    description: "Previous release to rollback to if needed"
+relationships:
+  - type: contains
+    target: ProgramRelease
+    cardinality: "1:1"
+    description: "Channel has one active release at a time"
+  - type: references
+    target: Environment
+    cardinality: "0:many"
+    description: "Channel may be deployed across multiple environments"
+  - type: dependsOn
+    target: DeploymentConstraint
+    cardinality: "0:many"
+    description: "Promotion requires constraint checks"
+constraints:
+  - expression: "name in ['canary', 'beta', 'stable']"
+    description: "Channel must be a recognized name"
+links:
+  docs:
+    - "https://www.palantir.com/docs/foundry/apollo/"

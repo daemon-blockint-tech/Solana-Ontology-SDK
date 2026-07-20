@@ -1,0 +1,48 @@
+canonicalName: Environment
+aliases:
+  - DeploymentTarget
+  - ClusterEnvironment
+purpose: "Deployment target combining a Solana cluster with configuration for program deployment and client SDK generation"
+category: delivery
+version: 1.0.0
+owner: delivery-team
+properties:
+  - name: name
+    type: string
+    required: true
+    description: "Environment name (e.g., devnet-staging, mainnet-prod)"
+  - name: cluster
+    type: Cluster
+    required: true
+    description: "Solana cluster this environment targets"
+  - name: rpcEndpoint
+    type: string
+    required: true
+    description: "RPC endpoint for this environment"
+  - name: programAddresses
+    type: Address[]
+    required: true
+    description: "Deployed program IDs in this environment"
+  - name: configVersion
+    type: string
+    required: true
+    description: "Version of the environment configuration"
+relationships:
+  - type: references
+    target: Cluster
+    cardinality: "1:1"
+    description: "Environment maps to one cluster"
+  - type: references
+    target: ReleaseChannel
+    cardinality: "0:many"
+    description: "Environment may host multiple release channels"
+  - type: references
+    target: UpgradeAuthority
+    cardinality: "1:1"
+    description: "Environment has one upgrade authority"
+constraints:
+  - expression: "name.isUnique()"
+    description: "Environment names must be unique"
+links:
+  docs:
+    - "https://solana.com/docs/core/clusters"

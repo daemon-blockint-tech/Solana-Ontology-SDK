@@ -1,0 +1,62 @@
+canonicalName: Position
+aliases:
+  - LPPosition
+  - LiquidityPosition
+purpose: "Represents a liquidity provider's share of a liquidity pool including deposited amounts and fees earned"
+category: defi
+version: 1.0.0
+owner: defi-team
+properties:
+  - name: positionAddress
+    type: Address
+    required: true
+    description: "PDA of the position NFT or account"
+  - name: pool
+    type: Address
+    required: true
+    description: "Liquidity pool this position belongs to"
+  - name: owner
+    type: Address
+    required: true
+    description: "Wallet owning this position"
+  - name: liquidity
+    type: u128
+    required: true
+    description: "Liquidity amount in pool units"
+  - name: tickLower
+    type: i32
+    required: false
+    description: "Lower tick boundary for concentrated liquidity"
+  - name: tickUpper
+    type: i32
+    required: false
+    description: "Upper tick boundary for concentrated liquidity"
+  - name: feeGrowthInsideA
+    type: u128
+    required: false
+    description: "Accumulated fee growth for token A"
+  - name: feeGrowthInsideB
+    type: u128
+    required: false
+    description: "Accumulated fee growth for token B"
+relationships:
+  - type: ownedBy
+    target: LiquidityPool
+    cardinality: "many:1"
+    description: "Position belongs to one pool"
+  - type: references
+    target: NFT
+    cardinality: "0:1"
+    description: "Position may be represented as an NFT"
+stateMachine:
+  states: [Open, Closed]
+  transitions:
+    - from: Open
+      to: Closed
+      via: "Withdraw all liquidity"
+constraints:
+  - expression: "liquidity >= 0"
+    description: "Position liquidity cannot be negative"
+links:
+  docs:
+    - "https://docs.orca.so/"

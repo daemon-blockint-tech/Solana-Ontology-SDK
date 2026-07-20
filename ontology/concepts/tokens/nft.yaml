@@ -1,0 +1,44 @@
+canonicalName: NFT
+aliases:
+  - NonFungibleToken
+  - DigitalCollectible
+purpose: "Unique, non-divisible token instance with metadata representing a digital asset or collectible"
+category: token
+version: 1.0.0
+owner: token-team
+properties:
+  - name: mint
+    type: Address
+    required: true
+    description: "The NFT mint address (supply = 1, decimals = 0)"
+  - name: metadata
+    type: Metadata
+    required: true
+    description: "Associated Metaplex metadata account"
+  - name: collection
+    type: Address
+    required: false
+    description: "Optional collection mint this NFT belongs to"
+  - name: edition
+    type: Address
+    required: false
+    description: "Optional master/printed edition account"
+relationships:
+  - type: extends
+    target: TokenMint
+    cardinality: "1:1"
+    description: "An NFT is a TokenMint with supply 1 and decimals 0"
+  - type: references
+    target: Metadata
+    cardinality: "1:1"
+    description: "Every NFT has associated metadata"
+  - type: ownedBy
+    target: Collection
+    cardinality: "0:1"
+    description: "NFT may belong to a collection"
+constraints:
+  - expression: "mint.supply == 1 && mint.decimals == 0"
+    description: "NFT mints must have supply 1 and 0 decimals"
+links:
+  docs:
+    - "https://solana.com/docs/core/tokens#non-fungible-tokens"

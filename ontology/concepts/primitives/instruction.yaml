@@ -1,0 +1,38 @@
+canonicalName: Instruction
+aliases:
+  - TxInstruction
+  - ProgramInstruction
+purpose: "Single program call specifying the target program, accounts, and instruction data"
+category: primitive
+version: 1.0.0
+owner: core
+properties:
+  - name: programId
+    type: Address
+    required: true
+    description: "Program to invoke"
+  - name: accounts
+    type: AccountMeta[]
+    required: true
+    description: "Accounts referenced by this instruction with signer/writable flags"
+  - name: data
+    type: bytes
+    required: true
+    description: "Serialized instruction data"
+relationships:
+  - type: references
+    target: Program
+    cardinality: "1:1"
+    description: "Each instruction targets exactly one program"
+  - type: references
+    target: Account
+    cardinality: "0:many"
+    description: "Instruction may reference multiple accounts"
+constraints:
+  - expression: "accounts.length <= 255"
+    description: "Instruction can reference at most 255 accounts"
+  - expression: "data.length <= 1024"
+    description: "Instruction data typically limited to ~1024 bytes per instruction"
+links:
+  docs:
+    - "https://solana.com/docs/core/transactions#instruction"

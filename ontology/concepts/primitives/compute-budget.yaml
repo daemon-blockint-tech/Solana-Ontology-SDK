@@ -1,0 +1,32 @@
+canonicalName: ComputeBudget
+aliases:
+  - CULimit
+  - ComputeUnitLimit
+purpose: "Configures compute unit limits and prioritization fee for a transaction to manage execution cost and ordering"
+category: primitive
+version: 1.0.0
+owner: core
+properties:
+  - name: computeUnitLimit
+    type: u32
+    required: false
+    description: "Maximum compute units allowed for the transaction (default 200,000)"
+  - name: computeUnitPrice
+    type: u64
+    required: false
+    description: "Micro-lamports per CU paid as prioritization fee"
+  - name: heapSize
+    type: u32
+    required: false
+    description: "Additional heap bytes allocated for the program (max 256KB)"
+relationships:
+  - type: references
+    target: Transaction
+    cardinality: "0:1"
+    description: "Compute budget instructions are prepended to a transaction"
+constraints:
+  - expression: "computeUnitLimit <= 1400000"
+    description: "Maximum CU limit per transaction is 1.4M"
+links:
+  docs:
+    - "https://solana.com/docs/core/fees#compute-budget"

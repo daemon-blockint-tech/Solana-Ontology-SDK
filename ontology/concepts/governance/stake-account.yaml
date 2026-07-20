@@ -1,0 +1,73 @@
+canonicalName: StakeAccount
+aliases:
+  - StakeDelegation
+  - DelegatedStake
+purpose: "On-chain account representing delegated SOL staked to a validator for earning inflation rewards"
+category: governance
+version: 1.0.0
+owner: governance-team
+properties:
+  - name: staker
+    type: Address
+    required: true
+    description: "Staking authority that can withdraw or split"
+  - name: withdrawer
+    type: Address
+    required: true
+    description: "Withdraw authority"
+  - name: validator
+    type: Address
+    required: true
+    description: "Vote account of the validator being delegated to"
+  - name: stakeAmount
+    type: u64
+    required: true
+    description: "Lamports actively staked"
+  - name: activationEpoch
+    type: u64
+    required: true
+    description: "Epoch when stake was activated"
+  - name: deactivationEpoch
+    type: u64
+    required: false
+    description: "Epoch when stake was deactivated (if deactivating)"
+  - name: lockup
+    type: Lockup
+    required: false
+    description: "Optional lockup period and custodian"
+relationships:
+  - type: references
+    target: Validator
+    cardinality: "1:1"
+    description: "Stake is delegated to one validator"
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+    description: "Owned by the Stake program"
+stateMachine:
+  states: [Uninitialized, Inactive, Activating, Active, Deactivating, Withdrawn]
+  transitions:
+    - from: Uninitialized
+      to: Inactive
+      via: "Initialize stake account"
+    - from: Inactive
+      to: Activating
+      via: "Delegate stake to validator"
+    - from: Activating
+      to: Active
+      via: "Activation epoch reached"
+    - from: Active
+      to: Deactivating
+      via: "Deactivate stake instruction"
+    - from: Deactivating
+      to: Inactive
+      via: "Deactivation epoch reached"
+    - from: Inactive
+      to: Withdrawn
+      via: "Withdraw stake to wallet"
+constraints:
+  - expression: "stakeAmount >= rentExemptMinimum"
+    description: "Stake account must maintain rent-exempt minimum"
+links:
+  docs:
+    - "https://solana.com/docs/economics/staking"

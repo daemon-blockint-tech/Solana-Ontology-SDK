@@ -1,0 +1,29 @@
+canonicalName: Signer
+aliases:
+  - TransactionSigner
+  - Authority
+purpose: "Entity that provides an Ed25519 signature authorizing a transaction or instruction"
+category: primitive
+version: 1.0.0
+owner: core
+properties:
+  - name: publicKey
+    type: Address
+    required: true
+    description: "Public key of the signer"
+  - name: signature
+    type: Signature
+    required: true
+    description: "Ed25519 signature over the transaction message"
+relationships:
+  - type: references
+    target: Transaction
+    cardinality: "0:many"
+    description: "A signer may sign multiple transactions"
+  - type: ownedBy
+    target: Account
+    cardinality: "0:1"
+    description: "Signer may be backed by an account with keypair"
+links:
+  docs:
+    - "https://solana.com/docs/core/transactions#signatures"

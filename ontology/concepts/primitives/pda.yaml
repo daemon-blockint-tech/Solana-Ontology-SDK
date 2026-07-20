@@ -1,0 +1,42 @@
+canonicalName: PDA
+aliases:
+  - ProgramDerivedAddress
+  - DeterministicAddress
+purpose: "Deterministic, program-controlled address derived from seeds and bump seed to eliminate private-key management for program-owned state"
+category: primitive
+version: 1.0.0
+owner: core
+properties:
+  - name: address
+    type: Address
+    required: true
+    description: "The derived PDA public key"
+  - name: seeds
+    type: bytes[]
+    required: true
+    description: "Seed bytes used for derivation"
+  - name: bump
+    type: u8
+    required: true
+    description: "Bump seed ensuring the address falls off the Ed25519 curve"
+  - name: programId
+    type: Address
+    required: true
+    description: "Program that owns this PDA"
+relationships:
+  - type: derivedFrom
+    target: Program
+    cardinality: "many:1"
+    description: "PDAs are derived from a specific program ID"
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+    description: "The deriving program is the signer for PDA-based operations"
+constraints:
+  - expression: "!isOnCurve(address)"
+    description: "PDA must not lie on the Ed25519 curve"
+  - expression: "seeds.flat().length <= 32"
+    description: "Total seed bytes are limited for derivation"
+links:
+  docs:
+    - "https://solana.com/docs/core/pda"

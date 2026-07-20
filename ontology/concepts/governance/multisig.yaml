@@ -1,0 +1,45 @@
+canonicalName: Multisig
+aliases:
+  - SPLMultisig
+  - MultiSignatureWallet
+purpose: "On-chain wallet requiring M-of-N signatures to authorize transactions, providing shared control over funds and program authority"
+category: governance
+version: 1.0.0
+owner: governance-team
+properties:
+  - name: multisigAddress
+    type: Address
+    required: true
+    description: "PDA of the multisig account"
+  - name: threshold
+    type: u8
+    required: true
+    description: "Number of signatures required (M)"
+  - name: owners
+    type: Address[]
+    required: true
+    description: "List of signer public keys (N)"
+  - name: nonce
+    type: u8
+    required: true
+    description: "Sequence number for replay protection"
+relationships:
+  - type: references
+    target: Signer
+    cardinality: "many:many"
+    description: "Multisig references multiple signers as owners"
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+    description: "Owned by SPL multisig program or Squads"
+constraints:
+  - expression: "threshold <= owners.length"
+    description: "Threshold cannot exceed number of owners"
+  - expression: "threshold >= 1"
+    description: "At least one signature required"
+  - expression: "owners.length <= 11"
+    description: "SPL multisig supports up to 11 owners"
+links:
+  docs:
+    - "https://spl.solana.com/multisig"
+  anchorIdl: "multisig_program"

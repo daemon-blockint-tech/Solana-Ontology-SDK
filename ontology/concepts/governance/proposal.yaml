@@ -1,0 +1,78 @@
+canonicalName: Proposal
+aliases:
+  - GovernanceProposal
+  - DAOProposal
+purpose: "Formal on-chain proposal for governance actions that token holders can vote on to execute decisions"
+category: governance
+version: 1.0.0
+owner: governance-team
+properties:
+  - name: proposalAddress
+    type: Address
+    required: true
+    description: "PDA of the proposal account"
+  - name: governance
+    type: Address
+    required: true
+    description: "Governance program account this proposal belongs to"
+  - name: proposer
+    type: Address
+    required: true
+    description: "Wallet that created the proposal"
+  - name: description
+    type: string
+    required: true
+    description: "Human-readable proposal description"
+  - name: voteThreshold
+    type: u64
+    required: true
+    description: "Minimum yes votes required to pass"
+  - name: yesVotes
+    type: u64
+    required: true
+    description: "Current yes vote count"
+  - name: noVotes
+    type: u64
+    required: true
+    description: "Current no vote count"
+  - name: abstainVotes
+    type: u64
+    required: true
+    description: "Current abstain vote count"
+  - name: votingDeadline
+    type: u64
+    required: true
+    description: "Slot after which voting closes"
+relationships:
+  - type: ownedBy
+    target: DAO
+    cardinality: "many:1"
+    description: "Proposal belongs to one DAO governance"
+  - type: contains
+    target: Vote
+    cardinality: "0:many"
+    description: "Proposal has many votes"
+stateMachine:
+  states: [Draft, Voting, Succeeded, Defeated, Executed, Cancelled]
+  transitions:
+    - from: Draft
+      to: Voting
+      via: "Proposal published and voting opens"
+    - from: Voting
+      to: Succeeded
+      via: "Voting deadline passes with yesVotes >= voteThreshold"
+    - from: Voting
+      to: Defeated
+      via: "Voting deadline passes with yesVotes < voteThreshold"
+    - from: Succeeded
+      to: Executed
+      via: "Proposal instructions executed on-chain"
+    - from: Draft
+      to: Cancelled
+      via: "Proposer cancels before voting opens"
+constraints:
+  - expression: "yesVotes + noVotes + abstainVotes <= totalTokenSupply"
+    description: "Total votes cannot exceed token supply"
+links:
+  docs:
+    - "https://docs.solanagovernance.com/"

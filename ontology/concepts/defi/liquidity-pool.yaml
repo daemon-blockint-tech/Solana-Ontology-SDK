@@ -1,0 +1,69 @@
+canonicalName: LiquidityPool
+aliases:
+  - Pool
+  - AMMPool
+  - LiquidityPair
+purpose: "On-chain pool holding paired token reserves that enables automated market maker swaps"
+category: defi
+version: 1.0.0
+owner: defi-team
+properties:
+  - name: poolAddress
+    type: Address
+    required: true
+    description: "PDA of the liquidity pool"
+  - name: tokenA
+    type: Address
+    required: true
+    description: "First token mint in the pair"
+  - name: tokenB
+    type: Address
+    required: true
+    description: "Second token mint in the pair"
+  - name: reserveA
+    type: u64
+    required: true
+    description: "Current reserve of token A"
+  - name: reserveB
+    type: u64
+    required: true
+    description: "Current reserve of token B"
+  - name: feeNumerator
+    type: u32
+    required: true
+    description: "Swap fee numerator (fee = feeNumerator / feeDenominator)"
+  - name: feeDenominator
+    type: u32
+    required: true
+    description: "Swap fee denominator"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+    description: "Pool is owned by a DEX program (e.g., Raydium, Orca)"
+  - type: contains
+    target: Position
+    cardinality: "0:many"
+    description: "Pool has liquidity positions"
+  - type: references
+    target: TokenMint
+    cardinality: "2:1"
+    description: "Pool references two token mints"
+stateMachine:
+  states: [Uninitialized, Active, Paused, Drained]
+  transitions:
+    - from: Uninitialized
+      to: Active
+      via: "Initialize pool with initial liquidity"
+    - from: Active
+      to: Paused
+      via: "Admin pauses trading"
+    - from: Active
+      to: Drained
+      via: "All liquidity withdrawn and pool closed"
+constraints:
+  - expression: "reserveA > 0 && reserveB > 0 || reserveA == 0 && reserveB == 0"
+    description: "Reserves must both be zero or both be non-zero"
+links:
+  docs:
+    - "https://docs.raydium.io/"

@@ -1,0 +1,60 @@
+canonicalName: Transaction
+aliases:
+  - Tx
+  - SolanaTransaction
+purpose: "Atomic unit of work containing one or more instructions, signatures, and a recent blockhash"
+category: primitive
+version: 1.0.0
+owner: core
+properties:
+  - name: signatures
+    type: Signature[]
+    required: true
+    description: "Ed25519 signatures from required signers"
+  - name: message
+    type: Message
+    required: true
+    description: "Transaction message containing instructions, account keys, and blockhash"
+  - name: recentBlockhash
+    type: Hash
+    required: true
+    description: "Recent blockhash for replay protection"
+relationships:
+  - type: contains
+    target: Instruction
+    cardinality: "1:many"
+    description: "A transaction contains one or more instructions"
+  - type: references
+    target: Signer
+    cardinality: "1:many"
+    description: "Transaction requires signatures from one or more signers"
+  - type: dependsOn
+    target: ComputeBudget
+    cardinality: "0:1"
+    description: "Optional compute budget instruction sets CU limits"
+stateMachine:
+  states: [Draft, Signed, Submitted, Confirmed, Finalized, Failed]
+  transitions:
+    - from: Draft
+      to: Signed
+      via: "All required signers sign the transaction"
+    - from: Signed
+      to: Submitted
+      via: "Transaction sent to RPC endpoint"
+    - from: Submitted
+      to: Confirmed
+      via: "Validator includes transaction in a block"
+    - from: Confirmed
+      to: Finalized
+      via: "Block reaches finality (after sufficient confirmations)"
+    - from: Submitted
+      to: Failed
+      via: "Transaction rejected or expired (blockhash timeout)"
+constraints:
+  - expression: "instructions.length >= 1 && instructions.length <= 255"
+    description: "Transaction must contain between 1 and 255 instructions"
+  - expression: "signatures.length == requiredSigners.length"
+    description: "Number of signatures must match number of required signers"
+links:
+  docs:
+    - "https://solana.com/docs/core/transactions"

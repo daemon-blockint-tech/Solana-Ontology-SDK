@@ -1,0 +1,64 @@
+canonicalName: Vault
+aliases:
+  - YieldVault
+  - SingleAssetVault
+purpose: "Single-asset yield strategy vault that accepts deposits, manages strategy execution, and distributes yields"
+category: defi
+version: 1.0.0
+owner: defi-team
+properties:
+  - name: vaultAddress
+    type: Address
+    required: true
+    description: "PDA of the vault"
+  - name: asset
+    type: Address
+    required: true
+    description: "Underlying token mint the vault accepts"
+  - name: totalAssets
+    type: u64
+    required: true
+    description: "Total assets under management"
+  - name: totalShares
+    type: u64
+    required: true
+    description: "Total shares minted"
+  - name: strategy
+    type: Address
+    required: true
+    description: "Strategy program managing the vault funds"
+  - name: managementFee
+    type: u16
+    required: true
+    description: "Management fee in basis points"
+  - name: performanceFee
+    type: u16
+    required: true
+    description: "Performance fee in basis points"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+    description: "Vault is owned by a vault program (e.g., Kamino, Francium)"
+  - type: references
+    target: TokenMint
+    cardinality: "1:1"
+    description: "Vault accepts one underlying token"
+stateMachine:
+  states: [Uninitialized, Active, Paused, Emergency]
+  transitions:
+    - from: Uninitialized
+      to: Active
+      via: "Initialize vault with strategy"
+    - from: Active
+      to: Paused
+      via: "Admin pauses deposits/withdrawals"
+    - from: Active
+      to: Emergency
+      via: "Emergency trigger (loss threshold, oracle failure)"
+constraints:
+  - expression: "totalShares == 0 || totalAssets > 0"
+    description: "If shares exist, vault must hold assets"
+links:
+  docs:
+    - "https://docs.kamino.finance/"

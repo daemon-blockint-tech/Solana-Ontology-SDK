@@ -1,0 +1,215 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://solana-ontology.dev/schema/concept.json",
+  "title": "Solana Ontology Concept",
+  "description": "Schema for a single concept in the Solana Ontology SDK",
+  "type": "object",
+  "required": ["canonicalName", "purpose", "category", "version"],
+  "additionalProperties": false,
+  "properties": {
+    "canonicalName": {
+      "type": "string",
+      "description": "Unique canonical name for this concept (PascalCase)",
+      "pattern": "^[A-Z][a-zA-Z0-9]+$",
+      "minLength": 2
+    },
+    "aliases": {
+      "type": "array",
+      "description": "Alternative names used in the ecosystem",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "purpose": {
+      "type": "string",
+      "description": "One-sentence purpose statement explaining why this concept exists",
+      "minLength": 10
+    },
+    "category": {
+      "type": "string",
+      "description": "Concept cluster category",
+      "enum": ["primitive", "token", "defi", "governance", "infrastructure", "delivery"]
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version of this concept definition",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "owner": {
+      "type": "string",
+      "description": "Team or individual responsible for this concept",
+      "minLength": 1
+    },
+    "properties": {
+      "type": "array",
+      "description": "Data properties of this concept",
+      "items": {
+        "$ref": "#/$defs/property"
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "description": "Relationships to other concepts",
+      "items": {
+        "$ref": "#/$defs/relationship"
+      }
+    },
+    "stateMachine": {
+      "$ref": "#/$defs/stateMachine"
+    },
+    "constraints": {
+      "type": "array",
+      "description": "Invariant constraints that must hold",
+      "items": {
+        "$ref": "#/$defs/constraint"
+      }
+    },
+    "links": {
+      "$ref": "#/$defs/links"
+    }
+  },
+  "$defs": {
+    "property": {
+      "type": "object",
+      "required": ["name", "type", "required"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-zA-Z0-9]*$",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "description": "Solana type or reference to another concept name"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        },
+        "defaultValue": {
+          "description": "Default value for this property"
+        }
+      }
+    },
+    "relationship": {
+      "type": "object",
+      "required": ["type", "target", "cardinality"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ownedBy",
+            "derivedFrom",
+            "cpiTo",
+            "versionOf",
+            "contains",
+            "references",
+            "extends",
+            "dependsOn"
+          ]
+        },
+        "target": {
+          "type": "string",
+          "description": "Canonical name of the target concept"
+        },
+        "cardinality": {
+          "type": "string",
+          "enum": ["1:1", "1:many", "many:1", "many:many", "0:1", "0:many", "2:1", "n:1", "1:n"]
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "stateMachine": {
+      "type": "object",
+      "required": ["states", "transitions"],
+      "additionalProperties": false,
+      "properties": {
+        "states": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "transitions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to", "via"],
+            "additionalProperties": false,
+            "properties": {
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              },
+              "via": {
+                "type": "string",
+                "description": "Description of the mechanism that triggers this transition"
+              }
+            }
+          }
+        }
+      }
+    },
+    "constraint": {
+      "type": "object",
+      "required": ["expression", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Optional name for this constraint"
+        },
+        "expression": {
+          "type": "string",
+          "description": "Formal or pseudo-formal constraint expression"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "links": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["label", "url"],
+            "additionalProperties": false,
+            "properties": {
+              "label": { "type": "string" },
+              "url": { "type": "string", "format": "uri" }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "docs": {
+              "type": "array",
+              "items": { "type": "string", "format": "uri" }
+            },
+            "anchorIdl": { "type": "string" },
+            "auditReports": {
+              "type": "array",
+              "items": { "type": "string", "format": "uri" }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

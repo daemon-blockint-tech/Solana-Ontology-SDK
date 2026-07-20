@@ -1,0 +1,69 @@
+canonicalName: TokenAccount
+aliases:
+  - AssociatedTokenAccount
+  - ATA
+purpose: "Holds a specific token mint's balance for a wallet, tracking amount, delegate, and close state"
+category: token
+version: 1.0.0
+owner: token-team
+properties:
+  - name: mint
+    type: Address
+    required: true
+    description: "The mint this account holds tokens for"
+  - name: owner
+    type: Address
+    required: true
+    description: "Wallet that owns this token account"
+  - name: amount
+    type: u64
+    required: true
+    description: "Token balance in base units"
+  - name: delegate
+    type: Address
+    required: false
+    description: "Optional delegated authority"
+  - name: delegatedAmount
+    type: u64
+    required: false
+    description: "Amount delegated to the delegate"
+  - name: isNative
+    type: bool
+    required: true
+    description: "Whether this is a native (SOL wrapping) token account"
+  - name: closeAuthority
+    type: Address
+    required: false
+    description: "Optional authority to close the account"
+relationships:
+  - type: ownedBy
+    target: TokenMint
+    cardinality: "many:1"
+    description: "Each token account is associated with exactly one mint"
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+    description: "Owned by SPL Token or Token-2022 program"
+  - type: extends
+    target: TokenExtension
+    cardinality: "0:many"
+    description: "Token-2022 accounts may have extensions"
+stateMachine:
+  states: [Uninitialized, Active, Frozen, Closed]
+  transitions:
+    - from: Uninitialized
+      to: Active
+      via: "Initialize token account or create ATA instruction"
+    - from: Active
+      to: Frozen
+      via: "Mint freeze authority freezes the account"
+    - from: Active
+      to: Closed
+      via: "Close account instruction drains lamports to destination"
+constraints:
+  - expression: "amount <= mint.supply"
+    description: "Token account balance cannot exceed mint supply"
+links:
+  docs:
+    - "https://solana.com/docs/core/tokens#token-account"
+  anchorIdl: "token_program"

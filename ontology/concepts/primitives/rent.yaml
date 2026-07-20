@@ -1,0 +1,32 @@
+canonicalName: Rent
+aliases:
+  - RentExempt
+  - AccountRent
+purpose: "Mechanism requiring accounts to maintain a minimum lamport balance to exist on-chain without being garbage collected"
+category: primitive
+version: 1.0.0
+owner: core
+properties:
+  - name: lamportsPerByte
+    type: u64
+    required: true
+    description: "Lamports per byte per epoch for rent"
+  - name: exemptionThreshold
+    type: f64
+    required: true
+    description: "Multiplier for rent-exempt minimum (currently 2.0)"
+  - name: burnPercent
+    type: u8
+    required: true
+    description: "Percentage of rent burned (currently 50%)"
+relationships:
+  - type: references
+    target: Account
+    cardinality: "0:many"
+    description: "Rent applies to all non-exempt accounts"
+constraints:
+  - expression: "account.lamports >= rentExemptMinimum(data.length)"
+    description: "Accounts must hold at least the rent-exempt minimum to avoid deletion"
+links:
+  docs:
+    - "https://solana.com/docs/core/rent"

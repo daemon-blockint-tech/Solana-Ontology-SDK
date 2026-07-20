@@ -1,0 +1,40 @@
+canonicalName: UpgradeAuthority
+aliases:
+  - ProgramAuthority
+  - UpgradeSigner
+purpose: "Controller entity authorized to upgrade a program's bytecode or freeze it permanently"
+category: delivery
+version: 1.0.0
+owner: delivery-team
+properties:
+  - name: authorityAddress
+    type: Address
+    required: true
+    description: "Public key of the upgrade authority"
+  - name: isMutable
+    type: bool
+    required: true
+    description: "Whether the program can still be upgraded"
+  - name: multisig
+    type: Address
+    required: false
+    description: "Optional multisig controlling the authority"
+relationships:
+  - type: references
+    target: Program
+    cardinality: "0:many"
+    description: "Authority may control multiple programs"
+  - type: references
+    target: Environment
+    cardinality: "0:many"
+    description: "Authority manages upgrades across environments"
+  - type: references
+    target: Multisig
+    cardinality: "0:1"
+    description: "Authority may be a multisig"
+constraints:
+  - expression: "isMutable == true || authorityAddress == None"
+    description: "If immutable, authority must be None"
+links:
+  docs:
+    - "https://solana.com/docs/programs/deploying"

@@ -1,0 +1,54 @@
+canonicalName: SwapRoute
+aliases:
+  - DEXRoute
+  - AggregationRoute
+purpose: "Optimized multi-hop swap path through one or more DEX pools that minimizes slippage and maximizes output"
+category: defi
+version: 1.0.0
+owner: defi-team
+properties:
+  - name: inputMint
+    type: Address
+    required: true
+    description: "Source token mint"
+  - name: outputMint
+    type: Address
+    required: true
+    description: "Destination token mint"
+  - name: amountIn
+    type: u64
+    required: true
+    description: "Input amount in base units"
+  - name: expectedAmountOut
+    type: u64
+    required: true
+    description: "Expected output amount before slippage"
+  - name: minimumAmountOut
+    type: u64
+    required: true
+    description: "Minimum acceptable output (slippage tolerance)"
+  - name: hops
+    type: Hop[]
+    required: true
+    description: "Ordered list of pool hops in the route"
+  - name: priceImpact
+    type: f64
+    required: true
+    description: "Estimated price impact as percentage"
+relationships:
+  - type: references
+    target: LiquidityPool
+    cardinality: "1:many"
+    description: "Route traverses one or more liquidity pools"
+  - type: dependsOn
+    target: OracleFeed
+    cardinality: "0:1"
+    description: "Route may reference oracle for price validation"
+constraints:
+  - expression: "minimumAmountOut <= expectedAmountOut"
+    description: "Minimum output cannot exceed expected output"
+  - expression: "hops.length <= 5"
+    description: "Routes typically limited to 5 hops"
+links:
+  docs:
+    - "https://docs.jup.ag/"

@@ -1,0 +1,36 @@
+canonicalName: Collection
+aliases:
+  - NFTCollection
+  - CollectionMint
+purpose: "Grouping mechanism for related NFTs enabling verified collection-level metadata and marketplace filtering"
+category: token
+version: 1.0.0
+owner: token-team
+properties:
+  - name: collectionMint
+    type: Address
+    required: true
+    description: "Mint address representing the collection"
+  - name: verified
+    type: bool
+    required: true
+    description: "Whether the collection is verified by the collection authority"
+  - name: size
+    type: u32
+    required: false
+    description: "Number of NFTs in the collection"
+relationships:
+  - type: contains
+    target: NFT
+    cardinality: "0:many"
+    description: "A collection contains many NFTs"
+  - type: extends
+    target: TokenMint
+    cardinality: "1:1"
+    description: "Collection itself is represented by a mint"
+constraints:
+  - expression: "verified == true || collectionAuthoritySigned"
+    description: "Verification requires collection authority signature"
+links:
+  docs:
+    - "https://docs.metaplex.com/programs/token-metadata/collections"

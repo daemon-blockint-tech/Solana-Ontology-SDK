@@ -1,0 +1,51 @@
+canonicalName: OracleFeed
+aliases:
+  - PriceFeed
+  - PriceOracle
+purpose: "On-chain price feed providing verified external price data for assets used by DeFi protocols"
+category: defi
+version: 1.0.0
+owner: defi-team
+properties:
+  - name: feedAddress
+    type: Address
+    required: true
+    description: "PDA of the oracle feed"
+  - name: price
+    type: i128
+    required: true
+    description: "Latest price value"
+  - name: exponent
+    type: i32
+    required: true
+    description: "Price exponent (price * 10^exponent)"
+  - name: confidence
+    type: u64
+    required: true
+    description: "Confidence interval around the price"
+  - name: lastUpdatedSlot
+    type: u64
+    required: true
+    description: "Slot of last price update"
+  - name: stalenessThreshold
+    type: u64
+    required: true
+    description: "Maximum acceptable slots since last update"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+    description: "Feed is owned by an oracle program (Switchboard, Chainlink, Pyth)"
+  - type: references
+    target: TokenMint
+    cardinality: "1:1"
+    description: "Feed provides price for a specific token"
+constraints:
+  - expression: "currentSlot - lastUpdatedSlot < stalenessThreshold"
+    description: "Price must not be stale beyond threshold"
+  - expression: "confidence < price"
+    description: "Confidence interval should be smaller than price"
+links:
+  docs:
+    - "https://docs.switchboard.xyz/"
+    - "https://docs.pyth.network/"

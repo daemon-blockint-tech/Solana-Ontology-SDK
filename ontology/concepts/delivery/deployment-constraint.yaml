@@ -1,0 +1,44 @@
+canonicalName: DeploymentConstraint
+aliases:
+  - PromotionGate
+  - UpgradePrecondition
+purpose: "Precondition that must be satisfied before a program release can be promoted or deployed, such as audit completion or CU budget verification"
+category: delivery
+version: 1.0.0
+owner: delivery-team
+properties:
+  - name: name
+    type: string
+    required: true
+    description: "Constraint name (e.g., audit-required, cu-budget-check)"
+  - name: type
+    type: string
+    required: true
+    description: "Constraint type: security, performance, dependency, manual-approval"
+  - name: expression
+    type: string
+    required: true
+    description: "Formal or pseudo-formal expression to evaluate"
+  - name: requiredApprovers
+    type: Address[]
+    required: false
+    description: "Addresses that must approve for manual-approval constraints"
+  - name: blocking
+    type: bool
+    required: true
+    description: "Whether failure blocks promotion entirely"
+relationships:
+  - type: references
+    target: ProgramRelease
+    cardinality: "0:many"
+    description: "Constraint applies to releases"
+  - type: references
+    target: ReleaseChannel
+    cardinality: "0:many"
+    description: "Constraint gates channel promotions"
+constraints:
+  - expression: "type in ['security', 'performance', 'dependency', 'manual-approval']"
+    description: "Constraint type must be recognized"
+links:
+  docs:
+    - "https://www.palantir.com/docs/foundry/apollo/"

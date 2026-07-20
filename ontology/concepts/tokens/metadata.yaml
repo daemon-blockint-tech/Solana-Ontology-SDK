@@ -1,0 +1,53 @@
+canonicalName: Metadata
+aliases:
+  - TokenMetadata
+  - MetaplexMetadata
+purpose: "Off-chain-referenced on-chain metadata for a token including name, symbol, URI, and attributes"
+category: token
+version: 1.0.0
+owner: token-team
+properties:
+  - name: name
+    type: string
+    required: true
+    description: "Display name (max 32 bytes)"
+  - name: symbol
+    type: string
+    required: true
+    description: "Token symbol (max 10 bytes)"
+  - name: uri
+    type: string
+    required: true
+    description: "URI to off-chain metadata JSON (max 200 bytes)"
+  - name: sellerFeeBasisPoints
+    type: u16
+    required: true
+    description: "Royalty in basis points (0-10000)"
+  - name: creators
+    type: Creator[]
+    required: false
+    description: "Optional creator list with shares"
+  - name: primarySaleHappened
+    type: bool
+    required: true
+    description: "Whether primary sale has occurred"
+  - name: isMutable
+    type: bool
+    required: true
+    description: "Whether metadata can be updated"
+relationships:
+  - type: references
+    target: NFT
+    cardinality: "1:1"
+    description: "Metadata is associated with one NFT mint"
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+    description: "Owned by Metaplex Token Metadata program"
+constraints:
+  - expression: "name.length <= 32 && symbol.length <= 10 && uri.length <= 200"
+    description: "Metaplex metadata field length limits"
+links:
+  docs:
+    - "https://docs.metaplex.com/programs/token-metadata"
+  anchorIdl: "token_metadata"

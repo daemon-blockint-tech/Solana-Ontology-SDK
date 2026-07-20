@@ -1,0 +1,44 @@
+canonicalName: Cluster
+aliases:
+  - Network
+  - SolanaCluster
+purpose: "Solana network environment (mainnet-beta, devnet, or testnet) with distinct RPC endpoints and consensus participants"
+category: infrastructure
+version: 1.0.0
+owner: core
+properties:
+  - name: name
+    type: string
+    required: true
+    description: "Cluster name: mainnet-beta, devnet, or testnet"
+  - name: rpcUrl
+    type: string
+    required: true
+    description: "Default RPC endpoint URL"
+  - name: wsUrl
+    type: string
+    required: true
+    description: "Default WebSocket endpoint URL"
+  - name: explorerUrl
+    type: string
+    required: false
+    description: "Block explorer URL"
+relationships:
+  - type: contains
+    target: Validator
+    cardinality: "0:many"
+    description: "Cluster has many validators"
+  - type: contains
+    target: Slot
+    cardinality: "0:many"
+    description: "Cluster produces slots continuously"
+  - type: contains
+    target: Epoch
+    cardinality: "0:many"
+    description: "Cluster progresses through epochs"
+constraints:
+  - expression: "name in ['mainnet-beta', 'devnet', 'testnet']"
+    description: "Cluster must be one of the three official networks"
+links:
+  docs:
+    - "https://solana.com/docs/core/clusters"

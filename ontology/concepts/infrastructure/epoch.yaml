@@ -1,0 +1,44 @@
+canonicalName: Epoch
+aliases:
+  - StakingEpoch
+  - ConsensusEpoch
+purpose: "Consensus time period of approximately 2-3 days during which validator leader schedule is fixed and staking rewards are distributed"
+category: infrastructure
+version: 1.0.0
+owner: core
+properties:
+  - name: epoch
+    type: u64
+    required: true
+    description: "Epoch number (monotonically increasing)"
+  - name: startSlot
+    type: u64
+    required: true
+    description: "First slot in this epoch"
+  - name: endSlot
+    type: u64
+    required: true
+    description: "Last slot in this epoch"
+  - name: totalStake
+    type: u64
+    required: true
+    description: "Total stake delegated during this epoch"
+  - name: rewardsDistributed
+    type: u64
+    required: false
+    description: "Total inflation rewards distributed"
+relationships:
+  - type: ownedBy
+    target: Cluster
+    cardinality: "many:1"
+    description: "Epochs belong to a cluster"
+  - type: contains
+    target: Slot
+    cardinality: "many:many"
+    description: "Epoch contains many slots"
+constraints:
+  - expression: "endSlot >= startSlot"
+    description: "Epoch end slot must be >= start slot"
+links:
+  docs:
+    - "https://solana.com/docs/economics/inflation"

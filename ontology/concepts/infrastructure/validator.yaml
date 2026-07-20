@@ -1,0 +1,52 @@
+canonicalName: Validator
+aliases:
+  - ConsensusNode
+  - SolanaValidator
+purpose: "Consensus participant that validates transactions, produces blocks when leader, and earns staking rewards"
+category: infrastructure
+version: 1.0.0
+owner: core
+properties:
+  - name: voteAccount
+    type: Address
+    required: true
+    description: "Vote account address"
+  - name: nodePubkey
+    type: Address
+    required: true
+    description: "Validator identity public key"
+  - name: commission
+    type: u8
+    required: true
+    description: "Commission rate (0-100) charged on rewards"
+  - name: activatedStake
+    type: u64
+    required: true
+    description: "Total stake delegated to this validator"
+  - name: lastVote
+    type: u64
+    required: true
+    description: "Last slot the validator voted on"
+  - name: rootSlot
+    type: u64
+    required: true
+    description: "Last rooted slot by this validator"
+  - name: epochCredits
+    type: u64
+    required: true
+    description: "Total credits earned across epochs"
+relationships:
+  - type: ownedBy
+    target: Cluster
+    cardinality: "many:1"
+    description: "Validator operates on a cluster"
+  - type: references
+    target: StakeAccount
+    cardinality: "0:many"
+    description: "Validator receives stake delegations"
+constraints:
+  - expression: "commission <= 100"
+    description: "Commission must be between 0 and 100"
+links:
+  docs:
+    - "https://solana.com/docs/validator"

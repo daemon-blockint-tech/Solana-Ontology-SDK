@@ -1,0 +1,36 @@
+canonicalName: TokenExtension
+aliases:
+  - Token2022Extension
+  - Extension
+purpose: "Token-2022 extension module adding features like transfer fees, metadata, permanent delegates, or confidential transfers to a mint or token account"
+category: token
+version: 1.0.0
+owner: token-team
+properties:
+  - name: extensionType
+    type: string
+    required: true
+    description: "Extension type enum (TransferFee, MetadataPointer, PermanentDelegate, ConfidentialTransfer, etc.)"
+  - name: data
+    type: bytes
+    required: true
+    description: "Extension-specific serialized data"
+  - name: accountType
+    type: string
+    required: true
+    description: "Whether attached to mint or token account"
+relationships:
+  - type: extends
+    target: TokenMint
+    cardinality: "0:many"
+    description: "Extensions augment a Token-2022 mint"
+  - type: extends
+    target: TokenAccount
+    cardinality: "0:many"
+    description: "Extensions augment a Token-2022 token account"
+constraints:
+  - expression: "extensionType in knownExtensions"
+    description: "Extension type must be a recognized Token-2022 extension"
+links:
+  docs:
+    - "https://solana.com/docs/core/tokens/token-2022"

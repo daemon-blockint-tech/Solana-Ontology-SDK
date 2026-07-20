@@ -1,0 +1,42 @@
+canonicalName: Vote
+aliases:
+  - GovernanceVote
+  - Ballot
+purpose: "Individual vote cast by a token holder on a governance proposal recording their position and voting weight"
+category: governance
+version: 1.0.0
+owner: governance-team
+properties:
+  - name: voter
+    type: Address
+    required: true
+    description: "Wallet that cast the vote"
+  - name: proposal
+    type: Address
+    required: true
+    description: "Proposal being voted on"
+  - name: voteType
+    type: string
+    required: true
+    description: "Vote choice: yes, no, or abstain"
+  - name: weight
+    type: u64
+    required: true
+    description: "Voting weight based on token holdings"
+  - name: slot
+    type: u64
+    required: true
+    description: "Slot in which the vote was cast"
+relationships:
+  - type: ownedBy
+    target: Proposal
+    cardinality: "many:1"
+    description: "Vote belongs to one proposal"
+constraints:
+  - expression: "voteType in ['yes', 'no', 'abstain']"
+    description: "Vote type must be yes, no, or abstain"
+  - expression: "weight > 0"
+    description: "Vote weight must be positive"
+links:
+  docs:
+    - "https://docs.solanagovernance.com/"

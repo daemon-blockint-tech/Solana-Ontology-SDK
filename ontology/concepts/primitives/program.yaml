@@ -1,0 +1,52 @@
+canonicalName: Program
+aliases:
+  - SmartContract
+  - ExecutableAccount
+purpose: "Executable account containing sBPF bytecode that defines and enforces on-chain behavior"
+category: primitive
+version: 1.0.0
+owner: core
+properties:
+  - name: programId
+    type: Address
+    required: true
+    description: "Public key of the executable account"
+  - name: bytecode
+    type: bytes
+    required: true
+    description: "Compiled sBPF/ELF bytecode"
+  - name: upgradeAuthority
+    type: Address
+    required: false
+    description: "Optional authority that can upgrade the program bytecode"
+relationships:
+  - type: contains
+    target: Account
+    cardinality: "0:many"
+    description: "Programs own zero or more data accounts"
+  - type: cpiTo
+    target: Program
+    cardinality: "0:many"
+    description: "Programs may invoke other programs via CPI (max depth 5)"
+  - type: versionOf
+    target: ProgramRelease
+    cardinality: "0:1"
+    description: "On-chain program may be tracked by a release in the delivery ontology"
+stateMachine:
+  states: [Deployed, Upgraded, Frozen]
+  transitions:
+    - from: Deployed
+      to: Upgraded
+      via: "Upgrade authority replaces bytecode via BPFLoaderUpgradeable"
+    - from: Deployed
+      to: Frozen
+      via: "Upgrade authority set to None to make program immutable"
+    - from: Upgraded
+      to: Frozen
+      via: "Upgrade authority set to None after final upgrade"
+constraints:
+  - expression: "upgradeAuthority == None || isSigner(upgradeAuthority)"
+    description: "Only the upgrade authority signer can modify the program"
+links:
+  docs:
+    - "https://solana.com/docs/core/programs"

@@ -1,0 +1,56 @@
+canonicalName: DAO
+aliases:
+  - Governance
+  - DecentralizedAutonomousOrganization
+purpose: "On-chain governance organization enabling token holders to propose, vote on, and execute decisions for a protocol or treasury"
+category: governance
+version: 1.0.0
+owner: governance-team
+properties:
+  - name: governanceAddress
+    type: Address
+    required: true
+    description: "PDA of the governance account"
+  - name: governedProgram
+    type: Address
+    required: true
+    description: "Program or account under governance control"
+  - name: governanceToken
+    type: Address
+    required: true
+    description: "Token mint used for voting power"
+  - name: proposalCount
+    type: u32
+    required: true
+    description: "Total proposals created"
+  - name: votingDelay
+    type: u64
+    required: true
+    description: "Slots before voting opens after proposal creation"
+  - name: votingPeriod
+    type: u64
+    required: true
+    description: "Slots during which voting is open"
+  - name: quorum
+    type: u64
+    required: true
+    description: "Minimum participation required for valid proposals"
+relationships:
+  - type: contains
+    target: Proposal
+    cardinality: "0:many"
+    description: "DAO has many proposals"
+  - type: references
+    target: TokenMint
+    cardinality: "1:1"
+    description: "DAO uses one governance token"
+  - type: references
+    target: Multisig
+    cardinality: "0:1"
+    description: "DAO may use a multisig for execution"
+constraints:
+  - expression: "quorum <= governanceToken.supply"
+    description: "Quorum cannot exceed token supply"
+links:
+  docs:
+    - "https://docs.solanagovernance.com/"

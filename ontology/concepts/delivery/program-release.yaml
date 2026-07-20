@@ -1,0 +1,67 @@
+canonicalName: ProgramRelease
+aliases:
+  - ProgramVersion
+  - ReleaseArtifact
+purpose: "Versioned program binary artifact with metadata including build hash, Anchor IDL, and changelog for tracked deployment"
+category: delivery
+version: 1.0.0
+owner: delivery-team
+properties:
+  - name: version
+    type: string
+    required: true
+    description: "Semantic version of the release"
+  - name: programId
+    type: Address
+    required: true
+    description: "On-chain program ID this release targets"
+  - name: bytecodeHash
+    type: Hash
+    required: true
+    description: "SHA-256 hash of the compiled bytecode"
+  - name: idl
+    type: string
+    required: false
+    description: "Anchor IDL JSON for this release"
+  - name: changelog
+    type: string
+    required: false
+    description: "Human-readable changelog"
+  - name: buildTimestamp
+    type: i64
+    required: true
+    description: "Unix timestamp of the build"
+relationships:
+  - type: versionOf
+    target: Program
+    cardinality: "many:1"
+    description: "Multiple releases map to one on-chain program"
+  - type: references
+    target: ReleaseChannel
+    cardinality: "0:many"
+    description: "Release may be promoted through channels"
+  - type: dependsOn
+    target: DeploymentConstraint
+    cardinality: "0:many"
+    description: "Release must satisfy deployment constraints"
+stateMachine:
+  states: [Built, Tested, Audited, Promoted, Deprecated]
+  transitions:
+    - from: Built
+      to: Tested
+      via: "CI test suite passes"
+    - from: Tested
+      to: Audited
+      via: "Security audit completed"
+    - from: Audited
+      to: Promoted
+      via: "Promoted to a release channel"
+    - from: Promoted
+      to: Deprecated
+      via: "Superseded by newer release"
+constraints:
+  - expression: "bytecodeHash != previousRelease.bytecodeHash"
+    description: "Each release must have a distinct bytecode hash"
+links:
+  docs:
+    - "https://www.anchor-lang.com/"

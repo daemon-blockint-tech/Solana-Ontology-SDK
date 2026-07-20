@@ -1,0 +1,61 @@
+canonicalName: TokenMint
+aliases:
+  - Mint
+  - MintAccount
+purpose: "Authoritative source for a fungible or non-fungible token, tracking supply and mint authority"
+category: token
+version: 1.0.0
+owner: token-team
+properties:
+  - name: mintAuthority
+    type: Address
+    required: false
+    description: "Optional authority permitted to mint new tokens"
+  - name: supply
+    type: u64
+    required: true
+    description: "Total token supply in base units"
+  - name: decimals
+    type: u8
+    required: true
+    description: "Number of decimal places for display"
+  - name: isInitialized
+    type: bool
+    required: true
+    description: "Whether the mint has been initialized"
+  - name: freezeAuthority
+    type: Address
+    required: false
+    description: "Optional authority that can freeze token accounts"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+    description: "Owned by SPL Token or Token-2022 program"
+  - type: contains
+    target: TokenAccount
+    cardinality: "0:many"
+    description: "A mint has many token accounts holding its tokens"
+  - type: extends
+    target: TokenExtension
+    cardinality: "0:many"
+    description: "Token-2022 mints may have extensions"
+stateMachine:
+  states: [Uninitialized, Active, MintDisabled, Frozen]
+  transitions:
+    - from: Uninitialized
+      to: Active
+      via: "Initialize mint instruction"
+    - from: Active
+      to: MintDisabled
+      via: "Revoke mint authority"
+    - from: Active
+      to: Frozen
+      via: "Freeze authority freezes all accounts"
+constraints:
+  - expression: "decimals <= 12"
+    description: "Standard token mints use up to 12 decimals"
+links:
+  docs:
+    - "https://solana.com/docs/core/tokens"
+  anchorIdl: "token_program"

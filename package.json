@@ -1,0 +1,27 @@
+{
+  "name": "solana-ontology-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Solana Data-Logic-Action by using Ontology System",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "turbo build",
+    "test": "turbo test",
+    "lint": "turbo lint",
+    "generate": "turbo generate",
+    "docs": "turbo docs",
+    "validate": "solana-ontology validate",
+    "clean": "turbo clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0",
+    "@types/node": "^20.14.0"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
