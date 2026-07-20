@@ -17,7 +17,9 @@
     "@solana-ontology/core": "workspace:*",
     "@solana-ontology/generator-ts": "workspace:*",
     "@solana-ontology/generator-rust": "workspace:*",
-    "commander": "^12.1.0"
+    "@solana-ontology/idl-parser": "workspace:*",
+    "commander": "^12.1.0",
+    "yaml": "^2.4.0"
   },
   "devDependencies": {
     "typescript": "^5.4.0",

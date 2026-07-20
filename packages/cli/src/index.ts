@@ -5,6 +5,7 @@ import { validateCommand } from "./commands/validate.js";
 import { generateCommand } from "./commands/generate.js";
 import { listCommand } from "./commands/list.js";
 import { graphCommand } from "./commands/graph.js";
+import { idlCommand } from "./commands/idl.js";
 
 const program = new Command();
 
@@ -58,6 +59,20 @@ program
       opts.path ? { ontologyRoot: opts.path, conceptsDir: `${opts.path}/concepts` } : {},
     );
     graphCommand(config);
+  });
+
+program
+  .command("idl")
+  .description("Parse an Anchor IDL JSON file and generate ontology concepts")
+  .argument("<path>", "Path to the IDL JSON file")
+  .option("--out <dir>", "Output directory for generated concept YAML")
+  .option("--codemod-only", "Only transform v0→v1, output normalized IDL JSON")
+  .option("--path <path>", "Custom ontology root path")
+  .action((idlPath, opts) => {
+    const config = resolveConfig(
+      opts.path ? { ontologyRoot: opts.path, conceptsDir: `${opts.path}/concepts` } : {},
+    );
+    idlCommand(idlPath, config, opts.out, opts.codemodOnly);
   });
 
 program.parse();

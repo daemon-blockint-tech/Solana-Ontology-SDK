@@ -1,0 +1,63 @@
+{
+  "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+  "metadata": {
+    "name": "token_program",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "initialize_mint",
+      "discriminator": [24, 77, 231, 94, 77, 226, 46, 173],
+      "accounts": [
+        { "name": "mint", "writable": true, "signer": false },
+        { "name": "rent", "writable": false, "signer": false }
+      ],
+      "args": [
+        { "name": "decimals", "type": "u8" },
+        { "name": "mint_authority", "type": "pubkey" },
+        { "name": "freeze_authority", "type": { "option": "pubkey" } }
+      ]
+    },
+    {
+      "name": "close_account",
+      "discriminator": [103, 76, 199, 96, 97, 255, 255, 255],
+      "accounts": [
+        { "name": "account", "writable": true, "signer": false },
+        { "name": "destination", "writable": true, "signer": false },
+        { "name": "owner", "writable": false, "signer": true }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "mint",
+      "discriminator": [0, 0, 0, 0, 0, 0, 0, 0],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "mint_authority", "type": { "option": "pubkey" } },
+          { "name": "supply", "type": "u64" },
+          { "name": "decimals", "type": "u8" },
+          { "name": "is_initialized", "type": "bool" },
+          { "name": "freeze_authority", "type": { "option": "pubkey" } }
+        ]
+      }
+    },
+    {
+      "name": "token_account",
+      "discriminator": [1, 1, 1, 1, 1, 1, 1, 1],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "mint", "type": "pubkey" },
+          { "name": "owner", "type": "pubkey" },
+          { "name": "amount", "type": "u64" },
+          { "name": "delegate", "type": { "option": "pubkey" } },
+          { "name": "is_initialized", "type": "bool" }
+        ]
+      }
+    }
+  ]
+}

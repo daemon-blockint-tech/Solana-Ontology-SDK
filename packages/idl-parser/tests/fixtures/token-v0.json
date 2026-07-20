@@ -1,0 +1,78 @@
+{
+  "version": "0.1.0",
+  "name": "tokenProgram",
+  "instructions": [
+    {
+      "name": "initializeMint",
+      "accounts": [
+        { "name": "mint", "isMut": true, "isSigner": false },
+        { "name": "rent", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "decimals", "type": "u8" },
+        { "name": "mintAuthority", "type": "pubkey" },
+        { "name": "freezeAuthority", "type": { "option": "pubkey" } }
+      ]
+    },
+    {
+      "name": "initializeAccount",
+      "accounts": [
+        { "name": "account", "isMut": true, "isSigner": false },
+        { "name": "mint", "isMut": false, "isSigner": false },
+        { "name": "rent", "isMut": false, "isSigner": false }
+      ],
+      "args": []
+    },
+    {
+      "name": "transfer",
+      "accounts": [
+        { "name": "source", "isMut": true, "isSigner": false },
+        { "name": "destination", "isMut": true, "isSigner": false },
+        { "name": "authority", "isMut": false, "isSigner": true }
+      ],
+      "args": [
+        { "name": "amount", "type": "u64" }
+      ]
+    },
+    {
+      "name": "closeAccount",
+      "accounts": [
+        { "name": "account", "isMut": true, "isSigner": false },
+        { "name": "destination", "isMut": true, "isSigner": false },
+        { "name": "owner", "isMut": false, "isSigner": true }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "mint",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "mintAuthority", "type": { "option": "pubkey" } },
+          { "name": "supply", "type": "u64" },
+          { "name": "decimals", "type": "u8" },
+          { "name": "isInitialized", "type": "bool" },
+          { "name": "freezeAuthority", "type": { "option": "pubkey" } }
+        ]
+      }
+    },
+    {
+      "name": "tokenAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "mint", "type": "pubkey" },
+          { "name": "owner", "type": "pubkey" },
+          { "name": "amount", "type": "u64" },
+          { "name": "delegate", "type": { "option": "pubkey" } },
+          { "name": "isInitialized", "type": "bool" }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+  }
+}
