@@ -43,15 +43,15 @@ export function mapIdlTypeToOntology(idlType: string | IdlV1Type): string {
 
   if (idlType.defined) return idlType.defined;
   if (idlType.option) {
-    const inner = typeof idlType.option === "string" ? idlType.option : mapIdlTypeToOntology(idlType.option);
+    const inner = typeof idlType.option === "string" ? mapIdlTypeToOntology(idlType.option) : mapIdlTypeToOntology(idlType.option);
     return `Option<${inner}>`;
   }
   if (idlType.vec) {
-    const inner = typeof idlType.vec === "string" ? idlType.vec : mapIdlTypeToOntology(idlType.vec);
+    const inner = typeof idlType.vec === "string" ? mapIdlTypeToOntology(idlType.vec) : mapIdlTypeToOntology(idlType.vec);
     return `Vec<${inner}>`;
   }
   if (idlType.array) {
-    const inner = typeof idlType.array[0] === "string" ? idlType.array[0] : mapIdlTypeToOntology(idlType.array[0]);
+    const inner = typeof idlType.array[0] === "string" ? mapIdlTypeToOntology(idlType.array[0]) : mapIdlTypeToOntology(idlType.array[0]);
     return `Array<${inner}, ${idlType.array[1]}>`;
   }
   if (idlType.pubkey) return "Address";
