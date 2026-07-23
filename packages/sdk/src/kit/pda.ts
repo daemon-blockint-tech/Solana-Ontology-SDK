@@ -30,17 +30,23 @@ export async function derivePdaKit(programId: string, seeds: Uint8Array[]): Prom
     const kit = await import("@solana/kit");
     const { getProgramDerivedAddress, address } = kit;
 
-    const [pdaAddress, bump] = await getProgramDerivedAddress({
-      programAddress: address(programId),
-      seeds,
-    });
+    // Kit v7: getProgramDerivedAddress(seeds, programAddress)
+    // Cast to any because @solana/kit is an optional peer dep — types may not resolve
+    const fn = getProgramDerivedAddress as unknown as
+      (seeds: Uint8Array[], programAddress: string) => Promise<readonly [string, number]>;
+    const result = await fn(seeds, address(programId));
 
-    return { address: pdaAddress as string, bump };
-  } catch (err) {
-    if (err instanceof Error && (err.message.includes("Cannot find module") || err.message.includes("@solana/kit is not installed"))) {
-      throw new Error("@solana/kit is not installed");
-    }
-    throw err;
+    // Kit returns a tuple [Address<string>, bump] — destructure it
+    const [pdaAddress, bump] = result as readonly [string, number];
+
+    return {
+      address: pdaAddress,
+      bump,
+    };
+  } catch {
+    throw new Error(
+      "Failed to derive PDA with @solana/kit. Ensure it is installed.",
+    );
   }
 }
 
@@ -94,7 +100,9 @@ export async function derivePdaFromConcept(
 }
 
 async function convertSeedToBytes(value: string | number | Uint8Array, type: string): Promise<Uint8Array> {
-  if (value instanceof Uint8Array) return value;
+  if (typeof value === "object" && value !== null && "byteLength" in value) {
+    return value as Uint8Array;
+  }
 
   switch (type) {
     case "string":
@@ -121,7 +129,9 @@ async function convertSeedToBytes(value: string | number | Uint8Array, type: str
       return new PublicKey(String(value)).toBytes();
     }
     case "bytes":
-      return value instanceof Uint8Array ? value : new TextEncoder().encode(String(value));
+      return (typeof value === "object" && value !== null && "byteLength" in value)
+        ? value as Uint8Array
+        : new TextEncoder().encode(String(value));
     default:
       return new TextEncoder().encode(String(value));
   }

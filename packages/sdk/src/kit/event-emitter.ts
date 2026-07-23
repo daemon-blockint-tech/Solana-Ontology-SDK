@@ -3,7 +3,14 @@
  */
 
 export type TransactionEventName =
-  "simulated" | "signed" | "dispatched" | "confirmed" | "finalized" | "failed" | "timeout";
+  | "simulated"
+  | "signed"
+  | "dispatched"
+  | "confirmed"
+  | "finalized"
+  | "failed"
+  | "timeout"
+  | "computeAdjusted";
 
 export type TransactionEventListener = (data: unknown) => void;
 

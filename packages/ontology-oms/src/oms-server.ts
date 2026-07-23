@@ -28,7 +28,8 @@ export class OntologyOmsServer {
   private adapter: ExternalAdapter;
   private config: OmsApiConfig;
 
-  private constructor(config?: Partial<OmsApiConfig>) {
+  /** Creates an OMS server with in-memory storage. Use OntologyOmsServer.create() for SQLite. */
+  constructor(config?: Partial<OmsApiConfig>) {
     this.config = {
       port: 3000,
       storage: "memory",

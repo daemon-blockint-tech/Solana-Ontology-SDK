@@ -65,7 +65,7 @@ properties:
     required: false
     description: "Amount delegated to the delegate"
   - name: isNative
-    type: bool
+    type: COption<u64>
     required: true
     description: "Whether this is a native (SOL wrapping) token account"
   - name: closeAuthority

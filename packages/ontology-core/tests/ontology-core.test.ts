@@ -203,7 +203,7 @@ describe("on-chain linkage fields", () => {
     };
     const result = validateConcept(concept);
     expect(result.valid).toBe(false);
-    expect(result.errors.some((e) => e.path.includes("discriminator"))).toBe(true);
+    expect(result.errors.some((e) => e.path?.includes("discriminator"))).toBe(true);
   });
 
   it("should reject duplicate pdaSeeds names", () => {
