@@ -3,7 +3,8 @@ import { resolve } from "node:path";
 
 export default defineConfig({
   test: {
-    exclude: ["tests/integration/**", "node_modules/**"],
+    include: ["packages/*/tests/**/*.test.ts"],
+    exclude: ["tests/integration/**", "node_modules/**", "**/node_modules/**"],
   },
   resolve: {
     alias: {

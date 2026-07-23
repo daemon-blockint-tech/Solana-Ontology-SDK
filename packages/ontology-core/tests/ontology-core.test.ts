@@ -12,9 +12,9 @@ const ONTOLOGY_ROOT = join(PROJECT_ROOT, "ontology");
 const CONCEPTS_DIR = join(ONTOLOGY_ROOT, "concepts");
 
 describe("loader", () => {
-  it("should load all 34 concept YAML files", () => {
+  it("should load all concept YAML files", () => {
     const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
-    expect(concepts.length).toBe(34);
+    expect(concepts.length).toBe(38);
   });
 
   it("should set _sourceFile on each concept", () => {
@@ -38,7 +38,7 @@ describe("loader", () => {
 });
 
 describe("validator", () => {
-  it("should validate all 34 seed concepts without errors", () => {
+  it("should validate all seed concepts without errors", () => {
     const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
     const result = validateAll(concepts);
     if (!result.valid) {
@@ -104,7 +104,7 @@ describe("graph", () => {
   it("should build a graph with all concepts as nodes", () => {
     const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
     const graph = buildGraph(concepts);
-    expect(graph.nodes.size).toBe(34);
+    expect(graph.nodes.size).toBe(38);
   });
 
   it("should detect orphans (concepts not referenced by others)", () => {
@@ -118,7 +118,7 @@ describe("graph", () => {
     const graph = buildGraph(concepts);
     expect(graph.components.length).toBeGreaterThan(0);
     const totalNodes = graph.components.reduce((sum, c) => sum + c.length, 0);
-    expect(totalNodes).toBe(34);
+    expect(totalNodes).toBe(38);
   });
 
   it("should find dependencies for Account", () => {

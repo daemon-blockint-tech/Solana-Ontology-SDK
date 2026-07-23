@@ -12,25 +12,25 @@ accountLayout:
   discriminator: "0000000000000000"
   fields:
     - name: mintAuthority
-      type: publicKey
+      type: COption<publicKey>
       offset: 0
-      description: "Optional authority permitted to mint new tokens (32 bytes, option)"
+      description: "Optional authority permitted to mint new tokens (COption<Pubkey>, 36 bytes)"
     - name: supply
       type: u64
-      offset: 32
+      offset: 36
       description: "Total token supply in base units"
     - name: decimals
       type: u8
-      offset: 40
+      offset: 44
       description: "Number of decimal places for display"
     - name: isInitialized
       type: bool
-      offset: 41
+      offset: 45
       description: "Whether the mint has been initialized"
     - name: freezeAuthority
-      type: publicKey
-      offset: 42
-      description: "Optional authority that can freeze token accounts (32 bytes, option)"
+      type: COption<publicKey>
+      offset: 46
+      description: "Optional authority that can freeze token accounts (COption<Pubkey>, 36 bytes)"
 properties:
   - name: mintAuthority
     type: Address

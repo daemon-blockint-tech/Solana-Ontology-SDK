@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/solana-icon.png" alt="Solana" width="48" height="48" />
+</p>
+
 # Solana Ontology SDK
 
 > Independent Semantic Ontology Layer for Solana Programs

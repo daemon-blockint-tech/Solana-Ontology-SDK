@@ -24,25 +24,25 @@ accountLayout:
       offset: 64
       description: "Token balance in base units"
     - name: delegate
-      type: publicKey
+      type: COption<publicKey>
       offset: 72
-      description: "Optional delegated authority"
+      description: "Optional delegated authority (COption<Pubkey>, 36 bytes)"
     - name: state
       type: u8
       offset: 108
       description: "Account state (0=uninitialized, 1=initialized, 2=frozen)"
     - name: isNative
-      type: u64
+      type: COption<u64>
       offset: 109
-      description: "Whether this is a native (SOL wrapping) token account"
+      description: "Whether this is a native (SOL wrapping) token account (COption<u64>, 12 bytes)"
     - name: delegatedAmount
       type: u64
-      offset: 112
+      offset: 121
       description: "Amount delegated to the delegate"
     - name: closeAuthority
-      type: publicKey
-      offset: 120
-      description: "Optional authority to close the account"
+      type: COption<publicKey>
+      offset: 129
+      description: "Optional authority to close the account (COption<Pubkey>, 36 bytes)"
 properties:
   - name: mint
     type: Address

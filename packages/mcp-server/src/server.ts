@@ -251,11 +251,9 @@ export class OntologyMcpServer {
     this.httpServer = createServer(
       async (req: IncomingMessage, res: ServerResponse) => {
         // CORS headers
-        if (this.config.auth?.required !== true) {
-          res.setHeader("Access-Control-Allow-Origin", "*");
-          res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-          res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-        }
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
         if (req.method === "OPTIONS") {
           res.writeHead(204);

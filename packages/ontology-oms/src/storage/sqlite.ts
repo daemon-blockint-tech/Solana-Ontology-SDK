@@ -28,7 +28,8 @@ export class SqliteStorage implements OmsStorage {
 
   constructor(dbPath: string) {
     // Dynamic import to avoid hard dependency in browser/edge environments
-    const Database = require("better-sqlite3");
+    // Use eval to bypass TypeScript module resolution for optional peer dep
+    const Database = (eval("require") as (mod: string) => new (path: string) => typeof this.db)("better-sqlite3");
     this.db = new Database(dbPath);
 
     // Auto-create tables

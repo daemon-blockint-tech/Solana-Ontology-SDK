@@ -47,8 +47,10 @@ export class KeypairSigner implements SignerProvider {
     tx.sign(keypair);
 
     const serialized = tx.serialize();
-    const signature = tx.signature ?? new Uint8Array(64);
-    return { serialized: new Uint8Array(serialized), signature };
+    if (!tx.signature) {
+      throw new Error("Transaction signing failed: no signature produced");
+    }
+    return { serialized: new Uint8Array(serialized), signature: tx.signature };
   }
 }
 

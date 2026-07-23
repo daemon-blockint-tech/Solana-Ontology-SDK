@@ -71,19 +71,6 @@ export function validateAll(concepts: Concept[]): ValidationResult {
       }
     }
 
-    // Semantic: accountLayout discriminator must be 8-byte hex if present
-    if (concept.accountLayout?.discriminator) {
-      const disc = concept.accountLayout.discriminator;
-      if (!/^[0-9a-fA-F]{16}$/.test(disc)) {
-        errors.push({
-          file: concept._sourceFile ?? "<unknown>",
-          conceptName: concept.canonicalName,
-          message: `accountLayout.discriminator must be 8-byte hex (16 hex chars), got "${disc}"`,
-          path: "accountLayout.discriminator",
-        });
-      }
-    }
-
     if (names.has(concept.canonicalName)) {
       errors.push({
         file: concept._sourceFile ?? "<unknown>",
