@@ -1,0 +1,48 @@
+canonicalName: FuzzFlow
+aliases:
+  - fuzz-sequence
+  - transaction-flow
+purpose: "Defines a sequence of instructions executed in order during fuzzing, modeling realistic transaction patterns"
+category: fuzzing
+version: 1.0.0
+owner: security-team
+properties:
+  - name: flowName
+    type: string
+    required: true
+    description: "Name of the flow (used as Rust function name)"
+  - name: instructions
+    type: string[]
+    required: true
+    description: "Ordered list of instruction names to execute in this flow"
+  - name: weight
+    type: u32
+    required: false
+    description: "Probability weight for this flow (default: 1, higher = more frequent)"
+  - name: precondition
+    type: string
+    required: false
+    description: "Optional state precondition that must be true before running this flow"
+  - name: postcondition
+    type: string
+    required: false
+    description: "Optional state assertion checked after running this flow"
+relationships:
+  - type: references
+    target: Instruction
+    cardinality: "many:1"
+    description: "Instructions executed in this flow"
+  - type: references
+    target: FuzzStrategy
+    cardinality: "many:1"
+    description: "The strategy this flow belongs to"
+constraints:
+  - name: at-least-one-instruction
+    expression: "instructions.length >= 1"
+    description: "A flow must contain at least one instruction"
+  - name: valid-flow-name
+    expression: "flowName matches ^[a-z][a-zA-Z0-9]*$"
+    description: "Flow name must be a valid Rust identifier"
+links:
+  docs:
+    - "https://ackee.xyz/trident/docs/latest/trident-examples/trident-examples/"

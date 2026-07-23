@@ -30,7 +30,7 @@
     "category": {
       "type": "string",
       "description": "Concept cluster category",
-      "enum": ["primitive", "token", "defi", "governance", "infrastructure", "delivery", "security"]
+      "enum": ["primitive", "token", "defi", "governance", "infrastructure", "delivery", "security", "fuzzing"]
     },
     "version": {
       "type": "string",

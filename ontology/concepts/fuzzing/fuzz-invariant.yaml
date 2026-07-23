@@ -1,0 +1,48 @@
+canonicalName: FuzzInvariant
+aliases:
+  - fuzz-property
+  - state-invariant
+purpose: "Defines a property that must hold true after every fuzz transaction, enabling detection of invalid state transitions"
+category: fuzzing
+version: 1.0.0
+owner: security-team
+properties:
+  - name: invariantName
+    type: string
+    required: true
+    description: "Name of the invariant (used as Rust function name)"
+  - name: description
+    type: string
+    required: true
+    description: "Human-readable description of what the invariant checks"
+  - name: accountStates
+    type: string[]
+    required: true
+    description: "Account canonical names whose state must be compared"
+  - name: checkExpression
+    type: string
+    required: true
+    description: "Rust expression that evaluates to true if invariant holds"
+  - name: severity
+    type: string
+    required: true
+    description: "Severity level if invariant is violated (low, medium, high, critical)"
+relationships:
+  - type: references
+    target: Account
+    cardinality: "many:1"
+    description: "Accounts whose state is checked"
+  - type: references
+    target: FuzzStrategy
+    cardinality: "many:1"
+    description: "The strategy this invariant belongs to"
+constraints:
+  - name: valid-invariant-name
+    expression: "invariantName matches ^[a-z][a-zA-Z0-9]*$"
+    description: "Invariant name must be a valid Rust identifier"
+  - name: valid-severity
+    expression: "severity in [low, medium, high, critical]"
+    description: "Severity must be one of: low, medium, high, critical"
+links:
+  docs:
+    - "https://ackee.xyz/trident/docs/latest/trident-api-macro/"

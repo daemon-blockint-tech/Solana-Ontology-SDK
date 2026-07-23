@@ -44,7 +44,7 @@ packages/
 | `@solana-ontology/cli`              | CLI: validate, generate, list, graph, idl                                | ✅    |
 | `@solana-ontology/deploy`           | Helm chart + K8s configs (devnet/testnet/mainnet)                        | —     |
 
-**Total: 136 tests passing across 12 test suites.**
+**Total: 146 tests passing across 13 test suites.**
 
 ## Concept Categories
 
@@ -57,6 +57,7 @@ packages/
 | **infrastructure** | Cluster, Slot, Epoch, Validator                                                     |
 | **delivery**       | ProgramRelease, ReleaseChannel, Environment, UpgradeAuthority, DeploymentConstraint |
 | **security**       | MissingSignerCheck, AccountSubstitution, MissingOwnerCheck, SplTokenConfusion, PdaSeedMismatch, IntegerOverflow, ArbitraryCpiInvocation |
+| **fuzzing**        | FuzzStrategy, FuzzFlow, FuzzInvariant                                                                       |
 
 ## Quick Start
 
@@ -270,6 +271,51 @@ import { generateGuardCode } from "@solana-ontology/generator-ts";
 
 const guard = generateGuardCode(concept);
 // → Rust code checking is_signer, account owner, transition preconditions
+```
+
+## Fuzzing with Trident
+
+Integration with [Trident](https://github.com/Ackee-Blockchain/trident) — a Rust-based, manually-guided fuzzing framework for Solana programs (12,000 tx/s, stateful fuzzing, SVM execution).
+
+### Fuzzing Concepts
+
+Three ontology concepts define fuzz campaigns:
+
+| Concept | Purpose |
+|---------|---------|
+| `FuzzStrategy` | Target program, instruction list, iteration count, flow weights |
+| `FuzzFlow` | Ordered instruction sequences with preconditions and postconditions |
+| `FuzzInvariant` | State properties checked after every transaction (derived from constraints) |
+
+### Generate Trident Fuzz Tests
+
+Auto-generate Rust fuzz test files (`#[init]`, `#[flow]`, `#[invariant]`) from any concept with a stateMachine:
+
+```typescript
+import { generateAllTridentFuzzTests, generateTridentConfig } from "@solana-ontology/generator-ts";
+import { loadConcepts } from "@solana-ontology/core";
+
+const concepts = loadConcepts("./ontology/concepts", "./ontology");
+
+// Generate .rs fuzz test files for all concepts with stateMachine
+const fuzzTests = generateAllTridentFuzzTests(concepts);
+// → { filename: "vault_fuzz.rs", content: "#[init] fn start() ..." }
+
+// Generate Trident.toml config
+const config = generateTridentConfig(concepts.find(c => c.canonicalName === "Vault")!);
+```
+
+Each generated fuzz test includes:
+- `#[init]` — setup function with initial instruction execution
+- `#[flow]` per state transition — randomized instruction execution with signer randomization
+- `#[invariant]` per constraint — state property checks after every transaction
+- Transaction builder structs with TODO comments for fuzzed input generation
+
+### Run with Trident CLI
+
+```bash
+cargo install trident-cli
+trident fuzz run vault_fuzz
 ```
 
 ## Testing

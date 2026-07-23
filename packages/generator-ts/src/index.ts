@@ -33,3 +33,11 @@ export {
   generatePoCTestScaffold,
   generateAllPoCTestScaffolds,
 } from "./security-gen.js";
+
+export {
+  generateTridentFuzzTest,
+  generateAllTridentFuzzTests,
+  generateTridentConfig,
+  extractFuzzConcepts,
+  type FuzzConcepts,
+} from "./fuzz-gen.js";

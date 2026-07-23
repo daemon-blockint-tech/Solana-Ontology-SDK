@@ -14,7 +14,7 @@ const CONCEPTS_DIR = join(ONTOLOGY_ROOT, "concepts");
 describe("loader", () => {
   it("should load all concept YAML files", () => {
     const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
-    expect(concepts.length).toBe(45);
+    expect(concepts.length).toBe(48);
   });
 
   it("should set _sourceFile on each concept", () => {
@@ -104,7 +104,7 @@ describe("graph", () => {
   it("should build a graph with all concepts as nodes", () => {
     const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
     const graph = buildGraph(concepts);
-    expect(graph.nodes.size).toBe(45);
+    expect(graph.nodes.size).toBe(48);
   });
 
   it("should detect orphans (concepts not referenced by others)", () => {
@@ -118,7 +118,7 @@ describe("graph", () => {
     const graph = buildGraph(concepts);
     expect(graph.components.length).toBeGreaterThan(0);
     const totalNodes = graph.components.reduce((sum, c) => sum + c.length, 0);
-    expect(totalNodes).toBe(45);
+    expect(totalNodes).toBe(48);
   });
 
   it("should find dependencies for Account", () => {

@@ -1,5 +1,5 @@
 export type ConceptCategory =
-  "primitive" | "token" | "defi" | "governance" | "infrastructure" | "delivery" | "security";
+  "primitive" | "token" | "defi" | "governance" | "infrastructure" | "delivery" | "security" | "fuzzing";
 
 export type RelationshipType =
   | "ownedBy"

@@ -1,0 +1,53 @@
+canonicalName: FuzzStrategy
+aliases:
+  - fuzz-config
+  - fuzzing-strategy
+purpose: "Defines a fuzzing strategy for a Solana program, including instruction selection, input generation, and invariant checking"
+category: fuzzing
+version: 1.0.0
+owner: security-team
+properties:
+  - name: targetProgram
+    type: string
+    required: true
+    description: "Canonical name of the program concept to fuzz"
+  - name: instructions
+    type: string[]
+    required: true
+    description: "List of instruction names to include in the fuzz campaign"
+  - name: maxIterations
+    type: u64
+    required: false
+    description: "Maximum number of fuzz iterations (default: 100000)"
+  - name: maxTxPerFlow
+    type: u32
+    required: false
+    description: "Maximum transactions per flow sequence (default: 10)"
+  - name: seedAccounts
+    type: string[]
+    required: false
+    description: "Account names to initialize before fuzzing"
+relationships:
+  - type: references
+    target: Program
+    cardinality: "1:1"
+    description: "The program being fuzzed"
+  - type: contains
+    target: FuzzFlow
+    cardinality: "1:many"
+    description: "Flow sequences that define instruction ordering"
+  - type: contains
+    target: FuzzInvariant
+    cardinality: "1:many"
+    description: "Invariants that must hold after every transaction"
+constraints:
+  - name: at-least-one-instruction
+    expression: "instructions.length >= 1"
+    description: "Must specify at least one instruction to fuzz"
+  - name: at-least-one-invariant
+    expression: "invariants.length >= 1"
+    description: "Must define at least one invariant to check"
+links:
+  docs:
+    - "https://ackee.xyz/trident/docs/latest/"
+    - "https://github.com/Ackee-Blockchain/trident"
