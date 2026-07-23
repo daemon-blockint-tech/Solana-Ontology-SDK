@@ -13,16 +13,10 @@ export interface PdaResult {
  * @param programId Program ID as base58 string
  * @param seeds Array of seed byte arrays
  */
-export async function derivePdaWeb3(
-  programId: string,
-  seeds: Uint8Array[],
-): Promise<PdaResult> {
+export async function derivePdaWeb3(programId: string, seeds: Uint8Array[]): Promise<PdaResult> {
   const { PublicKey } = await import("@solana/web3.js");
   const pkSeeds = seeds.map((s) => Buffer.from(s));
-  const [address, bump] = await PublicKey.findProgramAddress(
-    pkSeeds,
-    new PublicKey(programId),
-  );
+  const [address, bump] = await PublicKey.findProgramAddress(pkSeeds, new PublicKey(programId));
   return { address: address.toBase58(), bump };
 }
 
@@ -31,34 +25,19 @@ export async function derivePdaWeb3(
  * @param programId Program ID as base58 string
  * @param seeds Array of seed byte arrays
  */
-export async function derivePdaKit(
-  programId: string,
-  seeds: Uint8Array[],
-): Promise<PdaResult> {
+export async function derivePdaKit(programId: string, seeds: Uint8Array[]): Promise<PdaResult> {
   try {
     const kit = await import("@solana/kit");
-    const {
-      getProgramDerivedAddress,
-      address,
-    } = kit;
+    const { getProgramDerivedAddress, address } = kit;
 
-    const seedBytes = seeds.map((s) => ({
-      bytes: s as unknown as Uint8Array,
-    }));
+    const [pdaAddress, bump] = await getProgramDerivedAddress({
+      programAddress: address(programId),
+      seeds,
+    });
 
-    const result = await getProgramDerivedAddress(
-      seedBytes,
-      address(programId),
-    );
-
-    return {
-      address: result.pda as string,
-      bump: result.bump as number,
-    };
+    return { address: pdaAddress as string, bump };
   } catch {
-    throw new Error(
-      "Failed to derive PDA with @solana/kit. Ensure it is installed.",
-    );
+    throw new Error("Failed to derive PDA with @solana/kit. Ensure it is installed.");
   }
 }
 
@@ -66,10 +45,7 @@ export async function derivePdaKit(
  * Derive a PDA using whichever SDK is available.
  * Tries Kit first, falls back to web3.js.
  */
-export async function derivePda(
-  programId: string,
-  seeds: Uint8Array[],
-): Promise<PdaResult> {
+export async function derivePda(programId: string, seeds: Uint8Array[]): Promise<PdaResult> {
   try {
     return await derivePdaKit(programId, seeds);
   } catch {

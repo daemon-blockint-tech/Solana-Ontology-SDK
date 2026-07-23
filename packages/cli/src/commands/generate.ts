@@ -3,11 +3,7 @@ import { generateAll } from "@solana-ontology/generator-ts";
 import { generateAllRust } from "@solana-ontology/generator-rust";
 import type { CliConfig } from "../config.js";
 
-export function generateCommand(
-  lang: string,
-  config: CliConfig,
-  outputDir?: string,
-): void {
+export function generateCommand(lang: string, config: CliConfig, outputDir?: string): void {
   const concepts = loadConcepts(config.conceptsDir, config.ontologyRoot);
   console.log(`Loaded ${concepts.length} concepts`);
 

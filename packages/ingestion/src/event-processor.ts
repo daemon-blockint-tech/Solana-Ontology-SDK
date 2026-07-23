@@ -66,7 +66,11 @@ export class EventProcessor {
     };
 
     for (const cb of this.decodedCallbacks) {
-      try { cb(result); } catch { /* ignore callback errors */ }
+      try {
+        cb(result);
+      } catch {
+        /* ignore callback errors */
+      }
     }
 
     return result;

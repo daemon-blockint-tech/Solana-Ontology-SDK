@@ -176,7 +176,9 @@ export function generateClientFiles(
       "export * from './Client.js';",
       config.generateQueries ? "export * from './Queries.js';" : "",
       config.generateReact ? "export * from './Hooks.js';" : "",
-    ].filter(Boolean).join("\n"),
+    ]
+      .filter(Boolean)
+      .join("\n"),
   });
 
   return files;

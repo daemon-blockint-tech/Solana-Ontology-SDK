@@ -6,3 +6,10 @@ src/generated/
 coverage/
 *.log
 .DS_Store
+.env
+.env.*
+.env.local
+.vscode/
+.idea/
+*.swp
+*.swo

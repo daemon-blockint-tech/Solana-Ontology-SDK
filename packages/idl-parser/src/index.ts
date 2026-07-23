@@ -15,11 +15,7 @@ export type {
 
 export { isIdlV0, isIdlV1 } from "./types.js";
 
-export {
-  convertCamelToSnake,
-  calculateDiscriminator,
-  migrateIdlV0ToV1,
-} from "./codemod.js";
+export { convertCamelToSnake, calculateDiscriminator, migrateIdlV0ToV1 } from "./codemod.js";
 
 export {
   mapIdlTypeToOntology,

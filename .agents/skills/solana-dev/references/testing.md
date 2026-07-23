@@ -71,23 +71,23 @@ npm i @solana/kit @solana-program/system
 ```
 
 ```typescript
-import { createClient, lamports } from '@solana/kit';
-import { litesvm } from '@solana/kit-plugin-litesvm';
-import { airdropSigner, generatedSigner } from '@solana/kit-plugin-signer';
-import { getTransferSolInstruction } from '@solana-program/system';
+import { createClient, lamports } from "@solana/kit";
+import { litesvm } from "@solana/kit-plugin-litesvm";
+import { airdropSigner, generatedSigner } from "@solana/kit-plugin-signer";
+import { getTransferSolInstruction } from "@solana-program/system";
 
 const client = await createClient()
-    .use(generatedSigner())      // async — await the final client
-    .use(litesvm())
-    .use(airdropSigner(lamports(1_000_000_000n)));
+  .use(generatedSigner()) // async — await the final client
+  .use(litesvm())
+  .use(airdropSigner(lamports(1_000_000_000n)));
 
 // Direct access to the underlying LiteSVM instance
-client.svm.addProgramFromFile(programId, 'target/deploy/program.so');
+client.svm.addProgramFromFile(programId, "target/deploy/program.so");
 
 const ix = getTransferSolInstruction({
-    source: client.payer,
-    destination: recipient,
-    amount: lamports(1_000n),
+  source: client.payer,
+  destination: recipient,
+  amount: lamports(1_000n),
 });
 await client.sendTransaction([ix]);
 ```
@@ -231,119 +231,120 @@ npm i @solana/kit @solana/kit-plugin-rpc @solana/kit-plugin-signer @solana-progr
 ```
 
 ```typescript
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { Surfnet } from '@solana/surfpool';
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { Surfnet } from "@solana/surfpool";
 import {
-    address,
-    appendTransactionMessageInstruction,
-    createClient,
-    createTransactionMessage,
-    getBase64EncodedWireTransaction,
-    lamports,
-    pipe,
-    setTransactionMessageFeePayerSigner,
-    setTransactionMessageLifetimeUsingBlockhash,
-    signTransactionMessageWithSigners,
-} from '@solana/kit';
-import { solanaRpc } from '@solana/kit-plugin-rpc';
-import { generatedSigner } from '@solana/kit-plugin-signer';
-import { getTransferSolInstruction } from '@solana-program/system';
+  address,
+  appendTransactionMessageInstruction,
+  createClient,
+  createTransactionMessage,
+  getBase64EncodedWireTransaction,
+  lamports,
+  pipe,
+  setTransactionMessageFeePayerSigner,
+  setTransactionMessageLifetimeUsingBlockhash,
+  signTransactionMessageWithSigners,
+} from "@solana/kit";
+import { solanaRpc } from "@solana/kit-plugin-rpc";
+import { generatedSigner } from "@solana/kit-plugin-signer";
+import { getTransferSolInstruction } from "@solana-program/system";
 
-const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
 // Minimal cheatcode helper — plain JSON-RPC over fetch
 async function cheatcode(rpcUrl: string, method: string, params: unknown[]) {
-    const res = await fetch(rpcUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
-    });
-    const { result, error } = await res.json();
-    if (error) throw new Error(`${method}: ${error.message}`);
-    return result;
+  const res = await fetch(rpcUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+  });
+  const { result, error } = await res.json();
+  if (error) throw new Error(`${method}: ${error.message}`);
+  return result;
 }
 
 const makeClient = (rpcUrl: string) =>
-    createClient()
-        .use(generatedSigner())              // async — await the final client
-        .use(solanaRpc({ rpcUrl }));
+  createClient()
+    .use(generatedSigner()) // async — await the final client
+    .use(solanaRpc({ rpcUrl }));
 
 let surfnet: Surfnet;
 let client: Awaited<ReturnType<typeof makeClient>>;
 
 beforeAll(async () => {
-    surfnet = Surfnet.start();               // in-process surfnet, dynamic port
-    client = await makeClient(surfnet.rpcUrl);
+  surfnet = Surfnet.start(); // in-process surfnet, dynamic port
+  client = await makeClient(surfnet.rpcUrl);
 
-    // Fund the test signer via cheatcode (no faucet round-trip)
-    await cheatcode(surfnet.rpcUrl, 'surfnet_setAccount', [
-        client.payer.address,
-        { lamports: 10_000_000_000 },
-    ]);
+  // Fund the test signer via cheatcode (no faucet round-trip)
+  await cheatcode(surfnet.rpcUrl, "surfnet_setAccount", [
+    client.payer.address,
+    { lamports: 10_000_000_000 },
+  ]);
 });
 
-afterAll(() => surfnet.stop());              // idempotent graceful shutdown
+afterAll(() => surfnet.stop()); // idempotent graceful shutdown
 
-describe('deposit flow', () => {
-    it('credits USDC set up via cheatcode', async () => {
-        // Give the signer a 1,000 USDC ATA without minting
-        await cheatcode(surfnet.rpcUrl, 'surfnet_setTokenAccount', [
-            client.payer.address,
-            USDC_MINT,
-            { amount: 1_000_000_000 },
-        ]);
+describe("deposit flow", () => {
+  it("credits USDC set up via cheatcode", async () => {
+    // Give the signer a 1,000 USDC ATA without minting
+    await cheatcode(surfnet.rpcUrl, "surfnet_setTokenAccount", [
+      client.payer.address,
+      USDC_MINT,
+      { amount: 1_000_000_000 },
+    ]);
 
-        const balance = await client.rpc
-            .getBalance(client.payer.address)
-            .send();
-        expect(balance.value).toBeGreaterThan(0n);
+    const balance = await client.rpc.getBalance(client.payer.address).send();
+    expect(balance.value).toBeGreaterThan(0n);
 
-        // Exercise the program under test
-        const ix = getTransferSolInstruction({
-            source: client.payer,
-            destination: address('11111111111111111111111111111111'),
-            amount: lamports(1_000n),
-        });
-        await client.sendTransaction([ix]);
+    // Exercise the program under test
+    const ix = getTransferSolInstruction({
+      source: client.payer,
+      destination: address("11111111111111111111111111111111"),
+      amount: lamports(1_000n),
     });
+    await client.sendTransaction([ix]);
+  });
 
-    it('handles time-dependent logic via timeTravel', async () => {
-        // Jump 30 days ahead; returns the resulting EpochInfo
-        const epochInfo = await cheatcode(surfnet.rpcUrl, 'surfnet_timeTravel', [
-            { absoluteTimestamp: Math.floor(Date.now() / 1000) + 30 * 86_400 },
-        ]);
-        expect(epochInfo.absoluteSlot).toBeGreaterThan(0);
-        // Assert unlock/vesting/expiry behavior here
+  it("handles time-dependent logic via timeTravel", async () => {
+    // Jump 30 days ahead; returns the resulting EpochInfo
+    const epochInfo = await cheatcode(surfnet.rpcUrl, "surfnet_timeTravel", [
+      { absoluteTimestamp: Math.floor(Date.now() / 1000) + 30 * 86_400 },
+    ]);
+    expect(epochInfo.absoluteSlot).toBeGreaterThan(0);
+    // Assert unlock/vesting/expiry behavior here
+  });
+
+  it("stays under the CU budget", async () => {
+    // Build + sign the transaction under test, then encode it to
+    // base64 wire format for profiling
+    const ix = getTransferSolInstruction({
+      source: client.payer,
+      destination: address("11111111111111111111111111111111"),
+      amount: lamports(1_000n),
     });
+    const { value: blockhash } = await client.rpc.getLatestBlockhash().send();
+    const signedTx = await signTransactionMessageWithSigners(
+      pipe(
+        createTransactionMessage({ version: 0 }),
+        (m) => setTransactionMessageFeePayerSigner(client.payer, m),
+        (m) => setTransactionMessageLifetimeUsingBlockhash(blockhash, m),
+        (m) => appendTransactionMessageInstruction(ix, m),
+      ),
+    );
+    const base64VersionedTx = getBase64EncodedWireTransaction(signedTx);
 
-    it('stays under the CU budget', async () => {
-        // Build + sign the transaction under test, then encode it to
-        // base64 wire format for profiling
-        const ix = getTransferSolInstruction({
-            source: client.payer,
-            destination: address('11111111111111111111111111111111'),
-            amount: lamports(1_000n),
-        });
-        const { value: blockhash } = await client.rpc.getLatestBlockhash().send();
-        const signedTx = await signTransactionMessageWithSigners(pipe(
-            createTransactionMessage({ version: 0 }),
-            m => setTransactionMessageFeePayerSigner(client.payer, m),
-            m => setTransactionMessageLifetimeUsingBlockhash(blockhash, m),
-            m => appendTransactionMessageInstruction(ix, m),
-        ));
-        const base64VersionedTx = getBase64EncodedWireTransaction(signedTx);
-
-        // Simulates WITHOUT committing state; returns CU + pre/post snapshots
-        const profile = await cheatcode(surfnet.rpcUrl, 'surfnet_profileTransaction', [
-            base64VersionedTx, // base64-encoded VersionedTransaction
-            'deposit',         // optional tag for surfnet_getProfileResultsByTag
-        ]);
-        expect(profile.computeUnitsConsumed).toBeLessThan(200_000);
-    });
+    // Simulates WITHOUT committing state; returns CU + pre/post snapshots
+    const profile = await cheatcode(surfnet.rpcUrl, "surfnet_profileTransaction", [
+      base64VersionedTx, // base64-encoded VersionedTransaction
+      "deposit", // optional tag for surfnet_getProfileResultsByTag
+    ]);
+    expect(profile.computeUnitsConsumed).toBeLessThan(200_000);
+  });
 });
 ```
 
 Notes:
+
 - `Surfnet.start()` returns a pre-funded payer and cheatcode helpers on the instance as well; the raw `fetch` helper above works identically against a CLI-spawned surfnet.
 - `surfnet.stop()` is idempotent — always wire it into `afterAll` so failed runs don't leak processes.
 - npm package `@solana/surfpool` ships native binaries (napi-rs) for macOS x64/arm64 and Linux x64 GNU.
@@ -372,7 +373,7 @@ NO_DNA=1 surfpool start --rpc-url https://my-rpc-provider.com
 - **Live accounts**: `surfnet_streamAccount` re-fetches an account from the remote on every access (pass `{"includeOwnedAccounts": true}` to cascade); `surfnet_streamAccounts` registers several at once; `surfnet_offlineAccount` pins an account so it is never re-fetched.
 - **Oracle/protocol scenarios**: `surfnet_registerScenario` schedules account overrides on a slot timeline using built-in templates (Pyth, Switchboard, Raydium, Kamino, Drift, ...). Example: set BTC/USD to $67,500 with template `pyth_btcusd` and values `{"price_message.price_value": 67500}`. Use `fetchBeforeUse` on an override to refresh from the live feed before applying deltas.
 - **Snapshots**: `surfnet_exportSnapshot` (with sysvar/feature-gate filters since v1.4.0) captures forked state to JSON; reload deterministically with `surfpool start --snapshot ./snap.json`.
-- **Snapshot → offline unit-test fixtures**: with `{"scope": {"preTransaction": "<signature>"}}`, `surfnet_exportSnapshot` returns the state of every account a transaction touched *as it was before execution*. Run the flow once against a fork, export the pre-state, and load those accounts into LiteSVM/Mollusk to replay the instruction as a deterministic, offline unit test — see [surfpool/cheatcodes.md](surfpool/cheatcodes.md#surfnet_exportsnapshot).
+- **Snapshot → offline unit-test fixtures**: with `{"scope": {"preTransaction": "<signature>"}}`, `surfnet_exportSnapshot` returns the state of every account a transaction touched _as it was before execution_. Run the flow once against a fork, export the pre-state, and load those accounts into LiteSVM/Mollusk to replay the instruction as a deterministic, offline unit test — see [surfpool/cheatcodes.md](surfpool/cheatcodes.md#surfnet_exportsnapshot).
 
 ### Anchor Projects
 
@@ -415,16 +416,16 @@ Run surfpool-backed suites serially. The solana-foundation/pay-kit pattern uses 
 
 ```typescript
 // vitest.config.surfpool.ts
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-    test: {
-        include: ['tests/integration/**/*.test.ts'],
-        fileParallelism: false,
-        maxWorkers: 1,
-        testTimeout: 60_000,
-        hookTimeout: 60_000,
-    },
+  test: {
+    include: ["tests/integration/**/*.test.ts"],
+    fileParallelism: false,
+    maxWorkers: 1,
+    testTimeout: 60_000,
+    hookTimeout: 60_000,
+  },
 });
 ```
 

@@ -17,9 +17,10 @@ IDL housekeeping and the program code upgrade are **independent tracks** that ca
 
 ### Before deploying v1 (old program still live)
 
-A1. **Re-publish IDL to the new v1 location** *(v1 CLI)* — `anchor idl init` / `anchor idl upgrade`, or use `program-metadata` CLI directly (see §5).
+A1. **Re-publish IDL to the new v1 location** _(v1 CLI)_ — `anchor idl init` / `anchor idl upgrade`, or use `program-metadata` CLI directly (see §5).
 A2. **Update and publish clients** — update any clients that fetch the on-chain IDL to read from the new v1 location, then deploy them.
-A3. **Close legacy IDL accounts** *(v0.32 CLI)* on every cluster (see §5). Deploying the v1 binary or upgrading the CLI first makes this impossible.
+A3. **Close legacy IDL accounts** _(v0.32 CLI)_ on every cluster (see §5). Deploying the v1 binary or upgrading the CLI first makes this impossible.
+
 > **Client notice:** for minimal downtime, follow this order — new IDL first, then clients, then close legacy accounts. Clients depending on the old location will continue to work until A3.
 
 ### Program code upgrade (requires v1 CLI)
@@ -48,6 +49,7 @@ rustc --version    # must support edition 2021; 1.75+ recommended
 **Update AVM and Anchor CLI:**
 
 If your current `avm` supports `self-update`:
+
 ```bash
 avm self-update
 avm install 1.0.0
@@ -55,6 +57,7 @@ avm use 1.0.0
 ```
 
 Otherwise bootstrap via `cargo`:
+
 ```bash
 cargo install avm --git https://github.com/solana-foundation/anchor --tag v1.0.0 --locked
 avm install 1.0.0
@@ -62,11 +65,13 @@ avm use 1.0.0
 ```
 
 **Without AVM** — install `anchor-cli` directly:
+
 ```bash
 cargo install --git https://github.com/solana-foundation/anchor --tag v1.0.0 anchor-cli --locked
 ```
 
 **Update Solana CLI** (if below 3.x):
+
 ```bash
 sh -c "$(curl -sSfL https://release.anza.xyz/v3.1.10/install)"
 solana --version   # confirm 3.1.10
@@ -101,6 +106,7 @@ resolver = "2"          # required for edition 2021 members
 ```
 
 Without `resolver = "2"`, Cargo uses the v1 feature resolver, which unifies features across all targets. This causes spurious dependency conflicts and unexpected feature activation when mixing Solana/Anchor crates — manifesting as duplicate type errors or missing trait implementations that disappear once the resolver is set correctly. Any workspace containing at least one `edition = "2021"` crate should have this set.
+
 - The `cargo update` workarounds for 0.32 (`base64ct --precise 1.6.0`, `constant_time_eq --precise 0.4.1`, `blake3 --precise 1.5.5`) are no longer needed — remove them.
 - If you transitively depended on `solana-sdk` for signing, use `solana-signer` directly.
 
@@ -110,11 +116,11 @@ See [compatibility-matrix.md](../compatibility-matrix.md) for the full Anchor v1
 
 When you bump `solana-*` crates to `^3`, also bump `litesvm` in `[dev-dependencies]`. The correct version depends on which minor series of the granular `solana-*` crates your workspace resolves to:
 
-| litesvm | Solana granular crates era | Key markers |
-|---------|---------------------------|-------------|
-| `0.8.2` | `~3.0` | `solana-hash ~3.0`, `solana-vote-interface 4.0`, `solana-system-interface 2.0` |
-| `0.9.1` | `~3.1`–`~3.3` | `solana-hash 4.0`, `solana-vote-interface 5.0`, `solana-system-interface 3.0` |
-| `>0.10.0` | `3.3+` | follow latest releases when on cutting-edge solana-* deps |
+| litesvm   | Solana granular crates era | Key markers                                                                    |
+| --------- | -------------------------- | ------------------------------------------------------------------------------ |
+| `0.8.2`   | `~3.0`                     | `solana-hash ~3.0`, `solana-vote-interface 4.0`, `solana-system-interface 2.0` |
+| `0.9.1`   | `~3.1`–`~3.3`              | `solana-hash 4.0`, `solana-vote-interface 5.0`, `solana-system-interface 3.0`  |
+| `>0.10.0` | `3.3+`                     | follow latest releases when on cutting-edge solana-* deps                      |
 
 ```toml
 # [dev-dependencies] — pick the row that matches your solana-* versions
@@ -129,13 +135,13 @@ anchor-litesvm = "0.3"   # requires anchor-lang ^1.0.0 and litesvm ^0.8.2
 
 **`package.json` [TS] — full package rename table:**
 
-| Before (`@coral-xyz/…`) | After (`@anchor-lang/…`) |
-|-------------------------|--------------------------|
-| `@coral-xyz/anchor` | `@anchor-lang/core` |
-| `@coral-xyz/spl-token` | `@anchor-lang/spl-token` |
-| `@coral-xyz/anchor-errors` | `@anchor-lang/errors` |
-| `@coral-xyz/borsh` | `@anchor-lang/borsh` |
-| `@coral-xyz/anchor-cli` | `@anchor-lang/cli` |
+| Before (`@coral-xyz/…`)    | After (`@anchor-lang/…`) |
+| -------------------------- | ------------------------ |
+| `@coral-xyz/anchor`        | `@anchor-lang/core`      |
+| `@coral-xyz/spl-token`     | `@anchor-lang/spl-token` |
+| `@coral-xyz/anchor-errors` | `@anchor-lang/errors`    |
+| `@coral-xyz/borsh`         | `@anchor-lang/borsh`     |
+| `@coral-xyz/anchor-cli`    | `@anchor-lang/cli`       |
 
 ```json
 // Before
@@ -155,15 +161,16 @@ anchor-litesvm = "0.3"   # requires anchor-lang ^1.0.0 and litesvm ^0.8.2
 // Before
 import * as anchor from "@coral-xyz/anchor";
 import { Program, AnchorProvider, BN } from "@coral-xyz/anchor";
-import { Idl } from "@coral-xyz/anchor/dist/cjs/idl";  // deep import
+import { Idl } from "@coral-xyz/anchor/dist/cjs/idl"; // deep import
 
 // After
 import * as anchor from "@anchor-lang/core";
 import { Program, AnchorProvider, BN } from "@anchor-lang/core";
-import { Idl } from "@anchor-lang/core";  // IDL types live at root now
+import { Idl } from "@anchor-lang/core"; // IDL types live at root now
 ```
 
 Find all occurrences:
+
 ```bash
 grep -r "@coral-xyz" --include="*.ts" --include="*.js" --include="package.json" .
 grep -r "dist/cjs/idl" --include="*.ts" --include="*.js" .
@@ -238,6 +245,7 @@ error: duplicate mutable account `vault` — use `dup` constraint if intentional
 ```
 
 **Option A — prevent aliasing with a constraint (accidental duplication):**
+
 ```rust
 #[account(
     mut,
@@ -247,6 +255,7 @@ pub token_b: Account<'info, TokenAccount>,
 ```
 
 **Option B — allow intentional duplication:**
+
 ```rust
 #[account(mut, dup)]
 pub destination: Account<'info, TokenAccount>,
@@ -259,6 +268,7 @@ Checked types: `Account`, `LazyAccount`, `InterfaceAccount`, `Migration`. Read-o
 ## 4. Update `declare_program!` usages [COMPILE]
 
 **Rename `utils` module to `parsers`:**
+
 ```rust
 // Before
 use my_external_program::utils::*;
@@ -318,12 +328,14 @@ anchor idl close --provider.cluster mainnet-beta <PROGRAM_ID>
 Two options — pick one:
 
 **Option A: Anchor CLI** (resolved from workspace, no program ID needed):
+
 ```bash
 anchor idl init --filepath target/idl/my_program.json      # first publish
 anchor idl upgrade --filepath target/idl/my_program.json   # subsequent updates
 ```
 
 **Option B: `program-metadata` CLI** (usable immediately after closing, independent of the Anchor CLI and deploy cycle):
+
 ```bash
 npm install -g @solana-program/program-metadata
 program-metadata upload idl target/idl/my_program.json --program-id <PROGRAM_ID>
@@ -339,10 +351,10 @@ Option B is useful when you want to push an updated IDL without going through a 
 
 Using raw `AccountInfo<'info>` in `#[derive(Accounts)]` now emits a compile-time warning. These are warnings, not errors — migration can be incremental.
 
-| Old | New |
-|-----|-----|
-| `AccountInfo<'info>` (unknown data) | `UncheckedAccount<'info>` + `/// CHECK:` comment |
-| `AccountInfo<'info>` (token account) | `InterfaceAccount<'info, TokenAccount>` |
+| Old                                       | New                                                  |
+| ----------------------------------------- | ---------------------------------------------------- |
+| `AccountInfo<'info>` (unknown data)       | `UncheckedAccount<'info>` + `/// CHECK:` comment     |
+| `AccountInfo<'info>` (token account)      | `InterfaceAccount<'info, TokenAccount>`              |
 | `AccountInfo<'info>` (executable program) | `Program<'info, MyProgram>` or `Interface<'info, T>` |
 
 ### `UncheckedAccount::clone()` vs `.to_account_info()`
@@ -446,11 +458,13 @@ datasource_rpc_url = "https://api.mainnet-beta.solana.com"  # optional fork
 ```
 
 Add to `.gitignore`:
+
 ```
 .surfpool/
 ```
 
 CI — surfpool must be installed explicitly:
+
 ```yaml
 - name: Install surfpool
   run: curl -sL https://run.surfpool.run/ | bash
@@ -462,13 +476,13 @@ CI — surfpool must be installed explicitly:
 
 Anchor no longer shells out to `solana`. Update CI pipelines and scripts.
 
-| Before | After |
-|--------|-------|
-| `solana address` | `anchor address` |
-| `solana balance` | `anchor balance` |
-| `solana airdrop` | `anchor airdrop` |
-| `solana program deploy` | `anchor deploy` |
-| `solana logs` | `anchor logs` |
+| Before                  | After            |
+| ----------------------- | ---------------- |
+| `solana address`        | `anchor address` |
+| `solana balance`        | `anchor balance` |
+| `solana airdrop`        | `anchor airdrop` |
+| `solana program deploy` | `anchor deploy`  |
+| `solana logs`           | `anchor logs`    |
 
 Keep the `solana` CLI install step only if you use it directly (keypair generation, cluster switching, etc.).
 
@@ -477,6 +491,7 @@ Keep the `solana` CLI install step only if you use it directly (keypair generati
 ## 11. Clean up `Anchor.toml` and removed CLI commands [CLI]
 
 **Remove `[registry]` from `Anchor.toml`:**
+
 ```toml
 # Before — remove this entire section
 [registry]
@@ -484,6 +499,7 @@ url = "https://anchor.projectserum.com"
 ```
 
 **Remove `arch` build options from `Anchor.toml`** (if present — `arch = "sbf"` etc. are no longer recognised):
+
 ```bash
 grep -n "arch" Anchor.toml
 ```
@@ -595,7 +611,7 @@ pub enum MyType {
 }
 ```
 
-If discriminant values *don't* match ordinal order (e.g., `Foo = 5, Bar = 10`) you must implement borsh serialization manually instead of relying on the derive macro.
+If discriminant values _don't_ match ordinal order (e.g., `Foo = 5, Bar = 10`) you must implement borsh serialization manually instead of relying on the derive macro.
 
 ```bash
 grep -rn " = [0-9]" --include="*.rs" programs/   # find enums with explicit discriminants
@@ -611,16 +627,16 @@ Anchor v1 uses **Solana SDK 3.x**, which has breaking API changes beyond just th
 
 In anchor v0.31, `anchor_lang::solana_program` re-exported the full `solana-program` crate. In v1 several sub-modules are no longer re-exported:
 
-| Module | Old import | New import |
-|--------|-----------|------------|
-| `keccak` | `anchor_lang::solana_program::keccak` | `solana_program::keccak` |
-| `hash` | `anchor_lang::solana_program::hash` | `solana_program::hash` |
-| `ed25519_program` | `anchor_lang::solana_program::ed25519_program` | `solana_program::ed25519_program` |
-| `sysvar::instructions` | `anchor_lang::solana_program::sysvar::instructions` | `solana_program::sysvar::instructions` |
+| Module                     | Old import                                              | New import                                 |
+| -------------------------- | ------------------------------------------------------- | ------------------------------------------ |
+| `keccak`                   | `anchor_lang::solana_program::keccak`                   | `solana_program::keccak`                   |
+| `hash`                     | `anchor_lang::solana_program::hash`                     | `solana_program::hash`                     |
+| `ed25519_program`          | `anchor_lang::solana_program::ed25519_program`          | `solana_program::ed25519_program`          |
+| `sysvar::instructions`     | `anchor_lang::solana_program::sysvar::instructions`     | `solana_program::sysvar::instructions`     |
 | `instruction::Instruction` | `anchor_lang::solana_program::instruction::Instruction` | `solana_program::instruction::Instruction` |
-| `program::invoke_signed` | `anchor_lang::solana_program::program::invoke_signed` | `solana_program::program::invoke_signed` |
+| `program::invoke_signed`   | `anchor_lang::solana_program::program::invoke_signed`   | `solana_program::program::invoke_signed`   |
 
-**`system_instruction` quirk:** `system_instruction` is *not* accessible as `solana_program::system_instruction` in SDK 3.x when you depend on `solana-program` directly — that sub-module was removed from the crate root. However, it is still re-exported by Anchor: `anchor_lang::solana_program::system_instruction` continues to work. Use that path rather than importing from `solana_program` directly.
+**`system_instruction` quirk:** `system_instruction` is _not_ accessible as `solana_program::system_instruction` in SDK 3.x when you depend on `solana-program` directly — that sub-module was removed from the crate root. However, it is still re-exported by Anchor: `anchor_lang::solana_program::system_instruction` continues to work. Use that path rather than importing from `solana_program` directly.
 
 ```rust
 // Fails in SDK 3.x with direct solana-program dep
@@ -708,6 +724,7 @@ CpiContext::new_with_signer(solana_program::system_program::ID, cpi_accounts, si
 Any external CPI crate compiled against **anchor 0.31** will produce dozens of trait-bound errors in your workspace because the `AccountDeserialize`, `AccountSerialize`, `Owner`, and `Id` traits changed in anchor v1. Common culprits: `bubblegum-cpi`, `account-compression-cpi`, `tuktuk-program`.
 
 **Symptoms:**
+
 ```
 error[E0277]: the trait bound `Noop: anchor_lang::Id` is not satisfied
 error[E0277]: the trait bound `SplAccountCompression: anchor_lang::Id` is not satisfied
@@ -762,6 +779,7 @@ error[E0308]: mismatched types
 ```
 
 This also affects any import path through these crates:
+
 ```rust
 use spl_token::solana_program::instruction::Instruction;   // wrong Instruction type
 use spl_token::ID;                                         // wrong Pubkey type

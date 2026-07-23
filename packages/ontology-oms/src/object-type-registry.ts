@@ -3,8 +3,8 @@
  */
 
 import type { Concept, ConceptProperty } from "@solana-ontology/core";
-import type { ObjectTypeDefinition, ObjectTypeProperty, PropertyType } from "../types.js";
-import type { OmsStorage } from "../storage/interface.js";
+import type { ObjectTypeDefinition, ObjectTypeProperty, PropertyType } from "./types.js";
+import type { OmsStorage } from "./storage/interface.js";
 
 /**
  * Map a Solana/ontology type to OMS property type.
@@ -68,9 +68,7 @@ export function conceptToObjectType(concept: Concept): ObjectTypeDefinition {
     properties,
     description: concept.purpose,
     sourceConcept: concept.canonicalName,
-    indexes: [
-      { name: "by_owner", properties: ["owner"], unique: false },
-    ],
+    indexes: [{ name: "by_owner", properties: ["owner"], unique: false }],
   };
 }
 

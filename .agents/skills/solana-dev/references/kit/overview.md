@@ -23,9 +23,9 @@ Minimum version: Solana Kit v7 (plugin packages 0.13+). Note: some `@solana-prog
 ### Local Development
 
 ```ts
-import { createClient } from '@solana/kit';
-import { solanaLocalRpc } from '@solana/kit-plugin-rpc';
-import { signerFromFile } from '@solana/kit-plugin-signer';
+import { createClient } from "@solana/kit";
+import { solanaLocalRpc } from "@solana/kit-plugin-rpc";
+import { signerFromFile } from "@solana/kit-plugin-signer";
 
 // `signerFromFile` sets BOTH payer and identity to the loaded keypair (the common case).
 // Other options:
@@ -33,19 +33,19 @@ import { signerFromFile } from '@solana/kit-plugin-signer';
 //   - `generatedSigner()` + `airdropSigner(lamports(n))` // fresh local/devnet signer, funded after RPC is installed
 //   - `payer(...)` + `identity(...)`        // when fees and authority come from different keypairs
 const client = await createClient()
-  .use(signerFromFile('~/.config/solana/id.json'))
+  .use(signerFromFile("~/.config/solana/id.json"))
   .use(solanaLocalRpc());
 
-console.log('Payer:', client.payer.address);
+console.log("Payer:", client.payer.address);
 await client.sendTransaction([myInstruction]);
 ```
 
 ### Production (Mainnet/Devnet)
 
 ```ts
-import { createClient } from '@solana/kit';
-import { solanaDevnetRpc, solanaMainnetRpc } from '@solana/kit-plugin-rpc';
-import { signer } from '@solana/kit-plugin-signer';
+import { createClient } from "@solana/kit";
+import { solanaDevnetRpc, solanaMainnetRpc } from "@solana/kit-plugin-rpc";
+import { signer } from "@solana/kit-plugin-signer";
 
 const client = createClient()
   .use(signer(mySigner)) // sets payer + identity; use payer(...) + identity(...) if they differ
@@ -59,16 +59,16 @@ await client.sendTransaction([myInstruction]);
 ### Testing with LiteSVM
 
 ```ts
-import { createClient, lamports } from '@solana/kit';
-import { litesvm } from '@solana/kit-plugin-litesvm';
-import { airdropSigner, generatedSigner } from '@solana/kit-plugin-signer';
+import { createClient, lamports } from "@solana/kit";
+import { litesvm } from "@solana/kit-plugin-litesvm";
+import { airdropSigner, generatedSigner } from "@solana/kit-plugin-signer";
 
 const client = await createClient()
   .use(generatedSigner())
   .use(litesvm())
   .use(airdropSigner(lamports(1_000_000_000n)));
 
-client.svm.addProgramFromFile(myProgramAddress, 'program.so');
+client.svm.addProgramFromFile(myProgramAddress, "program.so");
 await client.sendTransaction([myInstruction]);
 ```
 
@@ -78,18 +78,18 @@ Full documentation: [LiteSVM](https://www.litesvm.com/docs/typescript/getting-st
 
 After applying `solanaRpc` / `solanaLocalRpc` / `solanaDevnetRpc` / `solanaMainnetRpc` (or `litesvm`), the client exposes:
 
-| Property/Method | Description |
-|-----------------|-------------|
-| `client.rpc` | RPC methods (`getBalance`, `getAccountInfo`, etc.) |
-| `client.rpcSubscriptions` | WebSocket subscriptions (RPC plugins only) |
-| `client.payer` | Transaction fee payer signer (set by `signer()` or `payer()`) |
-| `client.identity` | Authority signer (set by `signer()` or `identity()`) |
-| `client.sendTransaction(instructions)` | Plan + sign + send in one call |
-| `client.sendTransactions(plan)` | Execute a planned multi-tx plan |
-| `client.planTransaction(s)` | Plan without executing |
-| `client.getMinimumBalance(dataSize)` | Rent-exempt minimum lamports |
-| `client.airdrop(address, lamports)` | Faucet (devnet/local/litesvm only) |
-| `client.svm` | LiteSVM instance (litesvm plugin only) |
+| Property/Method                        | Description                                                   |
+| -------------------------------------- | ------------------------------------------------------------- |
+| `client.rpc`                           | RPC methods (`getBalance`, `getAccountInfo`, etc.)            |
+| `client.rpcSubscriptions`              | WebSocket subscriptions (RPC plugins only)                    |
+| `client.payer`                         | Transaction fee payer signer (set by `signer()` or `payer()`) |
+| `client.identity`                      | Authority signer (set by `signer()` or `identity()`)          |
+| `client.sendTransaction(instructions)` | Plan + sign + send in one call                                |
+| `client.sendTransactions(plan)`        | Execute a planned multi-tx plan                               |
+| `client.planTransaction(s)`            | Plan without executing                                        |
+| `client.getMinimumBalance(dataSize)`   | Rent-exempt minimum lamports                                  |
+| `client.airdrop(address, lamports)`    | Faucet (devnet/local/litesvm only)                            |
+| `client.svm`                           | LiteSVM instance (litesvm plugin only)                        |
 
 `solanaRpc({ ... })` accepts `rpcUrl` (required) plus `rpcSubscriptionsUrl`, `transactionConfig` (priority fees), `maxConcurrency`, `skipPreflight`, and the underlying `rpcConfig` / `rpcSubscriptionsConfig`. See [plugins.md](plugins.md) for the full options table, plugin catalog, and custom composition.
 
@@ -98,17 +98,17 @@ After applying `solanaRpc` / `solanaLocalRpc` / `solanaDevnetRpc` / `solanaMainn
 ### Branded Types
 
 ```ts
-import { address, lamports, signature } from '@solana/kit';
+import { address, lamports, signature } from "@solana/kit";
 
-const myAddress = address('So11111111111111111111111111111111111111112');
+const myAddress = address("So11111111111111111111111111111111111111112");
 const myLamports = lamports(1_000_000_000n);
-const mySig = signature('5eykt...');
+const mySig = signature("5eykt...");
 ```
 
 ### Signers
 
 ```ts
-import { generateKeyPairSigner } from '@solana/kit';
+import { generateKeyPairSigner } from "@solana/kit";
 const signer = await generateKeyPairSigner();
 // signer.address — the public key
 // signer is a TransactionSigner
@@ -128,18 +128,18 @@ See [codecs.md](codecs.md) for full codec patterns.
 ### Send SOL Transfer
 
 ```ts
-import { createClient, address, lamports } from '@solana/kit';
-import { solanaLocalRpc } from '@solana/kit-plugin-rpc';
-import { signerFromFile } from '@solana/kit-plugin-signer';
-import { getTransferSolInstruction } from '@solana-program/system';
+import { createClient, address, lamports } from "@solana/kit";
+import { solanaLocalRpc } from "@solana/kit-plugin-rpc";
+import { signerFromFile } from "@solana/kit-plugin-signer";
+import { getTransferSolInstruction } from "@solana-program/system";
 
 const client = await createClient()
-  .use(signerFromFile('~/.config/solana/id.json'))
+  .use(signerFromFile("~/.config/solana/id.json"))
   .use(solanaLocalRpc());
 
 const ix = getTransferSolInstruction({
   source: client.payer,
-  destination: address('recipient...'),
+  destination: address("recipient..."),
   amount: lamports(1_000_000_000n),
 });
 
@@ -149,7 +149,7 @@ await client.sendTransaction([ix]);
 ### Fetch Account
 
 ```ts
-import { fetchEncodedAccount, assertAccountExists, decodeAccount } from '@solana/kit';
+import { fetchEncodedAccount, assertAccountExists, decodeAccount } from "@solana/kit";
 
 const account = await fetchEncodedAccount(client.rpc, myAddress);
 assertAccountExists(account);
@@ -163,13 +163,13 @@ See [accounts.md](accounts.md) for batch fetching, PDAs, subscriptions, and toke
 Use the `tokenProgram()` plugin from `@solana-program/token` for a fluent token API. It auto-derives ATAs, auto-creates them if needed, and defaults the payer from the client.
 
 ```ts
-import { createClient, generateKeyPairSigner } from '@solana/kit';
-import { solanaLocalRpc } from '@solana/kit-plugin-rpc';
-import { signerFromFile } from '@solana/kit-plugin-signer';
-import { tokenProgram } from '@solana-program/token';
+import { createClient, generateKeyPairSigner } from "@solana/kit";
+import { solanaLocalRpc } from "@solana/kit-plugin-rpc";
+import { signerFromFile } from "@solana/kit-plugin-signer";
+import { tokenProgram } from "@solana-program/token";
 
 const client = await createClient()
-  .use(signerFromFile('~/.config/solana/id.json'))
+  .use(signerFromFile("~/.config/solana/id.json"))
   .use(solanaLocalRpc())
   .use(tokenProgram());
 
@@ -211,19 +211,14 @@ See [programs/token.md](programs/token.md) for low-level instruction patterns an
 Programs that ship a Kit plugin follow the same `.use()` pattern:
 
 ```ts
-import { createClient } from '@solana/kit';
-import { solanaDevnetRpc } from '@solana/kit-plugin-rpc';
-import { signer } from '@solana/kit-plugin-signer';
-import { myProgram } from '@my-programs/operations';
+import { createClient } from "@solana/kit";
+import { solanaDevnetRpc } from "@solana/kit-plugin-rpc";
+import { signer } from "@solana/kit-plugin-signer";
+import { myProgram } from "@my-programs/operations";
 
-const client = createClient()
-  .use(signer(mySigner))
-  .use(solanaDevnetRpc())
-  .use(myProgram());
+const client = createClient().use(signer(mySigner)).use(solanaDevnetRpc()).use(myProgram());
 
-await client.myProgram.instructions
-  .handyInstruction({ /* args */ })
-  .sendTransaction();
+await client.myProgram.instructions.handyInstruction({/* args */}).sendTransaction();
 ```
 
 ### RPC Queries
@@ -233,11 +228,9 @@ await client.myProgram.instructions
 const { value: balance } = await client.rpc.getBalance(myAddress).send();
 
 // Token accounts
-const { value: tokenAccs } = await client.rpc.getTokenAccountsByOwner(
-  owner,
-  { mint: mintAddr },
-  { encoding: 'jsonParsed' },
-).send();
+const { value: tokenAccs } = await client.rpc
+  .getTokenAccountsByOwner(owner, { mint: mintAddr }, { encoding: "jsonParsed" })
+  .send();
 
 // Latest blockhash
 const { value: blockhash } = await client.rpc.getLatestBlockhash().send();
@@ -247,14 +240,14 @@ const { value: blockhash } = await client.rpc.getLatestBlockhash().send();
 
 `@solana-program/*` packages are Codama-generated, Kit-compatible instruction builders:
 
-| Package | Purpose |
-|---------|---------|
-| `@solana-program/system` | Account creation, transfers, nonces |
-| `@solana-program/token` | SPL Token operations |
-| `@solana-program/token-2022` | Token Extensions (transfer fees, metadata, etc.) |
-| `@solana-program/compute-budget` | CU limits & priority fees |
-| `@solana-program/memo` | Memo program |
-| `@solana-program/stake` | Staking operations |
+| Package                          | Purpose                                          |
+| -------------------------------- | ------------------------------------------------ |
+| `@solana-program/system`         | Account creation, transfers, nonces              |
+| `@solana-program/token`          | SPL Token operations                             |
+| `@solana-program/token-2022`     | Token Extensions (transfer fees, metadata, etc.) |
+| `@solana-program/compute-budget` | CU limits & priority fees                        |
+| `@solana-program/memo`           | Memo program                                     |
+| `@solana-program/stake`          | Staking operations                               |
 
 **Note:** These packages export both low-level `get{Name}Instruction()` helpers and higher-level program plugins (e.g., `tokenProgram()`) that attach fluent APIs to the client. ATA functions are in `@solana-program/token` and `@solana-program/token-2022`, not a separate package.
 
@@ -262,28 +255,28 @@ See [codama.md](codama.md) for naming conventions and patterns.
 
 ## Package Overview
 
-| Package | Purpose |
-|---------|---------|
-| `@solana/kit` | Main SDK, re-exports all sub-packages, exports `createClient` |
-| `@solana/kit-plugin-rpc` | All-in-one RPC plugins: `solanaRpc`, `solanaMainnetRpc`, `solanaDevnetRpc`, `solanaLocalRpc` (plus low-level `rpc`, `rpcAirdrop`, `rpcTransactionPlanner`, `rpcTransactionPlanExecutor`) |
-| `@solana/kit-plugin-signer` | Signer plugins. Default `signer*` variants set both `payer` and `identity` (`signer`, `generatedSigner`, `signerFromFile`). Use `airdropSigner` to fund an already-installed signer; use `generatedSignerWithSol` only when an airdrop function is already installed. Role-specific `payer*` and `identity*` variants for when the two roles differ. |
-| `@solana/kit-plugin-wallet` | Browser wallet connection (Wallet Standard): `walletSigner`, `walletPayer`, `walletIdentity`, `walletWithoutSigner`; adds `client.wallet` (`getState()`, `connect()`); React hooks in `@solana/kit-plugin-wallet/react` |
-| `@solana/kit-plugin-litesvm` | All-in-one `litesvm` plugin (Node.js only) for in-memory testing |
-| `@solana/kit-plugin-instruction-plan` | `planAndSendTransactions` and instruction batching primitives |
-| `@solana/addresses` | Address validation |
-| `@solana/accounts` | Account fetching/decoding |
-| `@solana/codecs` | Data encoding/decoding |
-| `@solana/rpc` | JSON RPC client primitives |
-| `@solana/rpc-subscriptions` | WebSocket subscription primitives |
-| `@solana/transactions` | Compile/sign/serialize |
-| `@solana/transaction-messages` | Build tx messages |
-| `@solana/signers` | Signing abstraction |
-| `@solana/keychain` | Common Signing Interface for external signers |
-| `@solana/instruction-plans` | Multi-instruction batching |
-| `@solana/errors` | Error identification/decoding |
-| `@solana/functional` | Pipe and compose utilities |
-| `@solana/react` | Kit-native React bindings (`ClientProvider`, `useClient`, data/subscription hooks, SWR & TanStack Query adapters). Its legacy Wallet Standard hooks are being deprecated — use `@solana/kit-plugin-wallet/react` |
-| `@solana/compat` | Type conversions between Kit and legacy web3.js v1 values |
+| Package                               | Purpose                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@solana/kit`                         | Main SDK, re-exports all sub-packages, exports `createClient`                                                                                                                                                                                                                                                                                        |
+| `@solana/kit-plugin-rpc`              | All-in-one RPC plugins: `solanaRpc`, `solanaMainnetRpc`, `solanaDevnetRpc`, `solanaLocalRpc` (plus low-level `rpc`, `rpcAirdrop`, `rpcTransactionPlanner`, `rpcTransactionPlanExecutor`)                                                                                                                                                             |
+| `@solana/kit-plugin-signer`           | Signer plugins. Default `signer*` variants set both `payer` and `identity` (`signer`, `generatedSigner`, `signerFromFile`). Use `airdropSigner` to fund an already-installed signer; use `generatedSignerWithSol` only when an airdrop function is already installed. Role-specific `payer*` and `identity*` variants for when the two roles differ. |
+| `@solana/kit-plugin-wallet`           | Browser wallet connection (Wallet Standard): `walletSigner`, `walletPayer`, `walletIdentity`, `walletWithoutSigner`; adds `client.wallet` (`getState()`, `connect()`); React hooks in `@solana/kit-plugin-wallet/react`                                                                                                                              |
+| `@solana/kit-plugin-litesvm`          | All-in-one `litesvm` plugin (Node.js only) for in-memory testing                                                                                                                                                                                                                                                                                     |
+| `@solana/kit-plugin-instruction-plan` | `planAndSendTransactions` and instruction batching primitives                                                                                                                                                                                                                                                                                        |
+| `@solana/addresses`                   | Address validation                                                                                                                                                                                                                                                                                                                                   |
+| `@solana/accounts`                    | Account fetching/decoding                                                                                                                                                                                                                                                                                                                            |
+| `@solana/codecs`                      | Data encoding/decoding                                                                                                                                                                                                                                                                                                                               |
+| `@solana/rpc`                         | JSON RPC client primitives                                                                                                                                                                                                                                                                                                                           |
+| `@solana/rpc-subscriptions`           | WebSocket subscription primitives                                                                                                                                                                                                                                                                                                                    |
+| `@solana/transactions`                | Compile/sign/serialize                                                                                                                                                                                                                                                                                                                               |
+| `@solana/transaction-messages`        | Build tx messages                                                                                                                                                                                                                                                                                                                                    |
+| `@solana/signers`                     | Signing abstraction                                                                                                                                                                                                                                                                                                                                  |
+| `@solana/keychain`                    | Common Signing Interface for external signers                                                                                                                                                                                                                                                                                                        |
+| `@solana/instruction-plans`           | Multi-instruction batching                                                                                                                                                                                                                                                                                                                           |
+| `@solana/errors`                      | Error identification/decoding                                                                                                                                                                                                                                                                                                                        |
+| `@solana/functional`                  | Pipe and compose utilities                                                                                                                                                                                                                                                                                                                           |
+| `@solana/react`                       | Kit-native React bindings (`ClientProvider`, `useClient`, data/subscription hooks, SWR & TanStack Query adapters). Its legacy Wallet Standard hooks are being deprecated — use `@solana/kit-plugin-wallet/react`                                                                                                                                     |
+| `@solana/compat`                      | Type conversions between Kit and legacy web3.js v1 values                                                                                                                                                                                                                                                                                            |
 
 **Deprecated packages — do not install:** `@solana/kit-plugins` (umbrella), `@solana/kit-plugin-airdrop` (use `rpcAirdrop`/`litesvmAirdrop`), `@solana/kit-plugin-payer` (use `@solana/kit-plugin-signer`), `@solana/kit-client-rpc` / `@solana/kit-client-litesvm` (use the `solanaRpc` / `litesvm` all-in-one plugins).
 

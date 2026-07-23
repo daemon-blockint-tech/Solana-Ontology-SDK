@@ -6,7 +6,7 @@
  */
 
 import type { ActionInstruction } from "./action.js";
-import { ActionBuilder } from "./action.js";
+import { type ActionBuilder } from "./action.js";
 import type { SignerProvider, SignedTransaction } from "./signer.js";
 import { BlockhashCache, fetchLatestBlockhash, type BlockhashInfo } from "./blockhash.js";
 import { ConfirmationTracker, type PendingTransaction } from "./confirmation.js";
@@ -42,9 +42,7 @@ export class TransactionLifecycle {
   private confirmationTracker: ConfirmationTracker;
 
   constructor(private options: TransactionLifecycleOptions) {
-    this.blockhashCache = new BlockhashCache(
-      () => fetchLatestBlockhash(options.connection),
-    );
+    this.blockhashCache = new BlockhashCache(() => fetchLatestBlockhash(options.connection));
     this.confirmationTracker = new ConfirmationTracker({
       timeoutMs: options.confirmationTimeoutMs,
     });
@@ -115,6 +113,7 @@ export class TransactionLifecycle {
         unitsConsumed: sim.value?.unitsConsumed,
       };
     } catch (err) {
+      console.error("Transaction simulation error:", err);
       return {
         success: false,
         error: err instanceof Error ? err.message : String(err),

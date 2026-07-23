@@ -16,7 +16,10 @@ export class StateManager {
   /** Primary state: keyed by account pubkey, only latest state */
   private accounts = new Map<string, AccountState>();
   /** Pending transactions not yet finalized */
-  private pendingTx = new Map<string, { signature: string; slot: number; commitment: CommitmentLevel }>();
+  private pendingTx = new Map<
+    string,
+    { signature: string; slot: number; commitment: CommitmentLevel }
+  >();
   /** Slot → account pubkeys modified in that slot (for reorg rollback) */
   private slotModifications = new Map<number, Set<string>>();
   /** Slot → transaction signatures in that slot */
@@ -143,7 +146,11 @@ export class StateManager {
   /**
    * Get all pending (non-finalized) transactions.
    */
-  getPendingTransactions(): Array<{ signature: string; slot: number; commitment: CommitmentLevel }> {
+  getPendingTransactions(): Array<{
+    signature: string;
+    slot: number;
+    commitment: CommitmentLevel;
+  }> {
     return Array.from(this.pendingTx.values());
   }
 

@@ -30,9 +30,7 @@
         { "name": "destination", "isMut": true, "isSigner": false },
         { "name": "authority", "isMut": false, "isSigner": true }
       ],
-      "args": [
-        { "name": "amount", "type": "u64" }
-      ]
+      "args": [{ "name": "amount", "type": "u64" }]
     },
     {
       "name": "closeAccount",

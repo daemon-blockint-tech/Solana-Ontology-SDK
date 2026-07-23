@@ -3,8 +3,8 @@
  */
 
 import type { Concept, ConceptRelationship } from "@solana-ontology/core";
-import type { LinkTypeDefinition } from "../types.js";
-import type { OmsStorage } from "../storage/interface.js";
+import type { LinkTypeDefinition } from "./types.js";
+import type { OmsStorage } from "./storage/interface.js";
 
 /**
  * Convert a ConceptRelationship to a LinkTypeDefinition.

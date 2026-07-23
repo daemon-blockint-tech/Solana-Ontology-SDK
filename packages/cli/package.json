@@ -3,6 +3,18 @@
   "version": "0.1.0",
   "description": "CLI for validating and generating code from the Solana Ontology",
   "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "bin": {
     "solana-ontology": "dist/index.js"
   },

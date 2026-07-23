@@ -18,14 +18,6 @@ export {
 
 export { StateManager } from "./state-manager.js";
 
-export {
-  EventProcessor,
-  type AccountDecoderFn,
-  type DecodedAccount,
-} from "./event-processor.js";
+export { EventProcessor, type AccountDecoderFn, type DecodedAccount } from "./event-processor.js";
 
-export {
-  NullProducer,
-  KafkaProducer,
-  type MessageProducer,
-} from "./message-broker.js";
+export { NullProducer, KafkaProducer, type MessageProducer } from "./message-broker.js";

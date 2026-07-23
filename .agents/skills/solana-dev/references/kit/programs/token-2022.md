@@ -8,21 +8,21 @@ description: Kit-compatible @solana-program/token-2022 client — key difference
 Program address: `TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb`
 
 ```ts
-import { TOKEN_2022_PROGRAM_ADDRESS } from '@solana-program/token-2022';
+import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022";
 ```
 
 Token-2022 extends the base Token program with configurable extensions. For a full guide to available extensions and their use cases, see the [Token Extensions documentation](https://solana.com/docs/tokens/extensions).
 
 ## When to Use Token-2022 vs Token
 
-| Use Token-2022 | Use Token |
-|----------------|-----------|
-| Transfer fees needed | Simple fungible tokens |
-| On-chain metadata | Maximum compatibility |
-| Confidential transfers | Lowest compute cost |
-| Transfer hooks | Existing ecosystem integration |
-| Interest-bearing tokens | |
-| Non-transferable tokens | |
+| Use Token-2022          | Use Token                      |
+| ----------------------- | ------------------------------ |
+| Transfer fees needed    | Simple fungible tokens         |
+| On-chain metadata       | Maximum compatibility          |
+| Confidential transfers  | Lowest compute cost            |
+| Transfer hooks          | Existing ecosystem integration |
+| Interest-bearing tokens |                                |
+| Non-transferable tokens |                                |
 
 ## Key Differences from Base Token
 
@@ -48,7 +48,7 @@ const sizeWithExtensions = getMintSize([
 Same pattern as base Token, but you **must** pass `TOKEN_2022_PROGRAM_ADDRESS` — using the wrong program address derives the wrong ATA.
 
 ```ts
-import { findAssociatedTokenPda, TOKEN_2022_PROGRAM_ADDRESS } from '@solana-program/token-2022';
+import { findAssociatedTokenPda, TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022";
 
 const [ata] = await findAssociatedTokenPda({
   owner: walletAddress,
@@ -66,7 +66,7 @@ Extension instructions must come **before** mint initialization — the runtime 
 Same patterns as base Token — extensions are accessible via `mint.data.extensions`:
 
 ```ts
-import { fetchMint, fetchToken } from '@solana-program/token-2022';
+import { fetchMint, fetchToken } from "@solana-program/token-2022";
 
 const mint = await fetchMint(rpc, mintAddress);
 // Access extensions via mint.data.extensions

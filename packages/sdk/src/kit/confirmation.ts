@@ -45,10 +45,7 @@ export class ConfirmationTracker {
    * Start polling for confirmation of a transaction.
    * Uses web3.js connection to check signature status.
    */
-  async waitForConfirmation(
-    signature: string,
-    connection: unknown,
-  ): Promise<PendingTransaction> {
+  async waitForConfirmation(signature: string, connection: unknown): Promise<PendingTransaction> {
     const entry = this.pending.get(signature);
     if (!entry) throw new Error(`Transaction ${signature} is not being tracked`);
 

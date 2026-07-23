@@ -116,7 +116,11 @@ program
   .command("generate-client")
   .description("Generate a typed client library from ontology concepts")
   .option("--out <path>", "Output directory", "./generated/client")
-  .option("--package-name <name>", "NPM package name for generated client", "@my-org/ontology-client")
+  .option(
+    "--package-name <name>",
+    "NPM package name for generated client",
+    "@my-org/ontology-client",
+  )
   .option("--react", "Generate React hooks")
   .option("--no-queries", "Skip query builders")
   .option("--path <path>", "Custom ontology root path")

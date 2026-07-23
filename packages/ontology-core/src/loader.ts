@@ -27,10 +27,7 @@ function findYamlFiles(dir: string, base: string): string[] {
  * @param ontologyRoot Absolute path to the ontology root (for relative paths)
  * @returns Array of parsed Concept objects with _sourceFile set
  */
-export function loadConcepts(
-  conceptsDir: string,
-  ontologyRoot: string,
-): Concept[] {
+export function loadConcepts(conceptsDir: string, ontologyRoot: string): Concept[] {
   const yamlFiles = findYamlFiles(conceptsDir, ontologyRoot);
   const concepts: Concept[] = [];
 

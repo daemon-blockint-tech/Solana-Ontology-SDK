@@ -86,10 +86,7 @@ export function generateIndexFile(concepts: Concept[]): string {
 /**
  * Generate all TypeScript files for an array of concepts and write them to disk.
  */
-export function generateAll(
-  concepts: Concept[],
-  options: GenerateOptions,
-): GeneratedFile[] {
+export function generateAll(concepts: Concept[], options: GenerateOptions): GeneratedFile[] {
   const allFiles: GeneratedFile[] = [];
   mkdirSync(options.outputDir, { recursive: true });
 

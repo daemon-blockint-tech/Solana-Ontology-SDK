@@ -9,7 +9,10 @@ export interface IdlInstructionDef {
   name: string;
   discriminator: number[];
   accounts: { name: string; writable: boolean; signer: boolean; address?: string }[];
-  args: { name: string; type: string | { defined?: string; option?: unknown; vec?: unknown; array?: unknown } }[];
+  args: {
+    name: string;
+    type: string | { defined?: string; option?: unknown; vec?: unknown; array?: unknown };
+  }[];
 }
 
 export interface CompiledAccount {

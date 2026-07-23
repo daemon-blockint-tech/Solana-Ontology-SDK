@@ -3,22 +3,42 @@
   "version": "0.1.0",
   "private": true,
   "description": "Solana Data-Logic-Action by using Ontology System",
-  "license": "MIT",
+  "license": "Apache-2.0",
+  "author": "Solana Ontology SDK Contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/daemon-blockint-tech/Solana-Ontology-SDK"
+  },
+  "keywords": [
+    "solana",
+    "ontology",
+    "sdk",
+    "blockchain",
+    "web3"
+  ],
   "type": "module",
   "scripts": {
     "build": "turbo build",
     "test": "turbo test",
-    "lint": "turbo lint",
+    "lint": "eslint . && turbo lint",
+    "typecheck": "turbo lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,cjs,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,cjs,json,md}\"",
     "generate": "turbo generate",
     "docs": "turbo docs",
     "validate": "solana-ontology validate",
     "clean": "turbo clean && rm -rf node_modules"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^20.14.0",
+    "eslint": "^10.7.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.6",
     "turbo": "^2.0.0",
     "typescript": "^5.4.0",
-    "vitest": "^3.2.6",
-    "@types/node": "^20.14.0"
+    "typescript-eslint": "^8.65.0",
+    "vitest": "^3.2.6"
   },
   "packageManager": "pnpm@9.0.0",
   "engines": {

@@ -36,7 +36,10 @@ export function mapSolanaTypeToRust(type: string): string {
  * Convert a PascalCase concept name to snake_case for Rust.
  */
 export function toSnakeCase(name: string): string {
-  return name.replace(/([A-Z])/g, "_$1").toLowerCase().replace(/^_/, "");
+  return name
+    .replace(/([A-Z])/g, "_$1")
+    .toLowerCase()
+    .replace(/^_/, "");
 }
 
 /**

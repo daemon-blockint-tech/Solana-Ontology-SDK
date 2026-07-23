@@ -430,6 +430,7 @@ Token-2022 is not an upgrade to SPL Token. It's a different program with differe
 **Risk**: If a mint has the Permanent Delegate extension, that delegate can transfer or burn ANY amount from ANY token account. No approval needed. No signature from the account owner.
 
 **Attack**:
+
 1. Mint has Permanent Delegate extension set — one address controls ALL accounts holding this mint.
 2. Protocol accepts token deposits — vault holds user funds in token accounts for this mint.
 3. Protocol never validates delegate authority — no check whether the delegate is trusted.
@@ -456,6 +457,7 @@ This is not an exploit. It is a feature being misused.
 **Risk**: In old SPL, `amount == 0` means closable. In Token-2022, that's not sufficient.
 
 **Requirements for closure**: You also need:
+
 - `TransferFeeAmount.withheld_amount == 0`
 - `ConfidentialTransferAccount` balances cleared
 - `ConfidentialTransferFeeAmount.withheld_amount == 0`
@@ -487,6 +489,7 @@ Miss any one of these and your close instruction reverts. If that close is part 
 **Risk**: Transfer hooks run custom program logic on every transfer. Powerful — and dangerous.
 
 **Prevention**: If you're writing a transfer hook and mutating PDA state, validate all three:
+
 - The mint calling your hook is one you actually support. Otherwise any mint can invoke your program and access your PDAs.
 - The token accounts are in transferring state. Without this check, attackers call your hook outside of a real transfer.
 - The token accounts actually belong to the mint passed in. An attacker can create their own hook that calls yours, passing fake accounts with a legitimate mint.

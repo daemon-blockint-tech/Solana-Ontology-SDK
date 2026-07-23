@@ -8,11 +8,11 @@ For anything beyond a quick lookup (building/sending transactions, indexing, rep
 
 Source: https://solana.com/docs/references/clusters.md
 
-| Cluster | URL |
-|---|---|
+| Cluster      | URL                                   |
+| ------------ | ------------------------------------- |
 | mainnet-beta | `https://api.mainnet-beta.solana.com` |
-| devnet | `https://api.devnet.solana.com` |
-| testnet | `https://api.testnet.solana.com` |
+| devnet       | `https://api.devnet.solana.com`       |
+| testnet      | `https://api.testnet.solana.com`      |
 
 Public endpoints are rate-limited and intended for light/dev use. For production or repeated calls, use a private RPC provider.
 

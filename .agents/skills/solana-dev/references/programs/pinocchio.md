@@ -128,7 +128,6 @@ use pinocchio::{
 // pinocchio_system::instructions::Transfer,
 ```
 
-
 ## Utility Macros
 
 Define in `src/utils/macros.rs`:
@@ -803,6 +802,7 @@ cargo update blake3 --precise 1.5.5
 ## Security Checklist
 
 ### Account Validation
+
 - [ ] Validate account owners with `verify_owned_by` in `TryFrom`
 - [ ] Check signer status with `verify_signer`
 - [ ] Enforce writable/read-only with `verify_writable` / `verify_readonly`
@@ -810,17 +810,21 @@ cargo update blake3 --precise 1.5.5
 - [ ] Check for duplicate mutable accounts
 
 ### PDA Safety
+
 - [ ] Derive canonical bump with `find_program_address` at init — never trust user-supplied bumps
 - [ ] Store canonical bump in account data and validate on every use via `PdaAccount::validate_self`
 - [ ] Only transfer the lamport deficit on init — not the full rent amount (lamport griefing)
 
 ### Sysvars (Pinocchio has no implicit validation)
+
 - [ ] Use `Clock::get()?` and `Rent::get()?` — never accept sysvars as passed-in accounts
 
 ### Data & Arithmetic
+
 - [ ] Use `require_len!` before parsing instruction data
 - [ ] Use checked math (`checked_add`, `checked_sub`, etc.)
 
 ### Account Lifecycle
+
 - [ ] Close accounts with `account.close()` — this transfers ownership back to the system program
 - [ ] Discriminator check on every read prevents type cosplay attacks

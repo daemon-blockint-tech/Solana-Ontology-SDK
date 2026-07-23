@@ -1,10 +1,4 @@
-import type {
-  IdlV1,
-  IdlV1Account,
-  IdlV1Field,
-  IdlV1Instruction,
-  IdlV1Type,
-} from "./types.js";
+import type { IdlV1, IdlV1Account, IdlV1Field, IdlV1Instruction, IdlV1Type } from "./types.js";
 import type {
   Concept,
   ConceptProperty,
@@ -43,15 +37,24 @@ export function mapIdlTypeToOntology(idlType: string | IdlV1Type): string {
 
   if (idlType.defined) return idlType.defined;
   if (idlType.option) {
-    const inner = typeof idlType.option === "string" ? mapIdlTypeToOntology(idlType.option) : mapIdlTypeToOntology(idlType.option);
+    const inner =
+      typeof idlType.option === "string"
+        ? mapIdlTypeToOntology(idlType.option)
+        : mapIdlTypeToOntology(idlType.option);
     return `Option<${inner}>`;
   }
   if (idlType.vec) {
-    const inner = typeof idlType.vec === "string" ? mapIdlTypeToOntology(idlType.vec) : mapIdlTypeToOntology(idlType.vec);
+    const inner =
+      typeof idlType.vec === "string"
+        ? mapIdlTypeToOntology(idlType.vec)
+        : mapIdlTypeToOntology(idlType.vec);
     return `Vec<${inner}>`;
   }
   if (idlType.array) {
-    const inner = typeof idlType.array[0] === "string" ? mapIdlTypeToOntology(idlType.array[0]) : mapIdlTypeToOntology(idlType.array[0]);
+    const inner =
+      typeof idlType.array[0] === "string"
+        ? mapIdlTypeToOntology(idlType.array[0])
+        : mapIdlTypeToOntology(idlType.array[0]);
     return `Array<${inner}, ${idlType.array[1]}>`;
   }
   if (idlType.pubkey) return "Address";
@@ -103,7 +106,9 @@ export function generateStateTransitions(
   accountName: string,
 ): StateMachine | undefined {
   const relevantInstructions = idl.instructions.filter((ix) =>
-    ix.accounts.some((acc) => acc.name === accountName || acc.name === convertCamelToSnakeMatch(accountName)),
+    ix.accounts.some(
+      (acc) => acc.name === accountName || acc.name === convertCamelToSnakeMatch(accountName),
+    ),
   );
 
   if (relevantInstructions.length === 0) return undefined;
@@ -206,9 +211,31 @@ function convertCamelToSnakeMatch(name: string): string {
 function inferCategory(name: string): ConceptCategory {
   const lower = name.toLowerCase();
   if (lower.includes("token") || lower.includes("mint") || lower.includes("nft")) return "token";
-  if (lower.includes("pool") || lower.includes("vault") || lower.includes("swap") || lower.includes("lending") || lower.includes("position") || lower.includes("oracle")) return "defi";
-  if (lower.includes("proposal") || lower.includes("vote") || lower.includes("multisig") || lower.includes("dao") || lower.includes("stake")) return "governance";
-  if (lower.includes("cluster") || lower.includes("slot") || lower.includes("epoch") || lower.includes("validator")) return "infrastructure";
-  if (lower.includes("release") || lower.includes("deploy") || lower.includes("upgrade")) return "delivery";
+  if (
+    lower.includes("pool") ||
+    lower.includes("vault") ||
+    lower.includes("swap") ||
+    lower.includes("lending") ||
+    lower.includes("position") ||
+    lower.includes("oracle")
+  )
+    return "defi";
+  if (
+    lower.includes("proposal") ||
+    lower.includes("vote") ||
+    lower.includes("multisig") ||
+    lower.includes("dao") ||
+    lower.includes("stake")
+  )
+    return "governance";
+  if (
+    lower.includes("cluster") ||
+    lower.includes("slot") ||
+    lower.includes("epoch") ||
+    lower.includes("validator")
+  )
+    return "infrastructure";
+  if (lower.includes("release") || lower.includes("deploy") || lower.includes("upgrade"))
+    return "delivery";
   return "primitive";
 }

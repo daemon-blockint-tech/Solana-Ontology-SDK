@@ -5,3 +5,15 @@ dist
 .git
 .windsurf
 dev
+coverage
+src/generated
+.env
+.env.*
+Dockerfile
+docker-compose*
+.gitignore
+**/*.test.ts
+**/tests
+**/__tests__
+*.md
+!README.md

@@ -8,7 +8,7 @@ import type {
   ObjectTypeDefinition,
   LinkTypeDefinition,
   ActionTypeDefinition,
-} from "../types.js";
+} from "./types.js";
 
 /**
  * Null adapter — no-op default.

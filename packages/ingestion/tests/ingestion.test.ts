@@ -219,7 +219,9 @@ describe("ingestion", () => {
         previousData: null,
       });
 
-      const ownerAAccounts = manager.getAccountsByOwner("OwnerA111111111111111111111111111111111111111");
+      const ownerAAccounts = manager.getAccountsByOwner(
+        "OwnerA111111111111111111111111111111111111111",
+      );
       expect(ownerAAccounts).toHaveLength(1);
       expect(ownerAAccounts[0].lamports).toBe(1000);
     });

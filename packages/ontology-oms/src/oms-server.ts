@@ -201,6 +201,7 @@ export class OntologyOmsServer {
       // 404
       this.json(res, 404, { success: false, error: "Not found" });
     } catch (err) {
+      console.error("OMS request error:", err);
       this.json(res, 500, {
         success: false,
         error: err instanceof Error ? err.message : "Internal server error",
