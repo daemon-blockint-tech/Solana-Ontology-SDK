@@ -44,7 +44,7 @@ packages/
 | `@solana-ontology/cli`              | CLI: validate, generate, list, graph, idl                                | ✅    |
 | `@solana-ontology/deploy`           | Helm chart + K8s configs (devnet/testnet/mainnet)                        | —     |
 
-**Total: 71 tests passing across 6 new test suites.**
+**Total: 136 tests passing across 12 test suites.**
 
 ## Concept Categories
 
@@ -56,6 +56,7 @@ packages/
 | **governance**     | Proposal, Vote, Multisig, DAO, StakeAccount                                         |
 | **infrastructure** | Cluster, Slot, Epoch, Validator                                                     |
 | **delivery**       | ProgramRelease, ReleaseChannel, Environment, UpgradeAuthority, DeploymentConstraint |
+| **security**       | MissingSignerCheck, AccountSubstitution, MissingOwnerCheck, SplTokenConfusion, PdaSeedMismatch, IntegerOverflow, ArbitraryCpiInvocation |
 
 ## Quick Start
 
@@ -199,6 +200,76 @@ constraints:
 links:
   - label: Docs
     url: https://docs.example.com
+```
+
+## Security Layer
+
+The SDK includes a security validation framework based on [Neodyme's Solana Security Workshop](https://workshop.neodyme.io/index.html) and [Common Pitfalls](https://neodyme.io/en/blog/solana_common_pitfalls/) blog series.
+
+### Security Validation Rules
+
+The validator produces **warnings** (not errors) for concepts that exhibit vulnerability patterns:
+
+| Rule | Severity | Trigger |
+|------|----------|---------|
+| `missing_auth` | CRITICAL | State transitions without `requiredAuth` |
+| `missing_program_id` | HIGH | `accountLayout` without `programId` |
+| `untyped_pda_seeds` | MEDIUM | PDA seeds with no `publicKey` type |
+| `missing_token_standard` | MEDIUM | Token concept without `tokenStandard` |
+| `open_transition` | HIGH | Transition without `requires` or `requiresAuth` |
+
+### PoC Environment
+
+Write exploit tests against your concepts using `PoCEnvironment`, a TypeScript mirror of Neodyme's [`poc_framework::Environment`](https://docs.rs/poc-framework/0.1.2/poc_framework/trait.Environment.html) trait:
+
+```typescript
+import { PoCEnvironment, type IPoCEnvironment } from "@solana-ontology/sdk";
+
+const env: IPoCEnvironment = new PoCEnvironment({
+  rpcUrl: "http://localhost:8899",
+  payer: keypair,
+});
+
+// Create token infrastructure
+await env.createTokenMint(mintKp, authority, null, 6);
+await env.createTokenAccount(tokenAcctKp, mintPubkey);
+await env.mintTokens(mintPubkey, authority, tokenAcct, 1_000_000);
+
+// Execute exploit: call without signer
+const result = await env.executeAsTransaction([{
+  programId: targetProgram,
+  accounts: [{ pubkey: attacker, isSigner: false, isWritable: true }],
+  data: new Uint8Array(0),
+}]);
+expect(result.success).toBe(false); // should reject
+```
+### Auto-Generated PoC Test Scaffolds
+
+Generate exploit test files for all 7 security vulnerability patterns:
+
+```typescript
+import { generateAllPoCTestScaffolds } from "@solana-ontology/generator-ts";
+import { loadConcepts } from "@solana-ontology/core";
+
+const concepts = loadConcepts("./ontology/concepts", "./ontology");
+const scaffolds = generateAllPoCTestScaffolds(concepts);
+// → 7 .test.ts files with exploit scenarios using PoCEnvironment
+```
+
+Each scaffold includes:
+- `beforeAll` setup with `PoCEnvironment` + airdrop
+- Exploit-specific test cases (e.g., unsigned authority, fake account, overflow amount)
+- Assertions that the program rejects the attack
+
+### Guard Code Generation
+
+Auto-generate Rust guard snippets from concept security fields:
+
+```typescript
+import { generateGuardCode } from "@solana-ontology/generator-ts";
+
+const guard = generateGuardCode(concept);
+// → Rust code checking is_signer, account owner, transition preconditions
 ```
 
 ## Testing

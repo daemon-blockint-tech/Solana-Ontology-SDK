@@ -14,7 +14,7 @@ const CONCEPTS_DIR = join(ONTOLOGY_ROOT, "concepts");
 describe("loader", () => {
   it("should load all concept YAML files", () => {
     const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
-    expect(concepts.length).toBe(43);
+    expect(concepts.length).toBe(45);
   });
 
   it("should set _sourceFile on each concept", () => {
@@ -104,7 +104,7 @@ describe("graph", () => {
   it("should build a graph with all concepts as nodes", () => {
     const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
     const graph = buildGraph(concepts);
-    expect(graph.nodes.size).toBe(43);
+    expect(graph.nodes.size).toBe(45);
   });
 
   it("should detect orphans (concepts not referenced by others)", () => {
@@ -118,7 +118,7 @@ describe("graph", () => {
     const graph = buildGraph(concepts);
     expect(graph.components.length).toBeGreaterThan(0);
     const totalNodes = graph.components.reduce((sum, c) => sum + c.length, 0);
-    expect(totalNodes).toBe(43);
+    expect(totalNodes).toBe(45);
   });
 
   it("should find dependencies for Account", () => {
@@ -244,15 +244,17 @@ describe("program-ids", () => {
 });
 
 describe("security validation", () => {
-  it("should load 5 security vulnerability pattern concepts", () => {
+  it("should load 7 security vulnerability pattern concepts", () => {
     const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
     const securityConcepts = concepts.filter((c) => c.category === "security");
-    expect(securityConcepts.length).toBe(5);
+    expect(securityConcepts.length).toBe(7);
     expect(securityConcepts.map((c) => c.canonicalName)).toContain("MissingSignerCheck");
     expect(securityConcepts.map((c) => c.canonicalName)).toContain("AccountSubstitution");
     expect(securityConcepts.map((c) => c.canonicalName)).toContain("MissingOwnerCheck");
     expect(securityConcepts.map((c) => c.canonicalName)).toContain("SplTokenConfusion");
     expect(securityConcepts.map((c) => c.canonicalName)).toContain("PdaSeedMismatch");
+    expect(securityConcepts.map((c) => c.canonicalName)).toContain("IntegerOverflow");
+    expect(securityConcepts.map((c) => c.canonicalName)).toContain("ArbitraryCpiInvocation");
   });
 
   it("should produce security warnings for concepts with stateMachine but no requiredAuth", () => {

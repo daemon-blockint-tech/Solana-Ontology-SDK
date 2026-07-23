@@ -30,4 +30,6 @@ export {
   generateGuardCode,
   generateAdversarialTest,
   generateSecurityArtifacts,
+  generatePoCTestScaffold,
+  generateAllPoCTestScaffolds,
 } from "./security-gen.js";

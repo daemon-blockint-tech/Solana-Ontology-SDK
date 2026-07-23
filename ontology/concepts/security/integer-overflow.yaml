@@ -1,0 +1,29 @@
+canonicalName: IntegerOverflow
+aliases:
+  - ArithmeticOverflow
+  - UncheckedMath
+  - WrapAround
+purpose: "Vulnerability pattern: unchecked arithmetic in release/BPF mode causes integer wrap-around, allowing balance manipulation and fund theft"
+category: security
+version: 1.0.0
+owner: security-team
+properties:
+  - name: operation
+    type: string
+    required: true
+    description: "The arithmetic operation that can overflow (add, sub, mul)"
+  - name: operandType
+    type: string
+    required: true
+    description: "The integer type involved (u8, u32, u64, u128)"
+  - name: impact
+    type: string
+    required: true
+    description: "What happens when overflow wraps around"
+constraints:
+  - name: must-use-checked-math
+    expression: "all arithmetic uses checked_add/checked_sub/checked_mul or saturating_*"
+    description: "All arithmetic on user-controlled inputs must use checked math"
+links:
+  docs:
+    - "https://neodyme.io/en/blog/solana_common_pitfalls/"

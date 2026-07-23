@@ -59,3 +59,12 @@ export {
 } from "./kit/confirmation.js";
 
 export { TransactionEventEmitter, type TransactionEventName } from "./kit/event-emitter.js";
+
+// ── PoC Environment (exploit testing) ──────────────────────────────────────
+
+export {
+  PoCEnvironment,
+  type IPoCEnvironment,
+  type PoCEnvironmentConfig,
+  type PoCTransactionResult,
+} from "./kit/poc-env.js";

@@ -1,0 +1,33 @@
+canonicalName: ArbitraryCpiInvocation
+aliases:
+  - FakeProgramInvoke
+  - UnverifiedCpiTarget
+purpose: "Vulnerability pattern: program invokes a foreign program via invoke_signed without verifying the target program ID, allowing attacker to substitute a malicious program"
+category: security
+version: 1.0.0
+owner: security-team
+properties:
+  - name: invokedProgram
+    type: string
+    required: true
+    description: "The program that should have been verified before invocation"
+  - name: expectedProgramId
+    type: string
+    required: true
+    description: "The expected program ID that should be checked"
+  - name: impact
+    type: string
+    required: true
+    description: "What an attacker can do by substituting a fake program"
+relationships:
+  - type: references
+    target: Program
+    cardinality: "many:1"
+    description: "Relates to the Program primitive whose ID must be verified"
+constraints:
+  - name: must-verify-cpi-target
+    expression: "all invoke_signed calls verify target program ID"
+    description: "Every CPI invocation must verify the program ID matches the expected address"
+links:
+  docs:
+    - "https://neodyme.io/en/blog/solana_common_pitfalls/"
