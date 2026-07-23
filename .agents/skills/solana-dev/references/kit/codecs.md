@@ -15,8 +15,8 @@ description: Data encoding and decoding patterns for numbers, strings, structs, 
 ```ts
 // Full codec
 const codec: Codec<number> = getU32Codec();
-codec.encode(42);     // Uint8Array
-codec.decode(bytes);  // number
+codec.encode(42); // Uint8Array
+codec.decode(bytes); // number
 
 // Encoder only (tree-shaking)
 const encoder: Encoder<number> = getU32Encoder();
@@ -29,17 +29,21 @@ const decoder: Decoder<number> = getU32Decoder();
 
 ```ts
 // Unsigned
-getU8Codec();   // 1 byte
-getU16Codec();  // 2 bytes (little-endian default)
-getU32Codec();  // 4 bytes
-getU64Codec();  // 8 bytes (bigint)
+getU8Codec(); // 1 byte
+getU16Codec(); // 2 bytes (little-endian default)
+getU32Codec(); // 4 bytes
+getU64Codec(); // 8 bytes (bigint)
 getU128Codec(); // 16 bytes (bigint)
 
 // Signed
-getI8Codec();  getI16Codec();  getI32Codec();  getI64Codec();
+getI8Codec();
+getI16Codec();
+getI32Codec();
+getI64Codec();
 
 // Float
-getF32Codec();  getF64Codec();
+getF32Codec();
+getF64Codec();
 
 // Big-endian
 getU16Codec({ endian: Endian.Big });
@@ -67,12 +71,12 @@ const base58 = getBase58Codec();
 type MyStruct = { id: number; name: string; balance: bigint };
 
 const codec = getStructCodec([
-  ['id', getU32Codec()],
-  ['name', addCodecSizePrefix(getUtf8Codec(), getU32Codec())],
-  ['balance', getU64Codec()],
+  ["id", getU32Codec()],
+  ["name", addCodecSizePrefix(getUtf8Codec(), getU32Codec())],
+  ["balance", getU64Codec()],
 ]);
 
-const bytes = codec.encode({ id: 1, name: 'Alice', balance: 1000n });
+const bytes = codec.encode({ id: 1, name: "Alice", balance: 1000n });
 const data = codec.decode(bytes);
 ```
 
@@ -92,53 +96,60 @@ const point = getTupleCodec([getI32Codec(), getI32Codec()]);
 ## Enum
 
 ```ts
-enum Direction { Up, Down, Left, Right }
+enum Direction {
+  Up,
+  Down,
+  Left,
+  Right,
+}
 const codec = getEnumCodec(Direction);
-codec.encode(Direction.Up);  // [0]
+codec.encode(Direction.Up); // [0]
 ```
 
 ## Discriminated Union
 
 ```ts
 type Shape =
-  | { __kind: 'circle'; radius: number }
-  | { __kind: 'rectangle'; width: number; height: number };
+  { __kind: "circle"; radius: number } | { __kind: "rectangle"; width: number; height: number };
 
 const codec = getDiscriminatedUnionCodec([
-  ['circle', getStructCodec([['radius', getU32Codec()]])],
-  ['rectangle', getStructCodec([
-    ['width', getU32Codec()],
-    ['height', getU32Codec()],
-  ])],
+  ["circle", getStructCodec([["radius", getU32Codec()]])],
+  [
+    "rectangle",
+    getStructCodec([
+      ["width", getU32Codec()],
+      ["height", getU32Codec()],
+    ]),
+  ],
 ]);
 ```
 
 ## Boolean & Nullable
 
 ```ts
-const bool = getBooleanCodec();        // 1 byte
+const bool = getBooleanCodec(); // 1 byte
 const u32Bool = getBooleanCodec({ size: 4 });
 
 const nullable = getNullableCodec(getU32Codec());
-nullable.encode(null);  // [0]
-nullable.encode(42);    // [1, 42, 0, 0, 0]
+nullable.encode(null); // [0]
+nullable.encode(42); // [1, 42, 0, 0, 0]
 ```
 
 ## Options (Rust Option)
 
 ```ts
-import { some, none, isSome, getOptionCodec } from '@solana/options';
+import { some, none, isSome, getOptionCodec } from "@solana/options";
 
 const opt = getOptionCodec(getU32Codec());
-opt.encode(some(42));  // [1, 42, 0, 0, 0]
-opt.encode(none());    // [0]
+opt.encode(some(42)); // [1, 42, 0, 0, 0]
+opt.encode(none()); // [0]
 ```
 
 ## Bytes
 
 ```ts
 const bytes = getBytesCodec();
-const fixed32 = fixCodecSize(getBytesCodec(), 32);  // pubkeys
+const fixed32 = fixCodecSize(getBytesCodec(), 32); // pubkeys
 ```
 
 ## Composition Helpers
@@ -153,8 +164,8 @@ const fixed = fixCodecSize(getUtf8Codec(), 32);
 // Transform
 const upper = transformCodec(
   getUtf8Codec(),
-  (v) => v.toUpperCase(),  // before encode
-  (v) => v.toLowerCase(),  // after decode
+  (v) => v.toUpperCase(), // before encode
+  (v) => v.toLowerCase(), // after decode
 );
 
 // Offset
@@ -167,22 +178,21 @@ const offset = offsetCodec(getU32Codec(), { preOffset: 4 });
 
 ```ts
 const tokenDecoder: Decoder<TokenAccount> = getStructDecoder([
-  ['mint', fixDecoderSize(getBytesDecoder(), 32)],
-  ['owner', fixDecoderSize(getBytesDecoder(), 32)],
-  ['amount', getU64Decoder()],
-  ['delegate', getOptionDecoder(fixDecoderSize(getBytesDecoder(), 32))],
-  ['state', getU8Decoder()],
+  ["mint", fixDecoderSize(getBytesDecoder(), 32)],
+  ["owner", fixDecoderSize(getBytesDecoder(), 32)],
+  ["amount", getU64Decoder()],
+  ["delegate", getOptionDecoder(fixDecoderSize(getBytesDecoder(), 32))],
+  ["state", getU8Decoder()],
 ]);
 ```
 
 ### Instruction Encoder
 
 ```ts
-const transferEncoder: Encoder<{ discriminator: number; amount: bigint }> =
-  getStructEncoder([
-    ['discriminator', getU8Encoder()],
-    ['amount', getU64Encoder()],
-  ]);
+const transferEncoder: Encoder<{ discriminator: number; amount: bigint }> = getStructEncoder([
+  ["discriminator", getU8Encoder()],
+  ["amount", getU64Encoder()],
+]);
 
 const data = transferEncoder.encode({ discriminator: 3, amount: 1000000n });
 ```

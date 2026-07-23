@@ -26,7 +26,9 @@ describe("Kinetic Action Layer", () => {
     it("should handle listener removal", () => {
       const emitter = new TransactionEventEmitter();
       let count = 0;
-      const listener = () => { count++; };
+      const listener = () => {
+        count++;
+      };
       emitter.on("confirmed", listener);
       emitter.emit("confirmed");
       emitter.off("confirmed", listener);
@@ -148,7 +150,10 @@ describe("Kinetic Action Layer", () => {
           { name: "authority", writable: false, signer: true },
           { name: "mint", writable: true, signer: false },
         ],
-        { authority: "Auth1111111111111111111111111111111111111", mint: "Mint111111111111111111111111111111111111111" },
+        {
+          authority: "Auth1111111111111111111111111111111111111",
+          mint: "Mint111111111111111111111111111111111111111",
+        },
       );
       expect(accounts).toHaveLength(2);
       expect(accounts[0].isSigner).toBe(true);
@@ -157,10 +162,7 @@ describe("Kinetic Action Layer", () => {
 
     it("should throw on missing account", () => {
       expect(() =>
-        resolveAccounts(
-          [{ name: "authority", writable: false, signer: true }],
-          {},
-        ),
+        resolveAccounts([{ name: "authority", writable: false, signer: true }], {}),
       ).toThrow("Missing required account: authority");
     });
 

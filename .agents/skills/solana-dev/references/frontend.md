@@ -6,12 +6,14 @@ description: Build React and Next.js Solana apps with a Kit plugin client, Walle
 # Frontend with Solana Kit (Next.js / React)
 
 ## Goals
+
 - One Kit client instance for the app (RPC + wallet + transaction sending)
 - Wallet Standard-first discovery/connect (no wallet-specific adapters)
 - Minimal "use client" footprint in Next.js (hooks only in leaf components)
 - Transaction sending that is observable, cancelable, and UX-friendly
 
 ## Recommended dependencies
+
 - `@solana/kit` (v7+)
 - `@solana/kit-plugin-rpc`, `@solana/kit-plugin-wallet` (wallet React hooks ship in `@solana/kit-plugin-wallet/react`)
 - `@solana/react` (v7+ — Kit client bindings: `ClientProvider`, `useClient`, data hooks)
@@ -22,6 +24,7 @@ description: Build React and Next.js Solana apps with a Kit plugin client, Walle
 Do **not** use `@solana/client` / `@solana/react-hooks` (framework-kit) for new work — that stack is stale; the maintained path is Kit plugins + `@solana/react`. Do not use `@solana/wallet-adapter-*` for new apps either; Wallet Standard discovery covers modern wallets.
 
 ## Bootstrap recommendation
+
 Prefer `create-solana-dapp` and pick a Kit template for new projects.
 
 ## Client setup (Next.js App Router)
@@ -31,20 +34,19 @@ Create a single wallet-backed client, export its type, and provide it via `Clien
 Example `app/providers.tsx`:
 
 ```tsx
-'use client';
+"use client";
 
-import React from 'react';
-import { createClient } from '@solana/kit';
-import { solanaRpc } from '@solana/kit-plugin-rpc';
-import { walletSigner } from '@solana/kit-plugin-wallet';
-import { ClientProvider } from '@solana/react';
+import React from "react";
+import { createClient } from "@solana/kit";
+import { solanaRpc } from "@solana/kit-plugin-rpc";
+import { walletSigner } from "@solana/kit-plugin-wallet";
+import { ClientProvider } from "@solana/react";
 
-const rpcUrl =
-  process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? 'https://api.devnet.solana.com';
+const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
 
 // One client for the whole app. The connected wallet fills payer + identity.
 export const client = createClient()
-  .use(walletSigner({ chain: 'solana:devnet' }))
+  .use(walletSigner({ chain: "solana:devnet" }))
   .use(solanaRpc({ rpcUrl }));
 
 // Export the client type so every useClient<AppClient>() call in the app
@@ -63,7 +65,7 @@ Then wrap `app/layout.tsx` with `<Providers>`.
 Use the React hooks from `@solana/kit-plugin-wallet/react` — state hooks (`useWallets`, `useConnectedWallet`, `useWalletStatus`, `useIsWalletReady`) and action hooks (`useConnect`, `useDisconnect`, `useSignIn`, `useSignMessage`, `useSelectAccount`), plus a `WalletReadyGate` component for the discovery warm-up:
 
 ```tsx
-'use client';
+"use client";
 
 import {
   useConnect,
@@ -71,7 +73,7 @@ import {
   useDisconnect,
   useWallets,
   WalletReadyGate,
-} from '@solana/kit-plugin-wallet/react';
+} from "@solana/kit-plugin-wallet/react";
 
 function WalletButton() {
   const wallets = useWallets();
@@ -111,10 +113,10 @@ Outside React (or for imperative flows), the same state is on the client: `clien
 With the wallet plugin installed, `client.sendTransaction` plans, asks the wallet to sign, and sends:
 
 ```tsx
-import { useClient } from '@solana/react';
-import { getTransferSolInstruction } from '@solana-program/system';
-import { address, sol } from '@solana/kit';
-import type { AppClient } from '@/app/providers';
+import { useClient } from "@solana/react";
+import { getTransferSolInstruction } from "@solana-program/system";
+import { address, sol } from "@solana/kit";
+import type { AppClient } from "@/app/providers";
 
 function useSendTip() {
   const client = useClient<AppClient>();
@@ -122,7 +124,7 @@ function useSendTip() {
     const ix = getTransferSolInstruction({
       source: client.payer,
       destination: address(to),
-      amount: sol('0.01'),
+      amount: sol("0.01"),
     });
     return await client.sendTransaction([ix]);
   };

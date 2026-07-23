@@ -1,7 +1,4 @@
-export type {
-  ClientGenConfig,
-  GeneratedClientFile,
-} from "./types.js";
+export type { ClientGenConfig, GeneratedClientFile } from "./types.js";
 
 export {
   generateObjectTypes,

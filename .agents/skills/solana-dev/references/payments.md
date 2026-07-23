@@ -6,7 +6,9 @@ description: Build checkout flows, payment buttons, and QR-based payment request
 # Payments and commerce (optional)
 
 ## When payments are in scope
+
 Use this guidance when the user asks about:
+
 - checkout flows, tips, payment buttons
 - payment request URLs / QR codes
 - fee abstraction / gasless transactions
@@ -23,11 +25,14 @@ Build payment flows directly on `@solana/kit` + `@solana-program/*`:
 ## Solana Pay (payment requests / QR)
 
 Use the Solana Pay URL spec for request-based payments (point-of-sale, invoices, QR codes):
+
 - `solana:<recipient>?amount=..&spl-token=..&reference=..&label=..&message=..`
 - Verify settlement server-side by finding the transaction via the `reference` key and validating recipient, mint, and amount from chain state.
 
 ## Kora (gasless / fee abstraction)
+
 Consider Kora when you need:
+
 - sponsored transactions (user doesn't pay gas)
 - users paying fees in tokens other than SOL
 - a trusted signing / paymaster component
@@ -35,6 +40,7 @@ Consider Kora when you need:
 Kora ships a Kit plugin (`koraPlugin` / `createKitKoraClient` from `@solana/kora`).
 
 ## UX and security checklist for payments
+
 - Always show recipient + amount + token clearly before signing.
 - Protect against replay (use unique references / memoing where appropriate).
 - Confirm settlement by querying chain state, not by trusting client-side callbacks.

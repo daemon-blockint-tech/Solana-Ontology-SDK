@@ -12,7 +12,7 @@ If using plugin clients, prefer `client.use(tokenProgram())` for a fluent API th
 Program address: `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`
 
 ```ts
-import { TOKEN_PROGRAM_ADDRESS } from '@solana-program/token';
+import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
 ```
 
 ## Account Types
@@ -20,7 +20,7 @@ import { TOKEN_PROGRAM_ADDRESS } from '@solana-program/token';
 ### Mint (82 bytes)
 
 ```ts
-import { fetchMint, fetchMaybeMint, getMintSize } from '@solana-program/token';
+import { fetchMint, fetchMaybeMint, getMintSize } from "@solana-program/token";
 
 const mint = await fetchMint(rpc, mintAddress);
 // mint.data.decimals, mint.data.supply, mint.data.mintAuthority, mint.data.freezeAuthority
@@ -29,7 +29,7 @@ const mint = await fetchMint(rpc, mintAddress);
 ### Token Account (165 bytes)
 
 ```ts
-import { fetchToken, fetchMaybeToken, getTokenSize } from '@solana-program/token';
+import { fetchToken, fetchMaybeToken, getTokenSize } from "@solana-program/token";
 
 const token = await fetchToken(rpc, tokenAddress);
 // token.data.mint, token.data.owner, token.data.amount
@@ -38,7 +38,7 @@ const token = await fetchToken(rpc, tokenAddress);
 ### Multisig
 
 ```ts
-import { fetchMultisig } from '@solana-program/token';
+import { fetchMultisig } from "@solana-program/token";
 
 const multisig = await fetchMultisig(rpc, multisigAddress);
 // multisig.data.m, multisig.data.n, multisig.data.signers
@@ -49,7 +49,7 @@ const multisig = await fetchMultisig(rpc, multisigAddress);
 One deterministic token account per owner per mint. Derived from owner + mint + token program — no on-chain lookup needed. Always prefer ATAs for user-facing flows.
 
 ```ts
-import { findAssociatedTokenPda, TOKEN_PROGRAM_ADDRESS } from '@solana-program/token';
+import { findAssociatedTokenPda, TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
 
 const [ata] = await findAssociatedTokenPda({
   owner: walletAddress,
@@ -63,7 +63,7 @@ const [ata] = await findAssociatedTokenPda({
 ### Initialize Mint
 
 ```ts
-import { getInitializeMintInstruction } from '@solana-program/token';
+import { getInitializeMintInstruction } from "@solana-program/token";
 
 const ix = getInitializeMintInstruction({
   mint: mintKeypair.address,
@@ -78,7 +78,7 @@ const ix = getInitializeMintInstruction({
 Prefer `getTransferCheckedInstruction` — validates mint and decimals on-chain, preventing wrong-token transfers.
 
 ```ts
-import { getTransferInstruction, getTransferCheckedInstruction } from '@solana-program/token';
+import { getTransferInstruction, getTransferCheckedInstruction } from "@solana-program/token";
 
 // Simple transfer
 const ix = getTransferInstruction({
@@ -102,7 +102,7 @@ const ix = getTransferCheckedInstruction({
 ### Mint To
 
 ```ts
-import { getMintToInstruction, getMintToCheckedInstruction } from '@solana-program/token';
+import { getMintToInstruction, getMintToCheckedInstruction } from "@solana-program/token";
 
 const ix = getMintToInstruction({
   mint: mintAddress,
@@ -115,7 +115,7 @@ const ix = getMintToInstruction({
 ### Approve Delegate
 
 ```ts
-import { getApproveInstruction } from '@solana-program/token';
+import { getApproveInstruction } from "@solana-program/token";
 
 const ix = getApproveInstruction({
   source: tokenAccount,
@@ -128,7 +128,7 @@ const ix = getApproveInstruction({
 ### Burn
 
 ```ts
-import { getBurnInstruction } from '@solana-program/token';
+import { getBurnInstruction } from "@solana-program/token";
 
 const ix = getBurnInstruction({
   account: tokenAccount,
@@ -145,8 +145,8 @@ Handle multi-step operations (e.g., create ATA if needed). Auto-check preconditi
 ### Create Mint
 
 ```ts
-import { getCreateMintInstructionPlan } from '@solana-program/token';
-import { executeInstructionPlan } from '@solana/instruction-plans';
+import { getCreateMintInstructionPlan } from "@solana-program/token";
+import { executeInstructionPlan } from "@solana/instruction-plans";
 
 const plan = getCreateMintInstructionPlan({
   mint: mintKeypair,
@@ -162,7 +162,7 @@ await executeInstructionPlan(rpc, plan, { payer });
 ### Mint to ATA (Creates ATA if needed)
 
 ```ts
-import { getMintToATAInstructionPlan } from '@solana-program/token';
+import { getMintToATAInstructionPlan } from "@solana-program/token";
 
 const plan = getMintToATAInstructionPlan({
   mint: mintAddress,
@@ -180,17 +180,26 @@ await executeInstructionPlan(rpc, plan, { payer });
 
 ```ts
 import {
-  pipe, createTransactionMessage, setTransactionMessageFeePayerSigner,
-  setTransactionMessageLifetimeUsingBlockhash, appendTransactionMessageInstructions,
-  signTransactionMessageWithSigners, sendAndConfirmTransactionFactory,
-  assertIsTransactionWithBlockhashLifetime, generateKeyPairSigner, lamports,
-} from '@solana/kit';
+  pipe,
+  createTransactionMessage,
+  setTransactionMessageFeePayerSigner,
+  setTransactionMessageLifetimeUsingBlockhash,
+  appendTransactionMessageInstructions,
+  signTransactionMessageWithSigners,
+  sendAndConfirmTransactionFactory,
+  assertIsTransactionWithBlockhashLifetime,
+  generateKeyPairSigner,
+  lamports,
+} from "@solana/kit";
 import {
-  getInitializeMintInstruction, getMintToInstruction,
-  getMintSize, TOKEN_PROGRAM_ADDRESS, findAssociatedTokenPda,
+  getInitializeMintInstruction,
+  getMintToInstruction,
+  getMintSize,
+  TOKEN_PROGRAM_ADDRESS,
+  findAssociatedTokenPda,
   getCreateAssociatedTokenInstruction,
-} from '@solana-program/token';
-import { getCreateAccountInstruction } from '@solana-program/system';
+} from "@solana-program/token";
+import { getCreateAccountInstruction } from "@solana-program/system";
 
 // 1. Generate mint keypair
 const mintKeypair = await generateKeyPairSigner();
@@ -209,42 +218,46 @@ const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
 
 const message = pipe(
   createTransactionMessage({ version: 0 }),
-  m => setTransactionMessageFeePayerSigner(payer, m),
-  m => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, m),
-  m => appendTransactionMessageInstructions([
-    // Create mint account
-    getCreateAccountInstruction({
-      payer,
-      newAccount: mintKeypair,
-      lamports: lamports(mintRent),
-      space: getMintSize(),
-      programAddress: TOKEN_PROGRAM_ADDRESS,
-    }),
-    // Initialize mint
-    getInitializeMintInstruction({
-      mint: mintKeypair.address,
-      decimals: 9,
-      mintAuthority: payer.address,
-    }),
-    // Create ATA
-    getCreateAssociatedTokenInstruction({
-      payer,
-      ata,
-      owner: recipient.address,
-      mint: mintKeypair.address,
-    }),
-    // Mint tokens
-    getMintToInstruction({
-      mint: mintKeypair.address,
-      token: ata,
-      mintAuthority: payer,
-      amount: 1_000_000_000n,
-    }),
-  ], m),
+  (m) => setTransactionMessageFeePayerSigner(payer, m),
+  (m) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, m),
+  (m) =>
+    appendTransactionMessageInstructions(
+      [
+        // Create mint account
+        getCreateAccountInstruction({
+          payer,
+          newAccount: mintKeypair,
+          lamports: lamports(mintRent),
+          space: getMintSize(),
+          programAddress: TOKEN_PROGRAM_ADDRESS,
+        }),
+        // Initialize mint
+        getInitializeMintInstruction({
+          mint: mintKeypair.address,
+          decimals: 9,
+          mintAuthority: payer.address,
+        }),
+        // Create ATA
+        getCreateAssociatedTokenInstruction({
+          payer,
+          ata,
+          owner: recipient.address,
+          mint: mintKeypair.address,
+        }),
+        // Mint tokens
+        getMintToInstruction({
+          mint: mintKeypair.address,
+          token: ata,
+          mintAuthority: payer,
+          amount: 1_000_000_000n,
+        }),
+      ],
+      m,
+    ),
 );
 
 const sendAndConfirm = sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions });
 const signed = await signTransactionMessageWithSigners(message);
 assertIsTransactionWithBlockhashLifetime(signed);
-await sendAndConfirm(signed, { commitment: 'confirmed' });
+await sendAndConfirm(signed, { commitment: "confirmed" });
 ```

@@ -2,11 +2,7 @@
  * Storage interface for OMS — pluggable backends.
  */
 
-import type {
-  ObjectTypeDefinition,
-  LinkTypeDefinition,
-  ActionTypeDefinition,
-} from "../types.js";
+import type { ObjectTypeDefinition, LinkTypeDefinition, ActionTypeDefinition } from "../types.js";
 
 export interface OmsStorage {
   // Object Types

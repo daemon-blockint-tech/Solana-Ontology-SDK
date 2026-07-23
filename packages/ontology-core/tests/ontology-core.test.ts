@@ -1,11 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { loadConcepts } from "../src/loader.js";
 import { validateAll, validateConcept } from "../src/validator.js";
 import { buildGraph, getDependencies } from "../src/graph.js";
 import type { Concept } from "../src/types.js";
 
-const ONTOLOGY_ROOT = join(process.cwd(), "ontology");
+const PROJECT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+const ONTOLOGY_ROOT = join(PROJECT_ROOT, "ontology");
 const CONCEPTS_DIR = join(ONTOLOGY_ROOT, "concepts");
 
 describe("loader", () => {
@@ -93,9 +95,7 @@ describe("validator", () => {
     ];
     const result = validateAll(concepts);
     expect(result.valid).toBe(false);
-    expect(
-      result.errors.some((e) => e.message.includes("NonExistentConcept")),
-    ).toBe(true);
+    expect(result.errors.some((e) => e.message.includes("NonExistentConcept"))).toBe(true);
   });
 });
 

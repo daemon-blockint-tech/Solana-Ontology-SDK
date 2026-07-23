@@ -114,14 +114,19 @@ function migrateType(type: string | IdlV0Type): string | IdlV1Type {
   }
   const result: IdlV1Type = {};
   if (type.defined) result.defined = convertCamelToSnake(type.defined);
-  if (type.option) result.option = typeof type.option === "string" ? type.option : migrateType(type.option) as IdlV1Type;
-  if (type.vec) result.vec = typeof type.vec === "string" ? type.vec : migrateType(type.vec) as IdlV1Type;
+  if (type.option)
+    result.option =
+      typeof type.option === "string" ? type.option : (migrateType(type.option) as IdlV1Type);
+  if (type.vec)
+    result.vec = typeof type.vec === "string" ? type.vec : (migrateType(type.vec) as IdlV1Type);
   if (type.array) {
     result.array = [
-      typeof type.array[0] === "string" ? type.array[0] : migrateType(type.array[0]) as IdlV1Type,
+      typeof type.array[0] === "string" ? type.array[0] : (migrateType(type.array[0]) as IdlV1Type),
       type.array[1],
     ];
   }
-  if (type.coption) result.coption = typeof type.coption === "string" ? type.coption : migrateType(type.coption) as IdlV1Type;
+  if (type.coption)
+    result.coption =
+      typeof type.coption === "string" ? type.coption : (migrateType(type.coption) as IdlV1Type);
   return result;
 }

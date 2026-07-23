@@ -3,11 +3,7 @@
  */
 
 import type { OmsStorage } from "./interface.js";
-import type {
-  ObjectTypeDefinition,
-  LinkTypeDefinition,
-  ActionTypeDefinition,
-} from "../types.js";
+import type { ObjectTypeDefinition, LinkTypeDefinition, ActionTypeDefinition } from "../types.js";
 
 export class MemoryStorage implements OmsStorage {
   private objectTypes = new Map<string, ObjectTypeDefinition>();

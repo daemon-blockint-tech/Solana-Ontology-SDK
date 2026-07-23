@@ -54,7 +54,11 @@ export function idlCommand(
 
   for (const concept of concepts) {
     const { _sourceFile, ...data } = concept;
-    const fileName = concept.canonicalName.replace(/([A-Z])/g, "_$1").replace(/^_/, "").toLowerCase() + ".yaml";
+    const fileName =
+      concept.canonicalName
+        .replace(/([A-Z])/g, "_$1")
+        .replace(/^_/, "")
+        .toLowerCase() + ".yaml";
     const filePath = join(outDir, fileName);
     writeFileSync(filePath, yamlStringify(data));
     console.log(`  ✓ ${concept.canonicalName} → ${filePath}`);

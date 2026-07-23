@@ -8,7 +8,7 @@ description: Kit-compatible @solana-program/compute-budget client for CU limits,
 Program address: `ComputeBudget111111111111111111111111111111`
 
 ```ts
-import { COMPUTE_BUDGET_PROGRAM_ADDRESS } from '@solana-program/compute-budget';
+import { COMPUTE_BUDGET_PROGRAM_ADDRESS } from "@solana-program/compute-budget";
 ```
 
 Correctly budgeting compute units for your transaction increases the probability it gets accepted for processing. Without a declared CU limit, validators assume 200K CU per instruction. Since validators pack blocks to maximize throughput, they prefer transactions with tight budgets that clearly fit in remaining block space. Pairing a tight CU limit with a priority fee gives validators direct incentive to include your transaction. Total fee = base fee (5,000 lamports/sig) + (CU consumed × price per CU in micro-lamports).
@@ -22,7 +22,7 @@ If you're using a Kit client built with the `solanaRpc` / `solanaLocalRpc` / `so
 Always set based on simulation — overestimate wastes block space, underestimate fails the transaction.
 
 ```ts
-import { getSetComputeUnitLimitInstruction } from '@solana-program/compute-budget';
+import { getSetComputeUnitLimitInstruction } from "@solana-program/compute-budget";
 
 const ix = getSetComputeUnitLimitInstruction({ units: 200_000 });
 ```
@@ -32,7 +32,7 @@ const ix = getSetComputeUnitLimitInstruction({ units: 200_000 });
 Price per CU in micro-lamports — higher values improve inclusion during congestion.
 
 ```ts
-import { getSetComputeUnitPriceInstruction } from '@solana-program/compute-budget';
+import { getSetComputeUnitPriceInstruction } from "@solana-program/compute-budget";
 
 const ix = getSetComputeUnitPriceInstruction({ microLamports: 1000n });
 ```
@@ -42,7 +42,7 @@ const ix = getSetComputeUnitPriceInstruction({ microLamports: 1000n });
 Increases BPF heap beyond the default 32 KB — only needed when programs allocate large data structures (large account deserialization, Merkle trees, ZK proofs). Most transactions don't need this.
 
 ```ts
-import { getRequestHeapFrameInstruction } from '@solana-program/compute-budget';
+import { getRequestHeapFrameInstruction } from "@solana-program/compute-budget";
 
 const ix = getRequestHeapFrameInstruction({ bytes: 256 * 1024 }); // 256 KB
 ```
@@ -54,7 +54,7 @@ Simulate before sending to set a tight CU limit and avoid overpaying on priority
 ### Basic Estimator
 
 ```ts
-import { estimateComputeUnitLimitFactory } from '@solana-program/compute-budget';
+import { estimateComputeUnitLimitFactory } from "@solana-program/compute-budget";
 
 const estimateCU = estimateComputeUnitLimitFactory({ rpc });
 const estimatedUnits = await estimateCU(transactionMessage);
@@ -68,10 +68,10 @@ Estimates CU and updates the transaction message automatically:
 import {
   estimateComputeUnitLimitFactory,
   estimateAndUpdateProvisoryComputeUnitLimitFactory,
-} from '@solana-program/compute-budget';
+} from "@solana-program/compute-budget";
 
 const estimateAndUpdateCU = estimateAndUpdateProvisoryComputeUnitLimitFactory(
-  estimateComputeUnitLimitFactory({ rpc })
+  estimateComputeUnitLimitFactory({ rpc }),
 );
 
 // Returns message with CU limit instruction added/updated
@@ -86,18 +86,18 @@ const updatedMessage = await estimateAndUpdateCU(transactionMessage);
 import {
   updateOrAppendSetComputeUnitLimitInstruction,
   updateOrAppendSetComputeUnitPriceInstruction,
-} from '@solana-program/compute-budget';
+} from "@solana-program/compute-budget";
 
 // Update CU limit (or add if not present)
 const msg1 = updateOrAppendSetComputeUnitLimitInstruction(
-  (current) => current === null ? 200_000 : current,
-  transactionMessage
+  (current) => (current === null ? 200_000 : current),
+  transactionMessage,
 );
 
 // Update priority fee dynamically
 const msg2 = updateOrAppendSetComputeUnitPriceInstruction(
-  (current) => current === null ? 1000n : current * 2n, // Double on retry
-  transactionMessage
+  (current) => (current === null ? 1000n : current * 2n), // Double on retry
+  transactionMessage,
 );
 ```
 
@@ -107,21 +107,26 @@ Build with priority fee → estimate CU via simulation → refresh blockhash (si
 
 ```ts
 import {
-  pipe, createTransactionMessage, setTransactionMessageFeePayerSigner,
-  setTransactionMessageLifetimeUsingBlockhash, appendTransactionMessageInstruction,
-  prependTransactionMessageInstruction, signTransactionMessageWithSigners,
-  sendAndConfirmTransactionFactory, assertIsTransactionWithBlockhashLifetime,
-} from '@solana/kit';
+  pipe,
+  createTransactionMessage,
+  setTransactionMessageFeePayerSigner,
+  setTransactionMessageLifetimeUsingBlockhash,
+  appendTransactionMessageInstruction,
+  prependTransactionMessageInstruction,
+  signTransactionMessageWithSigners,
+  sendAndConfirmTransactionFactory,
+  assertIsTransactionWithBlockhashLifetime,
+} from "@solana/kit";
 import {
   getSetComputeUnitPriceInstruction,
   estimateComputeUnitLimitFactory,
   estimateAndUpdateProvisoryComputeUnitLimitFactory,
-} from '@solana-program/compute-budget';
+} from "@solana-program/compute-budget";
 
 async function sendWithComputeBudget(rpc, rpcSubscriptions, signer, instruction) {
   // Setup CU estimator
   const estimateAndUpdateCU = estimateAndUpdateProvisoryComputeUnitLimitFactory(
-    estimateComputeUnitLimitFactory({ rpc })
+    estimateComputeUnitLimitFactory({ rpc }),
   );
 
   // 1. Build base message with priority fee
@@ -129,13 +134,14 @@ async function sendWithComputeBudget(rpc, rpcSubscriptions, signer, instruction)
 
   let message = pipe(
     createTransactionMessage({ version: 0 }),
-    m => setTransactionMessageFeePayerSigner(signer, m),
-    m => setTransactionMessageLifetimeUsingBlockhash(simBlockhash, m),
-    m => appendTransactionMessageInstruction(instruction, m),
-    m => prependTransactionMessageInstruction(
-      getSetComputeUnitPriceInstruction({ microLamports: 1000n }),
-      m
-    ),
+    (m) => setTransactionMessageFeePayerSigner(signer, m),
+    (m) => setTransactionMessageLifetimeUsingBlockhash(simBlockhash, m),
+    (m) => appendTransactionMessageInstruction(instruction, m),
+    (m) =>
+      prependTransactionMessageInstruction(
+        getSetComputeUnitPriceInstruction({ microLamports: 1000n }),
+        m,
+      ),
   );
 
   // 2. Estimate CU via simulation (adds/updates CU limit instruction)
@@ -149,7 +155,7 @@ async function sendWithComputeBudget(rpc, rpcSubscriptions, signer, instruction)
   const sendAndConfirm = sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions });
   const signed = await signTransactionMessageWithSigners(message);
   assertIsTransactionWithBlockhashLifetime(signed);
-  return sendAndConfirm(signed, { commitment: 'confirmed' });
+  return sendAndConfirm(signed, { commitment: "confirmed" });
 }
 ```
 

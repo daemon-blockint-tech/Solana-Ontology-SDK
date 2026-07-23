@@ -21,18 +21,21 @@ For most use cases, prefer the plugin clients in [overview.md](overview.md) and 
 
 ```ts
 import {
-  pipe, createTransactionMessage, setTransactionMessageFeePayerSigner,
-  setTransactionMessageLifetimeUsingBlockhash, appendTransactionMessageInstruction,
+  pipe,
+  createTransactionMessage,
+  setTransactionMessageFeePayerSigner,
+  setTransactionMessageLifetimeUsingBlockhash,
+  appendTransactionMessageInstruction,
   prependTransactionMessageInstruction,
-} from '@solana/kit';
+} from "@solana/kit";
 
 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
 
 const message = pipe(
   createTransactionMessage({ version: 0 }),
-  m => setTransactionMessageFeePayerSigner(signer, m),
-  m => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, m),
-  m => appendTransactionMessageInstruction(instruction, m),
+  (m) => setTransactionMessageFeePayerSigner(signer, m),
+  (m) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, m),
+  (m) => appendTransactionMessageInstruction(instruction, m),
 );
 ```
 
@@ -71,10 +74,10 @@ const msg = prependTransactionMessageInstruction(computeBudgetIx, message);
 ### Creating Raw Instructions
 
 ```ts
-import { AccountRole } from '@solana/instructions';
+import { AccountRole } from "@solana/instructions";
 
 const instruction: Instruction = {
-  programAddress: address('Token...'),
+  programAddress: address("Token..."),
   accounts: [
     { address: source, role: AccountRole.WRITABLE_SIGNER },
     { address: dest, role: AccountRole.WRITABLE },
@@ -97,10 +100,10 @@ import {
   getSetComputeUnitPriceInstruction,
   estimateComputeUnitLimitFactory,
   estimateAndUpdateProvisoryComputeUnitLimitFactory,
-} from '@solana-program/compute-budget';
+} from "@solana-program/compute-budget";
 
 const estimateAndUpdateCU = estimateAndUpdateProvisoryComputeUnitLimitFactory(
-  estimateComputeUnitLimitFactory({ rpc })
+  estimateComputeUnitLimitFactory({ rpc }),
 );
 ```
 
@@ -110,12 +113,14 @@ const estimateAndUpdateCU = estimateAndUpdateProvisoryComputeUnitLimitFactory(
 // 1. Build message with priority fee
 let message = pipe(
   createTransactionMessage({ version: 0 }),
-  m => setTransactionMessageFeePayerSigner(signer, m),
-  m => setTransactionMessageLifetimeUsingBlockhash(blockhash, m),
-  m => appendTransactionMessageInstruction(instruction, m),
-  m => prependTransactionMessageInstruction(
-    getSetComputeUnitPriceInstruction({ microLamports: 1000n }), m
-  ),
+  (m) => setTransactionMessageFeePayerSigner(signer, m),
+  (m) => setTransactionMessageLifetimeUsingBlockhash(blockhash, m),
+  (m) => appendTransactionMessageInstruction(instruction, m),
+  (m) =>
+    prependTransactionMessageInstruction(
+      getSetComputeUnitPriceInstruction({ microLamports: 1000n }),
+      m,
+    ),
 );
 
 // 2. Estimate CU via simulation
@@ -132,11 +137,11 @@ await signAndSendTransactionMessageWithSigners(message);
 ### Update Priority Fee Dynamically
 
 ```ts
-import { updateOrAppendSetComputeUnitPriceInstruction } from '@solana-program/compute-budget';
+import { updateOrAppendSetComputeUnitPriceInstruction } from "@solana-program/compute-budget";
 
 const updated = updateOrAppendSetComputeUnitPriceInstruction(
-  (current) => current === null ? 1000n : current * 2n,
-  message
+  (current) => (current === null ? 1000n : current * 2n),
+  message,
 );
 ```
 
@@ -149,7 +154,7 @@ See [programs/compute-budget.md](programs/compute-budget.md) for the full CU ref
 ### With Embedded Signers (Recommended)
 
 ```ts
-import { signTransactionMessageWithSigners } from '@solana/kit';
+import { signTransactionMessageWithSigners } from "@solana/kit";
 
 // Auto-discovers signers from fee payer + instruction accounts
 const signed = await signTransactionMessageWithSigners(message);
@@ -158,14 +163,18 @@ const signed = await signTransactionMessageWithSigners(message);
 ### Sign and Send
 
 ```ts
-import { signAndSendTransactionMessageWithSigners } from '@solana/kit';
+import { signAndSendTransactionMessageWithSigners } from "@solana/kit";
 const signature = await signAndSendTransactionMessageWithSigners(message);
 ```
 
 ### Manual: Compile + Sign Separately
 
 ```ts
-import { compileTransaction, signTransaction, partiallySignTransaction } from '@solana/transactions';
+import {
+  compileTransaction,
+  signTransaction,
+  partiallySignTransaction,
+} from "@solana/transactions";
 
 const compiled = compileTransaction(message);
 const signed = await signTransaction([keypair1, keypair2], compiled);
@@ -187,7 +196,7 @@ const signed = await signTransactionMessageWithSigners(message);
 // Required type assertions before sending
 assertIsTransactionWithBlockhashLifetime(signed);
 assertIsTransactionWithinSizeLimit(signed);
-await sendAndConfirm(signed, { commitment: 'confirmed' });
+await sendAndConfirm(signed, { commitment: "confirmed" });
 ```
 
 ### Durable Nonce
@@ -197,13 +206,13 @@ const sendNonceTx = sendAndConfirmDurableNonceTransactionFactory({ rpc, rpcSubsc
 assertIsFullySignedTransaction(signed);
 assertIsTransactionWithDurableNonceLifetime(signed);
 assertIsTransactionWithinSizeLimit(signed);
-await sendNonceTx(signed, { commitment: 'confirmed' });
+await sendNonceTx(signed, { commitment: "confirmed" });
 ```
 
 ### Utilities
 
 ```ts
-import { getSignatureFromTransaction, getBase64EncodedWireTransaction } from '@solana/transactions';
+import { getSignatureFromTransaction, getBase64EncodedWireTransaction } from "@solana/transactions";
 
 const sig = getSignatureFromTransaction(signedTx);
 const base64 = getBase64EncodedWireTransaction(signedTx);
@@ -215,33 +224,40 @@ const base64 = getBase64EncodedWireTransaction(signedTx);
 
 ```ts
 import {
-  pipe, createTransactionMessage, setTransactionMessageFeePayerSigner,
-  setTransactionMessageLifetimeUsingBlockhash, appendTransactionMessageInstruction,
-  prependTransactionMessageInstruction, signTransactionMessageWithSigners,
-  sendAndConfirmTransactionFactory, assertIsTransactionWithBlockhashLifetime,
+  pipe,
+  createTransactionMessage,
+  setTransactionMessageFeePayerSigner,
+  setTransactionMessageLifetimeUsingBlockhash,
+  appendTransactionMessageInstruction,
+  prependTransactionMessageInstruction,
+  signTransactionMessageWithSigners,
+  sendAndConfirmTransactionFactory,
+  assertIsTransactionWithBlockhashLifetime,
   assertIsTransactionWithinSizeLimit,
-} from '@solana/kit';
+} from "@solana/kit";
 import {
   getSetComputeUnitPriceInstruction,
   estimateComputeUnitLimitFactory,
   estimateAndUpdateProvisoryComputeUnitLimitFactory,
-} from '@solana-program/compute-budget';
+} from "@solana-program/compute-budget";
 
 async function sendTx(rpc, rpcSubscriptions, signer, instruction) {
   const estimateAndUpdateCU = estimateAndUpdateProvisoryComputeUnitLimitFactory(
-    estimateComputeUnitLimitFactory({ rpc })
+    estimateComputeUnitLimitFactory({ rpc }),
   );
 
   const { value: simBlockhash } = await rpc.getLatestBlockhash().send();
 
   let message = pipe(
     createTransactionMessage({ version: 0 }),
-    m => setTransactionMessageFeePayerSigner(signer, m),
-    m => setTransactionMessageLifetimeUsingBlockhash(simBlockhash, m),
-    m => appendTransactionMessageInstruction(instruction, m),
-    m => prependTransactionMessageInstruction(
-      getSetComputeUnitPriceInstruction({ microLamports: 1000n }), m
-    ),
+    (m) => setTransactionMessageFeePayerSigner(signer, m),
+    (m) => setTransactionMessageLifetimeUsingBlockhash(simBlockhash, m),
+    (m) => appendTransactionMessageInstruction(instruction, m),
+    (m) =>
+      prependTransactionMessageInstruction(
+        getSetComputeUnitPriceInstruction({ microLamports: 1000n }),
+        m,
+      ),
   );
 
   message = await estimateAndUpdateCU(message);
@@ -254,7 +270,7 @@ async function sendTx(rpc, rpcSubscriptions, signer, instruction) {
   const signed = await signTransactionMessageWithSigners(message);
   assertIsTransactionWithBlockhashLifetime(signed);
   assertIsTransactionWithinSizeLimit(signed);
-  await sendAndConfirm(signed, { commitment: 'confirmed' });
+  await sendAndConfirm(signed, { commitment: "confirmed" });
 }
 ```
 
@@ -265,18 +281,18 @@ async function sendTx(rpc, rpcSubscriptions, signer, instruction) {
 ### Creating Clients
 
 ```ts
-import { createSolanaRpc, createSolanaRpcSubscriptions } from '@solana/kit';
+import { createSolanaRpc, createSolanaRpcSubscriptions } from "@solana/kit";
 
-const rpc = createSolanaRpc('https://api.devnet.solana.com');
-const rpcSubs = createSolanaRpcSubscriptions('wss://api.devnet.solana.com');
+const rpc = createSolanaRpc("https://api.devnet.solana.com");
+const rpcSubs = createSolanaRpcSubscriptions("wss://api.devnet.solana.com");
 ```
 
 ### Custom Transport
 
 ```ts
 const transport = createDefaultRpcTransport({
-  url: 'https://my-rpc.example.com',
-  headers: { 'Authorization': 'Bearer token' },
+  url: "https://my-rpc.example.com",
+  headers: { Authorization: "Bearer token" },
 });
 const rpc = createSolanaRpcFromTransport(transport);
 ```
@@ -295,12 +311,14 @@ await rpc.getBalance(address).send({ abortSignal: controller.signal });
 ### Return Types
 
 Most methods return `{ value: T }`:
+
 ```ts
 const { value: balance } = await rpc.getBalance(address).send();
 const { value: blockhash } = await rpc.getLatestBlockhash().send();
 ```
 
 Some return `T` directly:
+
 ```ts
 const rentExempt = await rpc.getMinimumBalanceForRentExemption(80n).send();
 const slot = await rpc.getSlot().send();
@@ -309,20 +327,22 @@ const slot = await rpc.getSlot().send();
 ### Subscriptions
 
 ```ts
-const sub = await rpcSubs.accountNotifications(address, {
-  encoding: 'base64',
-  commitment: 'confirmed',
-}).subscribe();
+const sub = await rpcSubs
+  .accountNotifications(address, {
+    encoding: "base64",
+    commitment: "confirmed",
+  })
+  .subscribe();
 
 for await (const notif of sub) {
-  console.log('Changed:', notif);
+  console.log("Changed:", notif);
 }
 ```
 
 ### Commitment Levels
 
 ```ts
-type Commitment = 'processed' | 'confirmed' | 'finalized';
+type Commitment = "processed" | "confirmed" | "finalized";
 // processed: seen by node
 // confirmed: supermajority confirmed
 // finalized: max lockout
@@ -331,13 +351,13 @@ type Commitment = 'processed' | 'confirmed' | 'finalized';
 ### Airdrop (devnet/testnet)
 
 ```ts
-import { airdropFactory, lamports } from '@solana/kit';
+import { airdropFactory, lamports } from "@solana/kit";
 
 const airdrop = airdropFactory({ rpc, rpcSubscriptions });
 await airdrop({
-  recipientAddress: address('...'),
+  recipientAddress: address("..."),
   lamports: lamports(1_000_000_000n),
-  commitment: 'confirmed',
+  commitment: "confirmed",
 });
 ```
 
@@ -362,16 +382,16 @@ import {
   isSolanaError,
   SOLANA_ERROR__BLOCK_HEIGHT_EXCEEDED,
   SOLANA_ERROR__JSON_RPC__SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE,
-} from '@solana/errors';
+} from "@solana/errors";
 
 try {
-  await sendAndConfirm(tx, { commitment: 'confirmed' });
+  await sendAndConfirm(tx, { commitment: "confirmed" });
 } catch (e) {
   if (isSolanaError(e, SOLANA_ERROR__BLOCK_HEIGHT_EXCEEDED)) {
-    console.error('Blockhash expired');
+    console.error("Blockhash expired");
   }
   if (isSolanaError(e, SOLANA_ERROR__JSON_RPC__SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE)) {
-    console.error('Preflight failed:', e.cause);
+    console.error("Preflight failed:", e.cause);
   }
 }
 ```
@@ -383,19 +403,20 @@ try {
 A plugin is a function that takes a client object and returns a new one (or a promise):
 
 ```ts
-export type ClientPlugin<TInput extends object, TOutput extends Promise<object> | object> =
-  (input: TInput) => TOutput;
+export type ClientPlugin<TInput extends object, TOutput extends Promise<object> | object> = (
+  input: TInput,
+) => TOutput;
 ```
 
 ### Basic Plugin
 
 ```ts
-import { createClient } from '@solana/kit';
+import { createClient } from "@solana/kit";
 
 function apple() {
   return <T extends object>(client: T) => ({
     ...client,
-    fruit: 'apple' as const,
+    fruit: "apple" as const,
   });
 }
 
@@ -409,14 +430,14 @@ Require that other plugins are installed first:
 
 ```ts
 function appleTart() {
-  return <T extends { fruit: 'apple' }>(client: T) => ({
+  return <T extends { fruit: "apple" }>(client: T) => ({
     ...client,
-    dessert: 'appleTart' as const,
+    dessert: "appleTart" as const,
   });
 }
 
 createClient().use(apple()).use(appleTart()); // ✅ Ok
-createClient().use(appleTart());              // ❌ TypeScript error
+createClient().use(appleTart()); // ❌ TypeScript error
 ```
 
 ### Async Plugin
@@ -444,17 +465,21 @@ The plugin system enables building purpose-built clients for specific domains. H
 [Kora](https://github.com/solana-foundation/kora) builds a gasless payment client by composing standard plugins with a custom Kora plugin:
 
 ```ts
-import { createClient } from '@solana/kit';
-import { planAndSendTransactions, transactionPlanExecutor, transactionPlanner } from '@solana/kit-plugin-instruction-plan';
-import { payer } from '@solana/kit-plugin-signer';
-import { rpc } from '@solana/kit-plugin-rpc';
+import { createClient } from "@solana/kit";
+import {
+  planAndSendTransactions,
+  transactionPlanExecutor,
+  transactionPlanner,
+} from "@solana/kit-plugin-instruction-plan";
+import { payer } from "@solana/kit-plugin-signer";
+import { rpc } from "@solana/kit-plugin-rpc";
 
 export async function createKitKoraClient(config) {
   return createClient()
     .use(rpc(config.rpcUrl))
     .use(koraPlugin({ apiKey: config.apiKey, endpoint: config.endpoint }))
     .use(payer(payerSigner))
-    .use(transactionPlanner(koraTransactionPlanner))      // Custom planning logic
+    .use(transactionPlanner(koraTransactionPlanner)) // Custom planning logic
     .use(transactionPlanExecutor(koraTransactionExecutor)) // Custom execution via Kora API
     .use(planAndSendTransactions());
 }
@@ -471,16 +496,14 @@ Key pattern: Standard plugins (`rpc`, `payer`, `planAndSendTransactions`) combin
 [Solana Pay](https://github.com/amilz/solana-pay) builds role-specific clients — a read-only merchant client and a full wallet client:
 
 ```ts
-import { createClient } from '@solana/kit';
-import { planAndSendTransactions } from '@solana/kit-plugin-instruction-plan';
-import { payer } from '@solana/kit-plugin-signer';
-import { rpc, rpcTransactionPlanExecutor, rpcTransactionPlanner } from '@solana/kit-plugin-rpc';
+import { createClient } from "@solana/kit";
+import { planAndSendTransactions } from "@solana/kit-plugin-instruction-plan";
+import { payer } from "@solana/kit-plugin-signer";
+import { rpc, rpcTransactionPlanExecutor, rpcTransactionPlanner } from "@solana/kit-plugin-rpc";
 
 // Merchant: read-only, no payer needed
 function createMerchantClient(config) {
-  return createClient()
-    .use(rpc(config.rpcUrl))
-    .use(solanaPayMerchant()); // Adds client.pay.encodeURL, findReference, validateTransfer
+  return createClient().use(rpc(config.rpcUrl)).use(solanaPayMerchant()); // Adds client.pay.encodeURL, findReference, validateTransfer
 }
 
 // Wallet: full tx capabilities

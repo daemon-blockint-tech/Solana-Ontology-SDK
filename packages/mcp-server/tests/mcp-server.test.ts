@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { loadConcepts } from "@solana-ontology/core";
-import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { OntologyMcpServer, OAuthProvider } from "../src/index.js";
 
-const conceptsDir = join(process.cwd(), "ontology", "concepts");
-const ontologyRoot = join(process.cwd(), "ontology");
+const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+const conceptsDir = join(projectRoot, "ontology", "concepts");
+const ontologyRoot = join(projectRoot, "ontology");
 
 let concepts: ReturnType<typeof loadConcepts>;
 

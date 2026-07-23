@@ -3,10 +3,7 @@ import type { Concept, StateTransition } from "@solana-ontology/core";
 /**
  * Generate an action builder function for a state machine transition.
  */
-function generateTransitionAction(
-  conceptName: string,
-  transition: StateTransition,
-): string {
+function generateTransitionAction(conceptName: string, transition: StateTransition): string {
   const fnName = `build${transition.from}To${transition.to}${conceptName}Action`;
 
   return [

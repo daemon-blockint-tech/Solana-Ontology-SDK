@@ -18,13 +18,13 @@ Create one client for the app, export its type, and provide it at the root:
 
 ```tsx
 // app/providers.tsx
-import { createClient } from '@solana/kit';
-import { solanaRpc } from '@solana/kit-plugin-rpc';
-import { walletSigner } from '@solana/kit-plugin-wallet';
-import { ClientProvider } from '@solana/react';
+import { createClient } from "@solana/kit";
+import { solanaRpc } from "@solana/kit-plugin-rpc";
+import { walletSigner } from "@solana/kit-plugin-wallet";
+import { ClientProvider } from "@solana/react";
 
 export const client = createClient()
-  .use(walletSigner({ chain: 'solana:devnet' }))
+  .use(walletSigner({ chain: "solana:devnet" }))
   .use(solanaRpc({ rpcUrl }));
 
 // Makes every useClient<AppClient>() call fully typed
@@ -38,8 +38,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
 Always pass your client type to `useClient` — a bare `useClient()` gives you an untyped `Client<object>` (and the type parameter is expected to become required):
 
 ```tsx
-import { useClient } from '@solana/react';
-import type { AppClient } from '@/app/providers';
+import { useClient } from "@solana/react";
+import type { AppClient } from "@/app/providers";
 
 function Balance({ address }: { address: Address }) {
   const client = useClient<AppClient>();
@@ -51,12 +51,12 @@ function Balance({ address }: { address: Address }) {
 
 ## Data Hooks
 
-| Hook | Purpose |
-|------|---------|
-| `useRequest` | One-shot async reads (RPC calls) |
-| `useSubscription` | WebSocket subscriptions with cleanup |
-| `useTrackedData` | Data that updates from a subscription stream |
-| `useAction` | Wrap async actions (send, connect) with pending/error state |
+| Hook              | Purpose                                                     |
+| ----------------- | ----------------------------------------------------------- |
+| `useRequest`      | One-shot async reads (RPC calls)                            |
+| `useSubscription` | WebSocket subscriptions with cleanup                        |
+| `useTrackedData`  | Data that updates from a subscription stream                |
+| `useAction`       | Wrap async actions (send, connect) with pending/error state |
 
 For caching, revalidation, and request dedup, prefer the framework adapters: `@solana/react/swr` (SWR) and `@solana/react/query` (TanStack Query).
 
@@ -66,22 +66,22 @@ Requires the `walletSigner` (or `walletWithoutSigner`) plugin on the client.
 
 **State hooks:**
 
-| Hook | Returns |
-|------|---------|
-| `useWallets()` | Discovered Wallet Standard wallets for the configured chain |
-| `useConnectedWallet()` | Active connection (`{ account, signer, wallet }`) or `null` |
-| `useWalletStatus()` | `'pending' \| 'disconnected' \| 'connecting' \| 'connected' \| 'disconnecting' \| 'reconnecting'` |
-| `useIsWalletReady()` | `false` during discovery warm-up, then `true` |
+| Hook                   | Returns                                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------------- |
+| `useWallets()`         | Discovered Wallet Standard wallets for the configured chain                                       |
+| `useConnectedWallet()` | Active connection (`{ account, signer, wallet }`) or `null`                                       |
+| `useWalletStatus()`    | `'pending' \| 'disconnected' \| 'connecting' \| 'connected' \| 'disconnecting' \| 'reconnecting'` |
+| `useIsWalletReady()`   | `false` during discovery warm-up, then `true`                                                     |
 
 **Action hooks** (built on `useAction` — expose `dispatch` + pending/error state):
 
-| Hook | Wraps |
-|------|-------|
-| `useConnect()` | `client.wallet.connect(wallet)` |
-| `useDisconnect()` | `client.wallet.disconnect()` |
-| `useSignIn()` | Sign-In-With-Solana (`client.wallet.signIn(wallet, input)`) |
-| `useSignMessage()` | `client.wallet.signMessage(message)` |
-| `useSelectAccount()` | Switch account within the authorized wallet |
+| Hook                 | Wraps                                                       |
+| -------------------- | ----------------------------------------------------------- |
+| `useConnect()`       | `client.wallet.connect(wallet)`                             |
+| `useDisconnect()`    | `client.wallet.disconnect()`                                |
+| `useSignIn()`        | Sign-In-With-Solana (`client.wallet.signIn(wallet, input)`) |
+| `useSignMessage()`   | `client.wallet.signMessage(message)`                        |
+| `useSelectAccount()` | Switch account within the authorized wallet                 |
 
 **Component:** `WalletReadyGate` — renders `fallback` until wallet discovery settles.
 
@@ -91,7 +91,7 @@ import {
   useConnectedWallet,
   useWallets,
   WalletReadyGate,
-} from '@solana/kit-plugin-wallet/react';
+} from "@solana/kit-plugin-wallet/react";
 
 function WalletPicker() {
   const wallets = useWallets();
@@ -100,7 +100,9 @@ function WalletPicker() {
 
   if (connected) return <p>{connected.account.address}</p>;
   return wallets.map((w) => (
-    <button key={w.name} onClick={() => connect(w)}>{w.name}</button>
+    <button key={w.name} onClick={() => connect(w)}>
+      {w.name}
+    </button>
   ));
 }
 ```
@@ -110,10 +112,10 @@ function WalletPicker() {
 ## Chain Identifiers
 
 ```ts
-'solana:mainnet'
-'solana:devnet'
-'solana:testnet'
-'solana:localnet'
+"solana:mainnet";
+"solana:devnet";
+"solana:testnet";
+"solana:localnet";
 ```
 
 ## Full App Pattern

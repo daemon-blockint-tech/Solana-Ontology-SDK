@@ -21,12 +21,18 @@ export function generateClientCommand(
   }
 
   const files = generateClientFiles(concepts, {
+    outputDir: opts.out,
     packageName: opts.packageName,
     generateReact: opts.react,
     generateQueries: opts.queries,
   });
 
-  emitClientPackage(files, opts.out);
+  emitClientPackage(files, {
+    outputDir: opts.out,
+    packageName: opts.packageName,
+    generateReact: opts.react,
+    generateQueries: opts.queries,
+  });
   console.log(`✓ Generated ${files.length} client files to: ${opts.out}`);
   console.log(`  Package: ${opts.packageName}`);
   console.log(`  React hooks: ${opts.react ? "yes" : "no"}`);

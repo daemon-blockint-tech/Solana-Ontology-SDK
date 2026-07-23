@@ -53,9 +53,7 @@ export class ResourceHandlers {
   searchResources(query: string): McpResource[] {
     const lower = query.toLowerCase();
     return this.listResources().filter(
-      (r) =>
-        r.name.toLowerCase().includes(lower) ||
-        r.description?.toLowerCase().includes(lower),
+      (r) => r.name.toLowerCase().includes(lower) || r.description?.toLowerCase().includes(lower),
     );
   }
 

@@ -9,63 +9,63 @@ All 26 `surfnet_*` JSON-RPC methods available on the surfnet RPC endpoint (defau
 
 ## Account Manipulation
 
-| Method | Description |
-|---|---|
-| `surfnet_setAccount` | Set or update an account's lamports, data, owner, and executable status directly without transactions. |
-| `surfnet_setTokenAccount` | Set or update an SPL token account's balance, delegate, state, and close authority for any mint. |
-| `surfnet_resetAccount` | Reset an account to its original state from the remote datasource. Optionally cascades to owned accounts. |
-| `surfnet_streamAccount` | Register an account for live streaming — re-fetches from remote datasource on every access instead of caching. |
-| `surfnet_streamAccounts` | Register multiple accounts for live streaming in a single call. |
-| `surfnet_getStreamedAccounts` | List all accounts currently registered for streaming. |
-| `surfnet_offlineAccount` | Pin an account as local-only — it is never re-fetched from the remote datasource. |
+| Method                        | Description                                                                                                    |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `surfnet_setAccount`          | Set or update an account's lamports, data, owner, and executable status directly without transactions.         |
+| `surfnet_setTokenAccount`     | Set or update an SPL token account's balance, delegate, state, and close authority for any mint.               |
+| `surfnet_resetAccount`        | Reset an account to its original state from the remote datasource. Optionally cascades to owned accounts.      |
+| `surfnet_streamAccount`       | Register an account for live streaming — re-fetches from remote datasource on every access instead of caching. |
+| `surfnet_streamAccounts`      | Register multiple accounts for live streaming in a single call.                                                |
+| `surfnet_getStreamedAccounts` | List all accounts currently registered for streaming.                                                          |
+| `surfnet_offlineAccount`      | Pin an account as local-only — it is never re-fetched from the remote datasource.                              |
 
 ## Program Management
 
-| Method | Description |
-|---|---|
-| `surfnet_cloneProgramAccount` | Clone a program and its program data account from one address to another. Useful for forking programs. |
-| `surfnet_setProgramAuthority` | Change or remove the upgrade authority on a program's ProgramData account. |
-| `surfnet_writeProgram` | Deploy program data in chunks at a byte offset, bypassing transaction size limits (up to 5MB RPC limit). |
-| `surfnet_registerIdl` | Register an Anchor IDL for a program in memory, enabling parsed account data in responses. |
-| `surfnet_getActiveIdl` | Retrieve the registered IDL for a program at a given slot. Returns null if none registered. |
+| Method                        | Description                                                                                              |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `surfnet_cloneProgramAccount` | Clone a program and its program data account from one address to another. Useful for forking programs.   |
+| `surfnet_setProgramAuthority` | Change or remove the upgrade authority on a program's ProgramData account.                               |
+| `surfnet_writeProgram`        | Deploy program data in chunks at a byte offset, bypassing transaction size limits (up to 5MB RPC limit). |
+| `surfnet_registerIdl`         | Register an Anchor IDL for a program in memory, enabling parsed account data in responses.               |
+| `surfnet_getActiveIdl`        | Retrieve the registered IDL for a program at a given slot. Returns null if none registered.              |
 
 ## Time Control
 
-| Method | Description |
-|---|---|
-| `surfnet_timeTravel` | Jump the network clock to a specific UNIX timestamp, slot, or epoch. Useful for testing time-dependent logic. |
-| `surfnet_pauseClock` | Freeze slot advancement and block production. Network stays at current slot until resumed. |
-| `surfnet_resumeClock` | Resume slot advancement and block production after a pause. |
+| Method                | Description                                                                                                   |
+| --------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `surfnet_timeTravel`  | Jump the network clock to a specific UNIX timestamp, slot, or epoch. Useful for testing time-dependent logic. |
+| `surfnet_pauseClock`  | Freeze slot advancement and block production. Network stays at current slot until resumed.                    |
+| `surfnet_resumeClock` | Resume slot advancement and block production after a pause.                                                   |
 
 ## Transaction Profiling
 
-| Method | Description |
-|---|---|
-| `surfnet_profileTransaction` | Dry-run a transaction and return CU estimates, logs, errors, and before/after account state snapshots. |
-| `surfnet_getTransactionProfile` | Retrieve a stored transaction profile by signature or UUID. |
-| `surfnet_getProfileResultsByTag` | Retrieve all profiling results grouped under a tag. Useful for benchmarking test suites. |
+| Method                           | Description                                                                                            |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `surfnet_profileTransaction`     | Dry-run a transaction and return CU estimates, logs, errors, and before/after account state snapshots. |
+| `surfnet_getTransactionProfile`  | Retrieve a stored transaction profile by signature or UUID.                                            |
+| `surfnet_getProfileResultsByTag` | Retrieve all profiling results grouped under a tag. Useful for benchmarking test suites.               |
 
 ## Network State
 
-| Method | Description |
-|---|---|
-| `surfnet_setSupply` | Override what `getSupply` returns — total, circulating, and non-circulating amounts. |
-| `surfnet_resetNetwork` | Reset the entire network to its initial state. All accounts revert to their original remote state. |
-| `surfnet_getLocalSignatures` | Get recent transaction signatures with logs and errors. Defaults to last 50. |
-| `surfnet_getSurfnetInfo` | Get network info including runbook execution status and configuration. |
-| `surfnet_exportSnapshot` | Export account state as JSON — the whole network, or the **pre-execution state of a specific transaction** (for deterministic offline LiteSVM/Mollusk fixtures). Reload with `surfpool start --snapshot ./export.json`. See [full parameters below](#surfnet_exportsnapshot). |
+| Method                       | Description                                                                                                                                                                                                                                                                   |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `surfnet_setSupply`          | Override what `getSupply` returns — total, circulating, and non-circulating amounts.                                                                                                                                                                                          |
+| `surfnet_resetNetwork`       | Reset the entire network to its initial state. All accounts revert to their original remote state.                                                                                                                                                                            |
+| `surfnet_getLocalSignatures` | Get recent transaction signatures with logs and errors. Defaults to last 50.                                                                                                                                                                                                  |
+| `surfnet_getSurfnetInfo`     | Get network info including runbook execution status and configuration.                                                                                                                                                                                                        |
+| `surfnet_exportSnapshot`     | Export account state as JSON — the whole network, or the **pre-execution state of a specific transaction** (for deterministic offline LiteSVM/Mollusk fixtures). Reload with `surfpool start --snapshot ./export.json`. See [full parameters below](#surfnet_exportsnapshot). |
 
 ## Scenarios
 
-| Method | Description |
-|---|---|
+| Method                     | Description                                                                                              |
+| -------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `surfnet_registerScenario` | Register a scenario with timed account overrides using templates (e.g. Pyth price feeds, Raydium pools). |
 
 ## Meta / Control
 
-| Method | Description |
-|---|---|
-| `surfnet_enableCheatcode` | Re-enable previously disabled cheatcodes. Takes a list of method entries, e.g. `[["surfnet_setAccount", ...]]`. |
+| Method                     | Description                                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `surfnet_enableCheatcode`  | Re-enable previously disabled cheatcodes. Takes a list of method entries, e.g. `[["surfnet_setAccount", ...]]`.     |
 | `surfnet_disableCheatcode` | Disable specific cheatcodes at runtime. Same parameter shape. A lockout mechanism prevents re-enabling once locked. |
 
 ---
@@ -138,7 +138,7 @@ curl -X POST http://127.0.0.1:8899 -H "Content-Type: application/json" \
 surfpool start --snapshot ./snapshot.json
 ```
 
-**Pre-execution state of a transaction** — after a transaction has executed on the surfnet, pass its signature with the `preTransaction` scope to get the state of every account it touched *as it was before execution* (writable accounts from the pre-execution capture, plus readonly account states):
+**Pre-execution state of a transaction** — after a transaction has executed on the surfnet, pass its signature with the `preTransaction` scope to get the state of every account it touched _as it was before execution_ (writable accounts from the pre-execution capture, plus readonly account states):
 
 ```bash
 curl -X POST http://127.0.0.1:8899 -H "Content-Type: application/json" \

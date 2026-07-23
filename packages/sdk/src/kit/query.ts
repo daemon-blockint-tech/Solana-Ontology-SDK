@@ -21,16 +21,10 @@ export function createConceptQuery<T>(
   options?: QueryOptions,
 ) {
   return {
-    fetch: (address: string) =>
-      fetchAccount(connection, address, decoder, options?.expectedOwner),
+    fetch: (address: string) => fetchAccount(connection, address, decoder, options?.expectedOwner),
 
     fetchMultiple: (addresses: string[]) =>
-      fetchMultipleAccounts(
-        connection,
-        addresses,
-        decoder,
-        options?.expectedOwner,
-      ),
+      fetchMultipleAccounts(connection, addresses, decoder, options?.expectedOwner),
   };
 }
 

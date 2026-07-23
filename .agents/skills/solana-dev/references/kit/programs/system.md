@@ -12,7 +12,7 @@ If using plugin clients, prefer `client.use(systemProgram())` for a fluent API. 
 Program address: `11111111111111111111111111111111`
 
 ```ts
-import { SYSTEM_PROGRAM_ADDRESS } from '@solana-program/system';
+import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
 ```
 
 ## Account Types
@@ -22,7 +22,7 @@ import { SYSTEM_PROGRAM_ADDRESS } from '@solana-program/system';
 Durable nonces replace blockhash lifetimes — use for offline signing or delayed submission.
 
 ```ts
-import { fetchNonce, getNonceSize } from '@solana-program/system';
+import { fetchNonce, getNonceSize } from "@solana-program/system";
 
 const size = getNonceSize(); // 80 bytes
 const nonce = await fetchNonce(rpc, nonceAddress);
@@ -36,8 +36,8 @@ const nonce = await fetchNonce(rpc, nonceAddress);
 Allocates a new account with a given size and owner. Fund with enough lamports for rent-exemption (`getMinimumBalanceForRentExemption`).
 
 ```ts
-import { getCreateAccountInstruction } from '@solana-program/system';
-import { lamports } from '@solana/kit';
+import { getCreateAccountInstruction } from "@solana-program/system";
+import { lamports } from "@solana/kit";
 
 const ix = getCreateAccountInstruction({
   payer,
@@ -51,8 +51,8 @@ const ix = getCreateAccountInstruction({
 ### Transfer SOL
 
 ```ts
-import { getTransferSolInstruction } from '@solana-program/system';
-import { lamports } from '@solana/kit';
+import { getTransferSolInstruction } from "@solana-program/system";
+import { lamports } from "@solana/kit";
 
 const ix = getTransferSolInstruction({
   source: payer,
@@ -64,7 +64,7 @@ const ix = getTransferSolInstruction({
 ### Initialize Nonce Account
 
 ```ts
-import { getInitializeNonceAccountInstruction } from '@solana-program/system';
+import { getInitializeNonceAccountInstruction } from "@solana-program/system";
 
 const ix = getInitializeNonceAccountInstruction({
   nonceAccount,
@@ -75,7 +75,7 @@ const ix = getInitializeNonceAccountInstruction({
 ### Advance Nonce
 
 ```ts
-import { getAdvanceNonceAccountInstruction } from '@solana-program/system';
+import { getAdvanceNonceAccountInstruction } from "@solana-program/system";
 
 const ix = getAdvanceNonceAccountInstruction({
   nonceAccount,
@@ -87,12 +87,22 @@ const ix = getAdvanceNonceAccountInstruction({
 
 ```ts
 import {
-  pipe, createTransactionMessage, setTransactionMessageFeePayerSigner,
-  setTransactionMessageLifetimeUsingBlockhash, appendTransactionMessageInstructions,
-  signTransactionMessageWithSigners, sendAndConfirmTransactionFactory,
-  assertIsTransactionWithBlockhashLifetime, generateKeyPairSigner, lamports,
-} from '@solana/kit';
-import { getCreateAccountInstruction, getTransferSolInstruction, SYSTEM_PROGRAM_ADDRESS } from '@solana-program/system';
+  pipe,
+  createTransactionMessage,
+  setTransactionMessageFeePayerSigner,
+  setTransactionMessageLifetimeUsingBlockhash,
+  appendTransactionMessageInstructions,
+  signTransactionMessageWithSigners,
+  sendAndConfirmTransactionFactory,
+  assertIsTransactionWithBlockhashLifetime,
+  generateKeyPairSigner,
+  lamports,
+} from "@solana/kit";
+import {
+  getCreateAccountInstruction,
+  getTransferSolInstruction,
+  SYSTEM_PROGRAM_ADDRESS,
+} from "@solana-program/system";
 
 // Generate new account
 const newAccount = await generateKeyPairSigner();
@@ -104,40 +114,44 @@ const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
 
 const message = pipe(
   createTransactionMessage({ version: 0 }),
-  m => setTransactionMessageFeePayerSigner(payer, m),
-  m => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, m),
-  m => appendTransactionMessageInstructions([
-    getCreateAccountInstruction({
-      payer,
-      newAccount,
-      lamports: lamports(minRent),
-      space: 0,
-      programAddress: SYSTEM_PROGRAM_ADDRESS,
-    }),
-    getTransferSolInstruction({
-      source: payer,
-      destination: newAccount.address,
-      amount: lamports(1_000_000_000n),
-    }),
-  ], m),
+  (m) => setTransactionMessageFeePayerSigner(payer, m),
+  (m) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, m),
+  (m) =>
+    appendTransactionMessageInstructions(
+      [
+        getCreateAccountInstruction({
+          payer,
+          newAccount,
+          lamports: lamports(minRent),
+          space: 0,
+          programAddress: SYSTEM_PROGRAM_ADDRESS,
+        }),
+        getTransferSolInstruction({
+          source: payer,
+          destination: newAccount.address,
+          amount: lamports(1_000_000_000n),
+        }),
+      ],
+      m,
+    ),
 );
 
 const sendAndConfirm = sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions });
 const signed = await signTransactionMessageWithSigners(message);
 assertIsTransactionWithBlockhashLifetime(signed);
-await sendAndConfirm(signed, { commitment: 'confirmed' });
+await sendAndConfirm(signed, { commitment: "confirmed" });
 ```
 
 ## Error Handling
 
 ```ts
-import { isSystemError, SYSTEM_ERROR__INSUFFICIENT_FUNDS } from '@solana-program/system';
+import { isSystemError, SYSTEM_ERROR__INSUFFICIENT_FUNDS } from "@solana-program/system";
 
 try {
   await sendTransaction(tx);
 } catch (e) {
   if (isSystemError(e, SYSTEM_ERROR__INSUFFICIENT_FUNDS)) {
-    console.error('Not enough SOL for transfer');
+    console.error("Not enough SOL for transfer");
   }
 }
 ```

@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  loadConcepts,
-  validateAll,
-  validateConcept,
-  type Concept,
-} from "@solana-ontology/core";
+import { loadConcepts, validateAll, validateConcept, type Concept } from "@solana-ontology/core";
 import {
   isIdlV0,
   migrateIdlV0ToV1,
@@ -31,9 +26,7 @@ const fixtureIdlV0: IdlV0 = {
         { name: "authority", isMut: false, isSigner: true },
         { name: "recipient", isMut: true, isSigner: false },
       ],
-      args: [
-        { name: "amount", type: "u64" },
-      ],
+      args: [{ name: "amount", type: "u64" }],
     },
     {
       name: "BurnToken",
@@ -41,9 +34,7 @@ const fixtureIdlV0: IdlV0 = {
         { name: "mint", isMut: true, isSigner: false },
         { name: "authority", isMut: false, isSigner: true },
       ],
-      args: [
-        { name: "amount", type: "u64" },
-      ],
+      args: [{ name: "amount", type: "u64" }],
     },
   ],
   accounts: [
@@ -76,9 +67,7 @@ describe("Cross-Package Integration", () => {
     expect(generatedConcepts.length).toBeGreaterThan(0);
 
     // Should have a concept for the MintAccount
-    const mintConcept = generatedConcepts.find(
-      (c: Concept) => c.canonicalName === "MintAccount",
-    );
+    const mintConcept = generatedConcepts.find((c: Concept) => c.canonicalName === "MintAccount");
     expect(mintConcept).toBeDefined();
     expect(mintConcept!.category).toBe("token");
     expect(mintConcept!.properties).toBeDefined();
@@ -119,9 +108,7 @@ describe("Cross-Package Integration", () => {
     expect(resources.length).toBeGreaterThan(0);
 
     // Verify a known concept is exposed as a resource
-    const accountResource = resources.find(
-      (r) => r.uri === "solana-ontology://concept/Account",
-    );
+    const accountResource = resources.find((r) => r.uri === "solana-ontology://concept/Account");
     expect(accountResource).toBeDefined();
     expect(accountResource!.name).toBe("Account");
 
@@ -174,9 +161,7 @@ describe("Cross-Package Integration", () => {
     expect(indexFile!.content).toContain("export");
 
     // ── Step 8: Verify MCP blocks destructive actions without approval ──
-    const destructiveTool = tools.find((t) =>
-      t.annotations?.destructive === true,
-    );
+    const destructiveTool = tools.find((t) => t.annotations?.destructive === true);
     if (destructiveTool) {
       const result = mcp.callTool(destructiveTool.name, {});
       expect(result.isError).toBe(true);
@@ -198,9 +183,7 @@ describe("Cross-Package Integration", () => {
     expect(dump.objectTypes.length).toBeGreaterThan(0);
 
     // The MintAccount concept should be registered
-    const mintAccount = dump.objectTypes.find(
-      (t) => t.name === "MintAccount",
-    );
+    const mintAccount = dump.objectTypes.find((t) => t.name === "MintAccount");
     expect(mintAccount).toBeDefined();
   });
 

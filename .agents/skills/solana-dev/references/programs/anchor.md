@@ -6,13 +6,16 @@ description: Write Solana programs using the Anchor framework for fast iteration
 # Programs with Anchor (default choice)
 
 ## When to use Anchor
+
 Use Anchor by default when:
+
 - You want fast iteration with reduced boilerplate
 - You want an IDL and TypeScript client story out of the box
 - You want mature testing and workspace tooling
 - You need built-in security through automatic account validation
 
 ## Core Advantages
+
 - **Reduced Boilerplate**: Abstracts repetitive account management, instruction serialization, and error handling
 - **Built-in Security**: Automatic account-ownership verification and data validation
 - **IDL Generation**: Automatic interface definition for client generation
@@ -20,33 +23,39 @@ Use Anchor by default when:
 ## Core Macros
 
 ### `declare_id!()`
+
 Declares the onchain address where the program resides—a unique public key derived from the project's keypair.
 
 ### `#[program]`
+
 Marks the module containing every instruction entrypoint and business-logic function.
 
 ### `#[derive(Accounts)]`
+
 Lists accounts an instruction requires and automatically enforces their constraints:
+
 - Declares all necessary accounts for specific instructions
 - Enforces constraint checks automatically to block bugs and exploits
 - Generates helper methods for safe account access and mutation
 
 ### `#[error_code]`
+
 Enables custom, human-readable error types with `#[msg(...)]` attributes for clearer debugging.
 
 ## Account Types
 
-| Type | Purpose |
-|------|---------|
-| `Signer<'info>` | Verifies the account signed the transaction |
-| `SystemAccount<'info>` | Confirms System Program ownership |
-| `Program<'info, T>` | Validates executable program accounts |
-| `Account<'info, T>` | Typed program account with automatic validation |
-| `UncheckedAccount<'info>` | Raw account requiring manual validation |
+| Type                      | Purpose                                         |
+| ------------------------- | ----------------------------------------------- |
+| `Signer<'info>`           | Verifies the account signed the transaction     |
+| `SystemAccount<'info>`    | Confirms System Program ownership               |
+| `Program<'info, T>`       | Validates executable program accounts           |
+| `Account<'info, T>`       | Typed program account with automatic validation |
+| `UncheckedAccount<'info>` | Raw account requiring manual validation         |
 
 ## Account Constraints
 
 ### Initialization
+
 ```rust
 #[account(
     init,
@@ -57,6 +66,7 @@ pub account: Account<'info, CustomAccount>,
 ```
 
 ### PDA Validation
+
 ```rust
 #[account(
     seeds = [b"vault", owner.key().as_ref()],
@@ -66,6 +76,7 @@ pub vault: SystemAccount<'info>,
 ```
 
 ### Ownership and Relationships
+
 ```rust
 #[account(
     has_one = authority @ CustomError::InvalidAuthority,
@@ -75,6 +86,7 @@ pub account: Account<'info, CustomAccount>,
 ```
 
 ### Reallocation
+
 ```rust
 #[account(
     mut,
@@ -86,6 +98,7 @@ pub account: Account<'info, CustomAccount>,
 ```
 
 ### Closing Accounts
+
 ```rust
 #[account(
     mut,
@@ -104,6 +117,7 @@ pub struct Escrow { ... }
 ```
 
 **Constraints:**
+
 - Discriminators must be unique across your program
 - Using `[1]` prevents using `[1, 2, ...]` which also start with `1`
 - `[0]` conflicts with uninitialized accounts
@@ -111,6 +125,7 @@ pub struct Escrow { ... }
 ## Instruction Patterns
 
 ### Basic Structure
+
 ```rust
 #[program]
 pub mod my_program {
@@ -124,6 +139,7 @@ pub mod my_program {
 ```
 
 ### Context Implementation Pattern
+
 Move logic to context struct implementations for organization and testability:
 
 ```rust
@@ -138,6 +154,7 @@ impl<'info> Transfer<'info> {
 ## Cross-Program Invocations (CPIs)
 
 ### Basic CPI
+
 ```rust
 let cpi_accounts = Transfer {
     from: ctx.accounts.from.to_account_info(),
@@ -149,6 +166,7 @@ transfer(cpi_ctx, amount)?;
 ```
 
 ### PDA-Signed CPIs
+
 ```rust
 let seeds = &[b"vault".as_ref(), &[ctx.bumps.vault]];
 let signer = &[&seeds[..]];
@@ -174,6 +192,7 @@ require!(value < 100, MyError::ValueError(value));
 ## Token Accounts
 
 ### SPL Token
+
 ```rust
 #[account(
     mint::decimals = 9,
@@ -190,6 +209,7 @@ pub token_account: Account<'info, TokenAccount>,
 ```
 
 ### Token2022 Compatibility
+
 Use `InterfaceAccount` for dual compatibility:
 
 ```rust
@@ -268,21 +288,23 @@ cargo update blake3 --precise 1.5.5
 
 Additionally, if you encounter warnings about `solana-program` conflicts, pin the v2 crate line explicitly by adding `solana-program = "2"` to the `[dependencies]` section in your program's `Cargo.toml` file (e.g., `programs/your-program/Cargo.toml`). Anchor 0.32.x is on the Solana **v2** crate ecosystem — do **not** pin `solana-program = "3"` on a 0.32 project; it forces a resolution incompatible with Anchor 0.32's own dependency graph. Bumping all `solana-*` crates to `^3` happens only as part of the v0.32 → v1 migration (see below).
 
-
 ## Security Best Practices
 
 ### Account Validation
+
 - Use typed accounts (`Account<'info, T>`) over `UncheckedAccount` when possible
 - Always validate signer requirements explicitly
 - Use `has_one` for ownership relationships
 - Validate PDA seeds and bumps
 
 ### CPI Safety
+
 - Use `Program<'info, T>` to validate CPI targets (prevents arbitrary CPI attacks)
 - Never pass extra privileges to CPI callees
 - Prefer explicit program IDs for known CPIs
 
 ### Common Gotchas
+
 - **Avoid `init_if_needed`**: Permits reinitialization attacks
 - **Legacy IDL formats**: Ensure tooling agrees on format (pre-0.30 vs new spec)
 - **PDA seeds**: Ensure all seed material is stable and canonical

@@ -30,9 +30,7 @@ export class OntologyMcpServer {
     };
     this.resourceHandlers = new ResourceHandlers();
     this.toolHandlers = new ToolHandlers();
-    this.authProvider = new OAuthProvider(
-      this.config.auth ?? { required: false },
-    );
+    this.authProvider = new OAuthProvider(this.config.auth ?? { required: false });
   }
 
   /**
@@ -83,6 +81,7 @@ export class OntologyMcpServer {
           };
       }
     } catch (err) {
+      console.error("MCP request error:", err);
       return {
         jsonrpc: "2.0",
         id: request.id,

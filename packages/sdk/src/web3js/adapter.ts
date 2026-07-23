@@ -51,9 +51,7 @@ export class Web3jsAdapter {
   }
 
   /** Fetch multiple accounts */
-  async getMultipleAccountsInfo(
-    addresses: string[],
-  ): Promise<(Web3AccountInfo | null)[]> {
+  async getMultipleAccountsInfo(addresses: string[]): Promise<(Web3AccountInfo | null)[]> {
     const conn = this._connection as {
       getMultipleAccountsInfo: (
         addrs: string[],

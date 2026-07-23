@@ -1,15 +1,7 @@
 // ── OMS API Types ──────────────────────────────────────────────────────────
 
 export type PropertyType =
-  | "String"
-  | "Long"
-  | "Double"
-  | "Boolean"
-  | "Binary"
-  | "DateTime"
-  | "Decimal"
-  | "Struct"
-  | "Array";
+  "String" | "Long" | "Double" | "Boolean" | "Binary" | "DateTime" | "Decimal" | "Struct" | "Array";
 
 export interface ObjectTypeProperty {
   name: string;

@@ -121,7 +121,11 @@ export class YellowstoneClient {
    */
   emitAccountUpdate(event: AccountUpdateEvent): void {
     for (const cb of this.accountCallbacks) {
-      try { cb(event); } catch { /* ignore callback errors */ }
+      try {
+        cb(event);
+      } catch {
+        /* ignore callback errors */
+      }
     }
   }
 
@@ -130,7 +134,11 @@ export class YellowstoneClient {
    */
   emitTransaction(event: TransactionEvent): void {
     for (const cb of this.transactionCallbacks) {
-      try { cb(event); } catch { /* ignore callback errors */ }
+      try {
+        cb(event);
+      } catch {
+        /* ignore callback errors */
+      }
     }
   }
 
@@ -139,7 +147,11 @@ export class YellowstoneClient {
    */
   emitBlock(event: BlockEvent): void {
     for (const cb of this.blockCallbacks) {
-      try { cb(event); } catch { /* ignore callback errors */ }
+      try {
+        cb(event);
+      } catch {
+        /* ignore callback errors */
+      }
     }
   }
 
@@ -148,7 +160,11 @@ export class YellowstoneClient {
    */
   emitSlotUpdate(event: SlotEvent): void {
     for (const cb of this.slotCallbacks) {
-      try { cb(event); } catch { /* ignore callback errors */ }
+      try {
+        cb(event);
+      } catch {
+        /* ignore callback errors */
+      }
     }
   }
 

@@ -1,10 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Concept } from "@solana-ontology/core";
-import {
-  mapSolanaTypeToRust,
-  toSnakeCase,
-  generateRustStruct,
-} from "../src/type-gen.js";
+import { mapSolanaTypeToRust, toSnakeCase, generateRustStruct } from "../src/type-gen.js";
 import { generateRustPdaHelper } from "../src/pda-gen.js";
 import { generateConceptRustFile, generateRustModFile } from "../src/emitter.js";
 
@@ -18,9 +14,7 @@ const mockConcept: Concept = {
     { name: "supply", type: "u64", required: true },
     { name: "authority", type: "Address", required: false },
   ],
-  relationships: [
-    { type: "derivedFrom", target: "PDA", cardinality: "0:1" },
-  ],
+  relationships: [{ type: "derivedFrom", target: "PDA", cardinality: "0:1" }],
 };
 
 describe("type-gen", () => {

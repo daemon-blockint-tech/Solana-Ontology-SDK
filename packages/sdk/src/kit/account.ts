@@ -44,15 +44,10 @@ export async function fetchAccount<T>(
   if (!info) return null;
 
   if (expectedOwner && info.owner !== expectedOwner) {
-    throw new Error(
-      `Account owner mismatch: expected ${expectedOwner}, got ${info.owner}`,
-    );
+    throw new Error(`Account owner mismatch: expected ${expectedOwner}, got ${info.owner}`);
   }
 
-  const data =
-    info.data instanceof Buffer
-      ? new Uint8Array(info.data)
-      : (info.data as Uint8Array);
+  const data = info.data instanceof Buffer ? new Uint8Array(info.data) : (info.data as Uint8Array);
 
   return decoder(data);
 }
@@ -93,9 +88,7 @@ export async function fetchMultipleAccounts<T>(
     }
 
     const data =
-      info.data instanceof Buffer
-        ? new Uint8Array(info.data)
-        : (info.data as Uint8Array);
+      info.data instanceof Buffer ? new Uint8Array(info.data) : (info.data as Uint8Array);
 
     return decoder(data);
   });

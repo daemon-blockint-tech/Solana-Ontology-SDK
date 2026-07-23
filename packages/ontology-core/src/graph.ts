@@ -24,9 +24,7 @@ export function buildGraph(concepts: Concept[]): OntologyGraph {
     }
   }
 
-  const orphans = concepts
-    .map((c) => c.canonicalName)
-    .filter((name) => !referencedBy.has(name));
+  const orphans = concepts.map((c) => c.canonicalName).filter((name) => !referencedBy.has(name));
 
   const components = computeComponents(nodes, edges);
 
@@ -77,10 +75,7 @@ function computeComponents(
 /**
  * Find all concepts that the given concept depends on (transitive closure).
  */
-export function getDependencies(
-  graph: OntologyGraph,
-  conceptName: string,
-): string[] {
+export function getDependencies(graph: OntologyGraph, conceptName: string): string[] {
   const result = new Set<string>();
   const queue = [conceptName];
   while (queue.length > 0) {
@@ -102,10 +97,7 @@ export function getDependencies(
 /**
  * Find all concepts that depend on the given concept (reverse dependencies).
  */
-export function getDependents(
-  graph: OntologyGraph,
-  conceptName: string,
-): string[] {
+export function getDependents(graph: OntologyGraph, conceptName: string): string[] {
   const result: string[] = [];
   for (const [name, rels] of graph.edges) {
     for (const rel of rels) {

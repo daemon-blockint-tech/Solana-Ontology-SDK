@@ -40,7 +40,9 @@ export class KeypairSigner implements SignerProvider {
     const web3 = await import("@solana/web3.js");
     const kp = this.keypair as { secretKey: Uint8Array };
     // web3.js exports nacl.sign via the default export
-    const nacl = (web3 as unknown as { nacl: { sign: (msg: Uint8Array, sk: Uint8Array) => Uint8Array } }).nacl;
+    const nacl = (
+      web3 as unknown as { nacl: { sign: (msg: Uint8Array, sk: Uint8Array) => Uint8Array } }
+    ).nacl;
     const signature = nacl.sign(messageBytes, kp.secretKey);
     return { serialized: messageBytes, signature };
   }

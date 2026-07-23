@@ -15,9 +15,7 @@ export function web3PubkeyToString(pubkey: unknown): string {
 /**
  * Convert a base58 string to a web3.js PublicKey.
  */
-export async function stringToWeb3Pubkey(
-  address: string,
-): Promise<unknown> {
+export async function stringToWeb3Pubkey(address: string): Promise<unknown> {
   const { PublicKey } = await import("@solana/web3.js");
   return new PublicKey(address);
 }

@@ -78,9 +78,7 @@ export class OntologyClient {
       // This is a stub — actual implementation depends on Kit API surface
       this._kitClient = { kit, rpcUrl: this.config.rpcUrl };
     } catch {
-      throw new Error(
-        "@solana/kit is not installed. Install it with: pnpm add @solana/kit",
-      );
+      throw new Error("@solana/kit is not installed. Install it with: pnpm add @solana/kit");
     }
   }
 
@@ -100,9 +98,7 @@ export class OntologyClient {
    */
   getWeb3Connection(): unknown {
     if (!this._web3Connection) {
-      throw new Error(
-        "web3.js Connection not initialized. Call initWeb3() first.",
-      );
+      throw new Error("web3.js Connection not initialized. Call initWeb3() first.");
     }
     return this._web3Connection;
   }

@@ -89,10 +89,12 @@ export class ToolHandlers {
       const approvalToken = params._approvalToken;
       if (!approvalToken || approvalToken !== "APPROVED") {
         return {
-          content: [{
-            type: "text",
-            text: `ERROR: Action "${name}" is destructive and requires human approval. Provide _approvalToken="APPROVED" to proceed.`,
-          }],
+          content: [
+            {
+              type: "text",
+              text: `ERROR: Action "${name}" is destructive and requires human approval. Provide _approvalToken="APPROVED" to proceed.`,
+            },
+          ],
           isError: true,
         };
       }
@@ -124,7 +126,12 @@ export class ToolHandlers {
     );
     if (!transition) {
       return {
-        content: [{ type: "text", text: `ERROR: Transition "${transitionVia}" not found for ${conceptName}` }],
+        content: [
+          {
+            type: "text",
+            text: `ERROR: Transition "${transitionVia}" not found for ${conceptName}`,
+          },
+        ],
         isError: true,
       };
     }
@@ -134,9 +141,7 @@ export class ToolHandlers {
       concept: conceptName,
       action: transitionVia,
       stateTransition: `${transition.from} → ${transition.to}`,
-      params: Object.fromEntries(
-        Object.entries(params).filter(([k]) => k !== "_approvalToken"),
-      ),
+      params: Object.fromEntries(Object.entries(params).filter(([k]) => k !== "_approvalToken")),
       instructions: [
         {
           programId: "TBD",
@@ -150,10 +155,12 @@ export class ToolHandlers {
     };
 
     return {
-      content: [{
-        type: "text",
-        text: JSON.stringify(proposedTx, null, 2),
-      }],
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(proposedTx, null, 2),
+        },
+      ],
     };
   }
 

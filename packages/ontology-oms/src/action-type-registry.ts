@@ -3,8 +3,8 @@
  */
 
 import type { Concept, StateTransition } from "@solana-ontology/core";
-import type { ActionTypeDefinition, ActionParameter, SubmissionCriteria } from "../types.js";
-import type { OmsStorage } from "../storage/interface.js";
+import type { ActionTypeDefinition, ActionParameter, SubmissionCriteria } from "./types.js";
+import type { OmsStorage } from "./storage/interface.js";
 
 /**
  * Convert a state transition to an action type definition.

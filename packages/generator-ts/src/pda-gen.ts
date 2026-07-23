@@ -5,9 +5,7 @@ import type { Concept } from "@solana-ontology/core";
  */
 export function isPDA(concept: Concept): boolean {
   return (
-    concept.relationships?.some(
-      (r) => r.type === "derivedFrom" && r.target === "PDA",
-    ) ?? false
+    concept.relationships?.some((r) => r.type === "derivedFrom" && r.target === "PDA") ?? false
   );
 }
 

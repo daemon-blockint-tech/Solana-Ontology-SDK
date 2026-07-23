@@ -1,10 +1,5 @@
 export type ConceptCategory =
-  | "primitive"
-  | "token"
-  | "defi"
-  | "governance"
-  | "infrastructure"
-  | "delivery";
+  "primitive" | "token" | "defi" | "governance" | "infrastructure" | "delivery";
 
 export type RelationshipType =
   | "ownedBy"
@@ -17,15 +12,7 @@ export type RelationshipType =
   | "dependsOn";
 
 export type Cardinality =
-  | "1:1"
-  | "1:many"
-  | "many:1"
-  | "many:many"
-  | "0:1"
-  | "0:many"
-  | "2:1"
-  | "n:1"
-  | "1:n";
+  "1:1" | "1:many" | "many:1" | "many:many" | "0:1" | "0:many" | "2:1" | "n:1" | "1:n";
 
 export interface ConceptProperty {
   name: string;
