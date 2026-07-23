@@ -1,0 +1,39 @@
+canonicalName: MetadataPointer
+aliases:
+  - TokenMetadata
+  - MetadataExtension
+purpose: "Token-2022 extension that points to an off-chain or on-chain metadata account for a mint"
+category: token
+version: 1.0.0
+owner: token-team
+programId: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+tokenStandard: token2022
+properties:
+  - name: metadataAddress
+    type: Address
+    required: false
+    description: "On-chain address of the metadata account (optional if using URI)"
+  - name: metadataUri
+    type: string
+    required: false
+    description: "URI to off-chain metadata (JSON)"
+  - name: name
+    type: string
+    required: true
+    description: "Display name of the token"
+  - name: symbol
+    type: string
+    required: true
+    description: "Ticker symbol for the token"
+relationships:
+  - type: extends
+    target: TokenMint
+    cardinality: "0:1"
+    description: "Metadata pointer attached to a Token-2022 mint"
+  - type: extends
+    target: TokenExtension
+    cardinality: "1:1"
+    description: "Is a Token-2022 extension"
+links:
+  docs:
+    - "https://spl.solana.com/token-2022/metadata"

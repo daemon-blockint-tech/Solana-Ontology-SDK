@@ -6,6 +6,9 @@ import type {
   StateMachine,
   StateTransition,
   ConceptCategory,
+  AccountLayoutDef,
+  BorshFieldDef,
+  IdlInstructionRef,
 } from "@solana-ontology/core";
 
 /**
@@ -165,6 +168,33 @@ export function generateConceptsFromIdl(idl: IdlV1): Concept[] {
     const relationships = inferRelationships(account, accountNames);
     const stateMachine = generateStateTransitions(idl, account.name);
 
+    // Build accountLayout from IDL account struct fields
+    const layoutFields: BorshFieldDef[] = (account.type.fields ?? []).map((field: IdlV1Field) => ({
+      name: field.name,
+      type: typeof field.type === "string" ? field.type : "complex",
+      description: `${field.name} field of ${pascalName}`,
+    }));
+    const accountLayout: AccountLayoutDef = {
+      discriminator: account.discriminator
+        ? account.discriminator.map((b: number) => b.toString(16).padStart(2, "0")).join("")
+        : undefined,
+      fields: layoutFields,
+    };
+
+    // Find instructions that target this account for idlInstruction ref
+    const targetInstruction = idl.instructions.find((ix) =>
+      ix.accounts.some((acc) => acc.name === account.name || acc.name === convertCamelToSnakeMatch(account.name)),
+    );
+    const idlInstruction: IdlInstructionRef | undefined = targetInstruction
+      ? {
+          programId: idl.address,
+          instructionName: targetInstruction.name,
+          discriminator: targetInstruction.discriminator
+            ? targetInstruction.discriminator.map((b: number) => b.toString(16).padStart(2, "0")).join("")
+            : undefined,
+        }
+      : undefined;
+
     const concept: Concept = {
       canonicalName: pascalName,
       purpose: `On-chain ${pascalName} account defined by ${idl.metadata.name} program`,
@@ -174,6 +204,9 @@ export function generateConceptsFromIdl(idl: IdlV1): Concept[] {
       properties,
       relationships: relationships.length > 0 ? relationships : undefined,
       stateMachine,
+      accountLayout,
+      programId: idl.address,
+      idlInstruction,
       constraints: [
         {
           name: "discriminator_check",

@@ -1,0 +1,29 @@
+canonicalName: PermanentDelegate
+aliases:
+  - PermanentDelegateExtension
+purpose: "Token-2022 extension that assigns a permanent delegate who can transfer or burn tokens from any account of this mint"
+category: token
+version: 1.0.0
+owner: token-team
+programId: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+tokenStandard: token2022
+properties:
+  - name: delegate
+    type: Address
+    required: true
+    description: "Permanent delegate address with unrestricted transfer/burn authority"
+relationships:
+  - type: extends
+    target: TokenMint
+    cardinality: "0:1"
+    description: "Permanent delegate configuration attached to a Token-2022 mint"
+  - type: extends
+    target: TokenExtension
+    cardinality: "1:1"
+    description: "Is a Token-2022 extension"
+constraints:
+  - expression: "delegate != null"
+    description: "Delegate address must be set"
+links:
+  docs:
+    - "https://spl.solana.com/token-2022/permanent-delegate"

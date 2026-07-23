@@ -1,0 +1,35 @@
+canonicalName: ConfidentialTransferMint
+aliases:
+  - ConfidentialTransfer
+  - EncryptedToken
+purpose: "Token-2022 extension enabling confidential token transfers using zero-knowledge proofs"
+category: token
+version: 1.0.0
+owner: token-team
+programId: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+tokenStandard: token2022
+properties:
+  - name: authority
+    type: Address
+    required: false
+    description: "Authority that can configure confidential transfer parameters"
+  - name: autoApproveNewAccounts
+    type: bool
+    required: true
+    description: "Whether new accounts are auto-approved for confidential transfers"
+  - name: auditorElgamalPubkey
+    type: string
+    required: false
+    description: "Optional auditor ElGamal public key for encrypted balance auditing"
+relationships:
+  - type: extends
+    target: TokenMint
+    cardinality: "0:1"
+    description: "Confidential transfer configuration attached to a Token-2022 mint"
+  - type: extends
+    target: TokenExtension
+    cardinality: "1:1"
+    description: "Is a Token-2022 extension"
+links:
+  docs:
+    - "https://spl.solana.com/token-2022/confidential-transfer"

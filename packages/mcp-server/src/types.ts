@@ -45,7 +45,7 @@ export interface McpRequest {
 
 export interface McpResponse {
   jsonrpc: "2.0";
-  id: number | string;
+  id: number | string | null;
   result?: unknown;
   error?: { code: number; message: string; data?: unknown };
 }

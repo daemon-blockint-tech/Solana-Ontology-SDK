@@ -45,6 +45,45 @@ export function validateAll(concepts: Concept[]): ValidationResult {
       errors.push(...result.errors);
     }
 
+    // Semantic: tokenStandard only valid for token category
+    if (concept.tokenStandard && concept.category !== "token") {
+      errors.push({
+        file: concept._sourceFile ?? "<unknown>",
+        conceptName: concept.canonicalName,
+        message: `tokenStandard is only valid for category "token", got "${concept.category}"`,
+        path: "tokenStandard",
+      });
+    }
+
+    // Semantic: pdaSeeds names must be unique
+    if (concept.pdaSeeds) {
+      const seedNames = new Set<string>();
+      for (const seed of concept.pdaSeeds) {
+        if (seedNames.has(seed.name)) {
+          errors.push({
+            file: concept._sourceFile ?? "<unknown>",
+            conceptName: concept.canonicalName,
+            message: `Duplicate PDA seed name: "${seed.name}"`,
+            path: "pdaSeeds",
+          });
+        }
+        seedNames.add(seed.name);
+      }
+    }
+
+    // Semantic: accountLayout discriminator must be 8-byte hex if present
+    if (concept.accountLayout?.discriminator) {
+      const disc = concept.accountLayout.discriminator;
+      if (!/^[0-9a-fA-F]{16}$/.test(disc)) {
+        errors.push({
+          file: concept._sourceFile ?? "<unknown>",
+          conceptName: concept.canonicalName,
+          message: `accountLayout.discriminator must be 8-byte hex (16 hex chars), got "${disc}"`,
+          path: "accountLayout.discriminator",
+        });
+      }
+    }
+
     if (names.has(concept.canonicalName)) {
       errors.push({
         file: concept._sourceFile ?? "<unknown>",

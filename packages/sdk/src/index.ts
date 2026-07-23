@@ -5,7 +5,13 @@ export {
   type AccountDecoder,
   type RawAccountData,
 } from "./kit/account.js";
-export { derivePda, derivePdaKit, derivePdaWeb3, type PdaResult } from "./kit/pda.js";
+export {
+  derivePda,
+  derivePdaKit,
+  derivePdaWeb3,
+  derivePdaFromConcept,
+  type PdaResult,
+} from "./kit/pda.js";
 export { ActionBuilder, type ActionInstruction } from "./kit/action.js";
 export { OntologyQuery, createConceptQuery, type QueryOptions } from "./kit/query.js";
 

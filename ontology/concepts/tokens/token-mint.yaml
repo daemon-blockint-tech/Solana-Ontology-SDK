@@ -6,6 +6,31 @@ purpose: "Authoritative source for a fungible or non-fungible token, tracking su
 category: token
 version: 1.0.0
 owner: token-team
+programId: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+tokenStandard: spl
+accountLayout:
+  discriminator: "0000000000000000"
+  fields:
+    - name: mintAuthority
+      type: publicKey
+      offset: 0
+      description: "Optional authority permitted to mint new tokens (32 bytes, option)"
+    - name: supply
+      type: u64
+      offset: 32
+      description: "Total token supply in base units"
+    - name: decimals
+      type: u8
+      offset: 40
+      description: "Number of decimal places for display"
+    - name: isInitialized
+      type: bool
+      offset: 41
+      description: "Whether the mint has been initialized"
+    - name: freezeAuthority
+      type: publicKey
+      offset: 42
+      description: "Optional authority that can freeze token accounts (32 bytes, option)"
 properties:
   - name: mintAuthority
     type: Address

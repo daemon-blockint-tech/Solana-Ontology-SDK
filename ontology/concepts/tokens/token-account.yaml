@@ -6,6 +6,43 @@ purpose: "Holds a specific token mint's balance for a wallet, tracking amount, d
 category: token
 version: 1.0.0
 owner: token-team
+programId: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+tokenStandard: spl
+accountLayout:
+  discriminator: "0000000000000000"
+  fields:
+    - name: mint
+      type: publicKey
+      offset: 0
+      description: "The mint this account holds tokens for"
+    - name: owner
+      type: publicKey
+      offset: 32
+      description: "Wallet that owns this token account"
+    - name: amount
+      type: u64
+      offset: 64
+      description: "Token balance in base units"
+    - name: delegate
+      type: publicKey
+      offset: 72
+      description: "Optional delegated authority"
+    - name: state
+      type: u8
+      offset: 108
+      description: "Account state (0=uninitialized, 1=initialized, 2=frozen)"
+    - name: isNative
+      type: u64
+      offset: 109
+      description: "Whether this is a native (SOL wrapping) token account"
+    - name: delegatedAmount
+      type: u64
+      offset: 112
+      description: "Amount delegated to the delegate"
+    - name: closeAuthority
+      type: publicKey
+      offset: 120
+      description: "Optional authority to close the account"
 properties:
   - name: mint
     type: Address

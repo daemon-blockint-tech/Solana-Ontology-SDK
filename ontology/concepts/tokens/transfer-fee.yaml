@@ -1,0 +1,42 @@
+canonicalName: TransferFeeConfig
+aliases:
+  - TransferFee
+  - FeeConfig
+purpose: "Token-2022 extension that configures transfer fees, charging a percentage on token transfers"
+category: token
+version: 1.0.0
+owner: token-team
+programId: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+tokenStandard: token2022
+properties:
+  - name: transferFeeBasisPoints
+    type: u16
+    required: true
+    description: "Fee in basis points (0-10000, e.g. 100 = 1%)"
+  - name: maximumFee
+    type: u64
+    required: true
+    description: "Maximum fee that can be charged per transfer"
+  - name: transferFeeConfigAuthority
+    type: Address
+    required: false
+    description: "Authority that can update the fee"
+  - name: withdrawWithheldAuthority
+    type: Address
+    required: false
+    description: "Authority that can withdraw withheld fees"
+relationships:
+  - type: extends
+    target: TokenMint
+    cardinality: "0:1"
+    description: "Transfer fee configuration attached to a Token-2022 mint"
+  - type: extends
+    target: TokenExtension
+    cardinality: "1:1"
+    description: "Is a Token-2022 extension"
+constraints:
+  - expression: "transferFeeBasisPoints >= 0 && transferFeeBasisPoints <= 10000"
+    description: "Basis points must be between 0 and 10000 (0% to 100%)"
+links:
+  docs:
+    - "https://spl.solana.com/token-2022/transfer-fee"

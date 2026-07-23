@@ -38,13 +38,17 @@ export class KeypairSigner implements SignerProvider {
 
   async signTransaction(messageBytes: Uint8Array): Promise<SignedTransaction> {
     const web3 = await import("@solana/web3.js");
-    const kp = this.keypair as { secretKey: Uint8Array };
-    // web3.js exports nacl.sign via the default export
-    const nacl = (
-      web3 as unknown as { nacl: { sign: (msg: Uint8Array, sk: Uint8Array) => Uint8Array } }
-    ).nacl;
-    const signature = nacl.sign(messageBytes, kp.secretKey);
-    return { serialized: messageBytes, signature };
+    const { Transaction, Keypair } = web3;
+    const kp = this.keypair as { secretKey: Uint8Array; publicKey: Uint8Array };
+
+    // Reconstruct the transaction from message bytes, sign it, and serialize
+    const tx = Transaction.from(Buffer.from(messageBytes));
+    const keypair = Keypair.fromSecretKey(kp.secretKey);
+    tx.sign(keypair);
+
+    const serialized = tx.serialize();
+    const signature = tx.signature ?? new Uint8Array(64);
+    return { serialized: new Uint8Array(serialized), signature };
   }
 }
 
@@ -68,13 +72,24 @@ export class KmsSigner implements SignerProvider {
   }
 
   async signTransaction(messageBytes: Uint8Array): Promise<SignedTransaction> {
+    const web3 = await import("@solana/web3.js");
+    const { Transaction } = web3;
+
     // KMS signing: send message bytes to KMS, get back Ed25519 signature
-    // This is a stub — actual KMS integration depends on the provider SDK
     const client = this.kmsClient as {
       sign: (params: { keyId: string; message: Uint8Array }) => Promise<{ signature: Uint8Array }>;
     };
     const result = await client.sign({ keyId: this.keyId, message: messageBytes });
-    return { serialized: messageBytes, signature: result.signature };
+
+    // Reconstruct the transaction and attach the KMS signature
+    const tx = Transaction.from(Buffer.from(messageBytes));
+    tx.addSignature(
+      new (web3.PublicKey)(this.publicKey),
+      Buffer.from(result.signature),
+    );
+
+    const serialized = tx.serialize();
+    return { serialized: new Uint8Array(serialized), signature: result.signature };
   }
 }
 
@@ -114,9 +129,15 @@ export class MpcSigner implements SignerProvider {
       throw new Error(`MPC signing failed: ${response.status} ${response.statusText}`);
     }
     const result = (await response.json()) as { signature: number[] };
-    return {
-      serialized: messageBytes,
-      signature: new Uint8Array(result.signature),
-    };
+    const signature = new Uint8Array(result.signature);
+
+    // Reconstruct the transaction and attach the MPC signature
+    const web3 = await import("@solana/web3.js");
+    const { Transaction } = web3;
+    const tx = Transaction.from(Buffer.from(messageBytes));
+    tx.addSignature(new web3.PublicKey(this.publicKey), Buffer.from(signature));
+    const serialized = tx.serialize();
+
+    return { serialized: new Uint8Array(serialized), signature };
   }
 }

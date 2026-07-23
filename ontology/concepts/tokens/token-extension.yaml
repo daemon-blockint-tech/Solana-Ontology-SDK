@@ -6,6 +6,8 @@ purpose: "Token-2022 extension module adding features like transfer fees, metada
 category: token
 version: 1.0.0
 owner: token-team
+programId: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+tokenStandard: token2022
 properties:
   - name: extensionType
     type: string

@@ -11,6 +11,7 @@ import type { Concept } from "@solana-ontology/core";
 import { buildGraph } from "@solana-ontology/core";
 import type { OmsApiConfig, ApiResponse, OntologyDump } from "./types.js";
 import { MemoryStorage } from "./storage/memory.js";
+import { SqliteStorage } from "./storage/sqlite.js";
 import type { OmsStorage } from "./storage/interface.js";
 import { ObjectTypeRegistry, conceptToObjectType } from "./object-type-registry.js";
 import { LinkTypeRegistry } from "./link-type-registry.js";
@@ -27,7 +28,7 @@ export class OntologyOmsServer {
   private adapter: ExternalAdapter;
   private config: OmsApiConfig;
 
-  constructor(config?: Partial<OmsApiConfig>) {
+  private constructor(config?: Partial<OmsApiConfig>) {
     this.config = {
       port: 3000,
       storage: "memory",
@@ -39,6 +40,15 @@ export class OntologyOmsServer {
     this.linkRegistry = new LinkTypeRegistry(this.storage);
     this.actionRegistry = new ActionTypeRegistry(this.storage);
     this.adapter = new NullAdapter();
+  }
+
+  static async create(config?: Partial<OmsApiConfig>): Promise<OntologyOmsServer> {
+    const server = new OntologyOmsServer(config);
+    if (server.config.storage === "sqlite") {
+      const sqlite = await SqliteStorage.create(server.config.dbPath ?? "./ontology-oms.db");
+      server.setStorage(sqlite);
+    }
+    return server;
   }
 
   /**

@@ -68,6 +68,27 @@
     },
     "links": {
       "$ref": "#/$defs/links"
+    },
+    "pdaSeeds": {
+      "type": "array",
+      "description": "Formal PDA seed structure for type-safe derivation",
+      "items": { "$ref": "#/$defs/pdaSeed" }
+    },
+    "accountLayout": {
+      "$ref": "#/$defs/accountLayout"
+    },
+    "programId": {
+      "type": "string",
+      "description": "Default on-chain program ID (base58, 32 bytes)",
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$"
+    },
+    "idlInstruction": {
+      "$ref": "#/$defs/idlInstruction"
+    },
+    "tokenStandard": {
+      "type": "string",
+      "enum": ["spl", "token2022"],
+      "description": "Token program variant (only valid for category: token)"
     }
   },
   "$defs": {
@@ -210,6 +231,69 @@
           }
         }
       ]
+    },
+    "pdaSeed": {
+      "type": "object",
+      "required": ["name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-zA-Z0-9]*$",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": ["string", "u8", "u32", "u64", "publicKey", "bytes"]
+        },
+        "description": { "type": "string" }
+      }
+    },
+    "accountLayout": {
+      "type": "object",
+      "required": ["fields"],
+      "additionalProperties": false,
+      "properties": {
+        "discriminator": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{16}$",
+          "description": "8-byte hex discriminator (Anchor style)"
+        },
+        "fields": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/borshField" }
+        }
+      }
+    },
+    "borshField": {
+      "type": "object",
+      "required": ["name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-zA-Z0-9]*$",
+          "minLength": 1
+        },
+        "type": { "type": "string" },
+        "offset": { "type": "integer", "minimum": 0 },
+        "description": { "type": "string" }
+      }
+    },
+    "idlInstruction": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "programId": {
+          "type": "string",
+          "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$"
+        },
+        "instructionName": { "type": "string" },
+        "discriminator": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{16}$"
+        }
+      }
     }
   }
 }

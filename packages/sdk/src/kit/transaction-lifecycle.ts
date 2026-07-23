@@ -75,10 +75,18 @@ export class TransactionLifecycle {
           signedTx: null,
         };
       }
+
+      // Auto-adjust compute unit limit from simulation result (20% margin)
+      if (simulation.unitsConsumed && simulation.unitsConsumed > 0) {
+        const adjustedLimit = Math.ceil(simulation.unitsConsumed * 1.2);
+        builder.setComputeUnitLimit(adjustedLimit);
+        this.events.emit("computeAdjusted", { requested: simulation.unitsConsumed, limit: adjustedLimit });
+      }
     }
 
-    // 3. Sign
-    const messageBytes = await this.buildMessageBytes(instructions, blockhash);
+    // 3. Sign — rebuild instructions in case CU was auto-adjusted
+    const adjustedInstructions = builder.build();
+    const messageBytes = await this.buildMessageBytes(adjustedInstructions, blockhash);
     const signedTx = await this.options.signer.signTransaction(messageBytes);
     this.events.emit("signed", signedTx);
 

@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { loadConcepts } from "../src/loader.js";
 import { validateAll, validateConcept } from "../src/validator.js";
 import { buildGraph, getDependencies } from "../src/graph.js";
+import { SOLANA_PROGRAM_IDS, getProgramId, findProgramIdByAddress } from "../src/program-ids.js";
 import type { Concept } from "../src/types.js";
 
 const PROJECT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -126,5 +127,118 @@ describe("graph", () => {
     const deps = getDependencies(graph, "Account");
     expect(deps).toContain("Program");
     expect(deps).toContain("PDA");
+  });
+});
+
+describe("on-chain linkage fields", () => {
+  it("should validate concepts with programId and accountLayout", () => {
+    const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
+    const tokenMint = concepts.find((c) => c.canonicalName === "TokenMint");
+    expect(tokenMint).toBeDefined();
+    expect(tokenMint!.programId).toBe(SOLANA_PROGRAM_IDS.Token);
+    expect(tokenMint!.tokenStandard).toBe("spl");
+    expect(tokenMint!.accountLayout).toBeDefined();
+    expect(tokenMint!.accountLayout!.discriminator).toBe("0000000000000000");
+    expect(tokenMint!.accountLayout!.fields.length).toBeGreaterThan(0);
+    // Verify COption offsets are correct
+    const supplyField = tokenMint!.accountLayout!.fields.find((f) => f.name === "supply");
+    expect(supplyField).toBeDefined();
+    expect(supplyField!.offset).toBe(36);
+    const decimalsField = tokenMint!.accountLayout!.fields.find((f) => f.name === "decimals");
+    expect(decimalsField).toBeDefined();
+    expect(decimalsField!.offset).toBe(44);
+  });
+
+  it("should validate TokenAccount has accountLayout with correct fields and offsets", () => {
+    const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
+    const tokenAccount = concepts.find((c) => c.canonicalName === "TokenAccount");
+    expect(tokenAccount).toBeDefined();
+    expect(tokenAccount!.programId).toBe(SOLANA_PROGRAM_IDS.Token);
+    expect(tokenAccount!.accountLayout).toBeDefined();
+    const amountField = tokenAccount!.accountLayout!.fields.find((f) => f.name === "amount");
+    expect(amountField).toBeDefined();
+    expect(amountField!.type).toBe("u64");
+    expect(amountField!.offset).toBe(64);
+    // Verify COption offsets are correct
+    const delegatedAmountField = tokenAccount!.accountLayout!.fields.find((f) => f.name === "delegatedAmount");
+    expect(delegatedAmountField).toBeDefined();
+    expect(delegatedAmountField!.offset).toBe(121);
+    const closeAuthorityField = tokenAccount!.accountLayout!.fields.find((f) => f.name === "closeAuthority");
+    expect(closeAuthorityField).toBeDefined();
+    expect(closeAuthorityField!.offset).toBe(129);
+  });
+
+  it("should validate TokenExtension has token2022 standard", () => {
+    const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
+    const tokenExt = concepts.find((c) => c.canonicalName === "TokenExtension");
+    expect(tokenExt).toBeDefined();
+    expect(tokenExt!.tokenStandard).toBe("token2022");
+    expect(tokenExt!.programId).toBe(SOLANA_PROGRAM_IDS.Token2022);
+  });
+
+  it("should reject tokenStandard on non-token category", () => {
+    const concept: Concept = {
+      canonicalName: "TestConcept",
+      purpose: "Test concept with invalid tokenStandard",
+      category: "primitive",
+      version: "1.0.0",
+      tokenStandard: "spl",
+    };
+    const result = validateConcept(concept);
+    // Schema validation passes (tokenStandard is valid string), but semantic check should catch it
+    const allResult = validateAll([concept]);
+    expect(allResult.errors.some((e) => e.message.includes("tokenStandard"))).toBe(true);
+  });
+
+  it("should reject invalid discriminator format via schema", () => {
+    const concept: Concept = {
+      canonicalName: "TestDiscriminator",
+      purpose: "Test concept with invalid discriminator format",
+      category: "token",
+      version: "1.0.0",
+      accountLayout: {
+        discriminator: "xyz123",
+        fields: [{ name: "test", type: "u8" }],
+      },
+    };
+    const result = validateConcept(concept);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.path.includes("discriminator"))).toBe(true);
+  });
+
+  it("should reject duplicate pdaSeeds names", () => {
+    const concept: Concept = {
+      canonicalName: "TestPdaSeeds",
+      purpose: "Test concept with duplicate PDA seed names",
+      category: "primitive",
+      version: "1.0.0",
+      pdaSeeds: [
+        { name: "mint", type: "publicKey" },
+        { name: "mint", type: "u8" },
+      ],
+    };
+    const allResult = validateAll([concept]);
+    expect(allResult.errors.some((e) => e.message.includes("Duplicate PDA seed"))).toBe(true);
+  });
+});
+
+describe("program-ids", () => {
+  it("should export well-known Solana program IDs", () => {
+    expect(SOLANA_PROGRAM_IDS.System).toBe("11111111111111111111111111111111");
+    expect(SOLANA_PROGRAM_IDS.Token).toBe("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+    expect(SOLANA_PROGRAM_IDS.Token2022).toBe("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+    expect(SOLANA_PROGRAM_IDS.ComputeBudget).toBe("ComputeBudget111111111111111111111111111111");
+    expect(SOLANA_PROGRAM_IDS.Ed25519).toBe("Ed25519SigVerify111111111111111111111111111");
+  });
+
+  it("should get program ID by name", () => {
+    expect(getProgramId("Token")).toBe(SOLANA_PROGRAM_IDS.Token);
+    expect(getProgramId("Token2022")).toBe(SOLANA_PROGRAM_IDS.Token2022);
+  });
+
+  it("should find program ID by address", () => {
+    expect(findProgramIdByAddress(SOLANA_PROGRAM_IDS.Token)).toBe("Token");
+    expect(findProgramIdByAddress(SOLANA_PROGRAM_IDS.Token2022)).toBe("Token2022");
+    expect(findProgramIdByAddress("UnknownAddress123")).toBeNull();
   });
 });

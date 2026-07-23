@@ -13,9 +13,15 @@ export type {
   OntologyGraph,
   ValidationResult,
   ValidationError,
+  PdaSeedDef,
+  BorshFieldDef,
+  AccountLayoutDef,
+  IdlInstructionRef,
+  TokenStandard,
 } from "./types.js";
 
 export { schema } from "./schema.js";
 export { loadConcepts, loadConcept } from "./loader.js";
 export { validateConcept, validateAll } from "./validator.js";
 export { buildGraph, getDependencies, getDependents } from "./graph.js";
+export { SOLANA_PROGRAM_IDS, getProgramId, findProgramIdByAddress, type ProgramIdName } from "./program-ids.js";

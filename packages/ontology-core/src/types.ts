@@ -51,6 +51,34 @@ export interface ConceptLink {
   url: string;
 }
 
+// ── On-chain linkage types ─────────────────────────────────────────────────
+
+export interface PdaSeedDef {
+  name: string;
+  type: "string" | "u8" | "u32" | "u64" | "publicKey" | "bytes";
+  description?: string;
+}
+
+export interface BorshFieldDef {
+  name: string;
+  type: string;
+  offset?: number;
+  description?: string;
+}
+
+export interface AccountLayoutDef {
+  discriminator?: string;
+  fields: BorshFieldDef[];
+}
+
+export interface IdlInstructionRef {
+  programId?: string;
+  instructionName?: string;
+  discriminator?: string;
+}
+
+export type TokenStandard = "spl" | "token2022";
+
 export interface ConceptLinksObject {
   docs?: string[];
   anchorIdl?: string;
@@ -69,6 +97,16 @@ export interface Concept {
   stateMachine?: StateMachine;
   constraints?: ConceptConstraint[];
   links?: ConceptLink[] | ConceptLinksObject;
+  /** Formal PDA seed structure for type-safe derivation */
+  pdaSeeds?: PdaSeedDef[];
+  /** Borsh account layout for on-chain decoding */
+  accountLayout?: AccountLayoutDef;
+  /** Default on-chain program ID (base58) */
+  programId?: string;
+  /** Link to IDL instruction for code generation */
+  idlInstruction?: IdlInstructionRef;
+  /** Token program variant (only valid for category: token) */
+  tokenStandard?: TokenStandard;
   /** File path relative to the ontology root, set by the loader */
   _sourceFile?: string;
 }
