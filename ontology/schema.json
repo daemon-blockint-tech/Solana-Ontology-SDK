@@ -30,7 +30,7 @@
     "category": {
       "type": "string",
       "description": "Concept cluster category",
-      "enum": ["primitive", "token", "defi", "governance", "infrastructure", "delivery"]
+      "enum": ["primitive", "token", "defi", "governance", "infrastructure", "delivery", "security"]
     },
     "version": {
       "type": "string",
@@ -89,6 +89,14 @@
       "type": "string",
       "enum": ["spl", "token2022"],
       "description": "Token program variant (only valid for category: token)"
+    },
+    "requiredAuth": {
+      "type": "string",
+      "description": "Security: required authority field name for signing (e.g. authority, admin)"
+    },
+    "requireOwnerCheck": {
+      "type": "boolean",
+      "description": "Security: whether this concept requires owner verification on accounts"
     }
   },
   "$defs": {
@@ -177,6 +185,14 @@
               "via": {
                 "type": "string",
                 "description": "Description of the mechanism that triggers this transition"
+              },
+              "requiresAuth": {
+                "type": "string",
+                "description": "Required signer authority for this transition"
+              },
+              "requires": {
+                "type": "string",
+                "description": "Precondition expression that must hold before transition"
               }
             }
           }

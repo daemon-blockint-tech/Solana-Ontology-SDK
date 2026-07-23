@@ -18,3 +18,16 @@ export { generatePdaHelper, isPDA } from "./pda-gen.js";
 export { generateActions, generateStateEnum } from "./action-gen.js";
 
 export { generateQuery, generateBatchQuery } from "./query-gen.js";
+
+export {
+  generateCpiHelper,
+  generateCpiHelpers,
+  generateCpiHelpersFile,
+  findCpiRelationships,
+} from "./cpi-gen.js";
+
+export {
+  generateGuardCode,
+  generateAdversarialTest,
+  generateSecurityArtifacts,
+} from "./security-gen.js";

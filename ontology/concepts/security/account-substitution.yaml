@@ -1,0 +1,33 @@
+canonicalName: AccountSubstitution
+aliases:
+  - FakeAccountAttack
+  - AccountConfusion
+purpose: "Vulnerability pattern: attacker substitutes a legitimate account with their own, bypassing access controls when owner is not verified"
+category: security
+version: 1.0.0
+owner: security-team
+properties:
+  - name: expectedAccount
+    type: string
+    required: true
+    description: "The account that should have been passed"
+  - name: substitutedAccount
+    type: string
+    required: true
+    description: "The attacker's account that was accepted"
+  - name: missingCheck
+    type: string
+    required: true
+    description: "The owner/key check that was absent"
+relationships:
+  - type: references
+    target: Account
+    cardinality: "many:1"
+    description: "Relates to the Account primitive whose owner should be verified"
+constraints:
+  - name: must-check-owner
+    expression: "concept.requireOwnerCheck == true"
+    description: "Concepts with accountLayout must enable requireOwnerCheck"
+links:
+  docs:
+    - "https://workshop.neodyme.io/level2.html"

@@ -1,0 +1,29 @@
+canonicalName: MissingOwnerCheck
+aliases:
+  - OwnerBypass
+  - ProgramOwnerVerification
+purpose: "Vulnerability pattern: account is used without verifying it belongs to the expected program, allowing cross-program account injection"
+category: security
+version: 1.0.0
+owner: security-team
+properties:
+  - name: accountField
+    type: string
+    required: true
+    description: "The account field that was not owner-checked"
+  - name: expectedProgram
+    type: string
+    required: true
+    description: "The program ID that should own the account"
+relationships:
+  - type: references
+    target: Program
+    cardinality: "many:1"
+    description: "Relates to the Program whose ID should be verified as owner"
+constraints:
+  - name: must-have-programId
+    expression: "concept.programId != null"
+    description: "Concepts with accountLayout must declare programId for owner verification"
+links:
+  docs:
+    - "https://workshop.neodyme.io/level3.html"

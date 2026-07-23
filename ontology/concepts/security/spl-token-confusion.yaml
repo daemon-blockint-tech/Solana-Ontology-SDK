@@ -1,0 +1,33 @@
+canonicalName: SplTokenConfusion
+aliases:
+  - TokenMintConfusion
+  - TokenAccountMixup
+purpose: "Vulnerability pattern: SPL token mint and token accounts are confused or unvalidated, allowing wrong-token transfers or balance manipulation"
+category: security
+version: 1.0.0
+owner: security-team
+properties:
+  - name: tokenConcept
+    type: string
+    required: true
+    description: "The token concept missing standard declaration"
+  - name: risk
+    type: string
+    required: true
+    description: "Description of the confusion risk"
+relationships:
+  - type: references
+    target: TokenMint
+    cardinality: "many:1"
+    description: "Relates to TokenMint that should declare tokenStandard"
+  - type: references
+    target: TokenAccount
+    cardinality: "many:1"
+    description: "Relates to TokenAccount that should declare tokenStandard"
+constraints:
+  - name: must-have-tokenStandard
+    expression: "concept.tokenStandard != null"
+    description: "Token category concepts must declare tokenStandard (spl or token2022)"
+links:
+  docs:
+    - "https://workshop.neodyme.io/level4.html"

@@ -1,5 +1,5 @@
 export type ConceptCategory =
-  "primitive" | "token" | "defi" | "governance" | "infrastructure" | "delivery";
+  "primitive" | "token" | "defi" | "governance" | "infrastructure" | "delivery" | "security";
 
 export type RelationshipType =
   | "ownedBy"
@@ -33,6 +33,10 @@ export interface StateTransition {
   from: string;
   to: string;
   via: string;
+  /** Required signer authority for this transition (security check) */
+  requiresAuth?: string;
+  /** Precondition expression that must hold before transition */
+  requires?: string;
 }
 
 export interface StateMachine {
@@ -107,6 +111,10 @@ export interface Concept {
   idlInstruction?: IdlInstructionRef;
   /** Token program variant (only valid for category: token) */
   tokenStandard?: TokenStandard;
+  /** Security: required authority field name for signing (e.g. "authority", "admin") */
+  requiredAuth?: string;
+  /** Security: whether this concept requires owner verification on accounts */
+  requireOwnerCheck?: boolean;
   /** File path relative to the ontology root, set by the loader */
   _sourceFile?: string;
 }
@@ -125,6 +133,7 @@ export interface OntologyGraph {
 export interface ValidationResult {
   valid: boolean;
   errors: ValidationError[];
+  warnings: ValidationWarning[];
 }
 
 export interface ValidationError {
@@ -132,4 +141,12 @@ export interface ValidationError {
   conceptName?: string;
   message: string;
   path?: string;
+}
+
+export interface ValidationWarning {
+  file: string;
+  conceptName?: string;
+  message: string;
+  path?: string;
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
 }

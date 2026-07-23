@@ -1,0 +1,33 @@
+canonicalName: PdaSeedMismatch
+aliases:
+  - WrongSeedDerivation
+  - PdaCollision
+purpose: "Vulnerability pattern: PDA is derived with wrong or insufficient seeds, allowing collision or substitution of derived addresses"
+category: security
+version: 1.0.0
+owner: security-team
+properties:
+  - name: expectedSeeds
+    type: string
+    required: true
+    description: "The seeds that should have been used"
+  - name: actualSeeds
+    type: string
+    required: true
+    description: "The insufficient seeds that were used"
+  - name: collisionRisk
+    type: string
+    required: true
+    description: "How the mismatch enables address collision"
+relationships:
+  - type: references
+    target: PDA
+    cardinality: "many:1"
+    description: "Relates to the PDA primitive whose seeds must be correctly typed"
+constraints:
+  - name: must-have-publicKey-seed
+    expression: "concept.pdaSeeds.any(s => s.type == 'publicKey')"
+    description: "PDA seeds with more than one entry should include at least one publicKey type"
+links:
+  docs:
+    - "https://workshop.neodyme.io/level2.html"

@@ -1,0 +1,33 @@
+canonicalName: MissingSignerCheck
+aliases:
+  - MissingAuthorityCheck
+  - UnsignedTransition
+purpose: "Vulnerability pattern: state transition executed without verifying the caller is a signer, allowing unauthorized state changes"
+category: security
+version: 1.0.0
+owner: security-team
+properties:
+  - name: transitionName
+    type: string
+    required: true
+    description: "Name of the unprotected transition"
+  - name: expectedSigner
+    type: string
+    required: true
+    description: "The authority field that should have been checked"
+  - name: impact
+    type: string
+    required: true
+    description: "What an attacker can do without signing"
+relationships:
+  - type: references
+    target: Signer
+    cardinality: "many:1"
+    description: "Relates to the Signer primitive that should be enforced"
+constraints:
+  - name: must-have-requiredAuth
+    expression: "concept.requiredAuth != null"
+    description: "Every concept with state transitions must declare requiredAuth"
+links:
+  docs:
+    - "https://workshop.neodyme.io/level1.html"

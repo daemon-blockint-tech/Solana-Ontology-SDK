@@ -14,7 +14,7 @@ const CONCEPTS_DIR = join(ONTOLOGY_ROOT, "concepts");
 describe("loader", () => {
   it("should load all concept YAML files", () => {
     const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
-    expect(concepts.length).toBe(38);
+    expect(concepts.length).toBe(43);
   });
 
   it("should set _sourceFile on each concept", () => {
@@ -104,7 +104,7 @@ describe("graph", () => {
   it("should build a graph with all concepts as nodes", () => {
     const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
     const graph = buildGraph(concepts);
-    expect(graph.nodes.size).toBe(38);
+    expect(graph.nodes.size).toBe(43);
   });
 
   it("should detect orphans (concepts not referenced by others)", () => {
@@ -118,7 +118,7 @@ describe("graph", () => {
     const graph = buildGraph(concepts);
     expect(graph.components.length).toBeGreaterThan(0);
     const totalNodes = graph.components.reduce((sum, c) => sum + c.length, 0);
-    expect(totalNodes).toBe(38);
+    expect(totalNodes).toBe(43);
   });
 
   it("should find dependencies for Account", () => {
@@ -240,5 +240,54 @@ describe("program-ids", () => {
     expect(findProgramIdByAddress(SOLANA_PROGRAM_IDS.Token)).toBe("Token");
     expect(findProgramIdByAddress(SOLANA_PROGRAM_IDS.Token2022)).toBe("Token2022");
     expect(findProgramIdByAddress("UnknownAddress123")).toBeNull();
+  });
+});
+
+describe("security validation", () => {
+  it("should load 5 security vulnerability pattern concepts", () => {
+    const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
+    const securityConcepts = concepts.filter((c) => c.category === "security");
+    expect(securityConcepts.length).toBe(5);
+    expect(securityConcepts.map((c) => c.canonicalName)).toContain("MissingSignerCheck");
+    expect(securityConcepts.map((c) => c.canonicalName)).toContain("AccountSubstitution");
+    expect(securityConcepts.map((c) => c.canonicalName)).toContain("MissingOwnerCheck");
+    expect(securityConcepts.map((c) => c.canonicalName)).toContain("SplTokenConfusion");
+    expect(securityConcepts.map((c) => c.canonicalName)).toContain("PdaSeedMismatch");
+  });
+
+  it("should produce security warnings for concepts with stateMachine but no requiredAuth", () => {
+    const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
+    const result = validateAll(concepts);
+    expect(result.warnings.length).toBeGreaterThan(0);
+    const missingAuthWarnings = result.warnings.filter(
+      (w) => w.path === "requiredAuth" && w.severity === "CRITICAL",
+    );
+    expect(missingAuthWarnings.length).toBeGreaterThan(0);
+  });
+
+  it("should produce warnings for open transitions without requires", () => {
+    const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
+    const result = validateAll(concepts);
+    const openTransitionWarnings = result.warnings.filter(
+      (w) => w.path?.startsWith("stateMachine.transitions.") && w.severity === "HIGH",
+    );
+    expect(openTransitionWarnings.length).toBeGreaterThan(0);
+  });
+
+  it("should produce warnings for token concepts without tokenStandard", () => {
+    const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
+    const result = validateAll(concepts);
+    const tokenWarnings = result.warnings.filter(
+      (w) => w.path === "tokenStandard" && w.severity === "MEDIUM",
+    );
+    expect(tokenWarnings.length).toBeGreaterThan(0);
+  });
+
+  it("should still pass validation (warnings are not errors)", () => {
+    const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
+    const result = validateAll(concepts);
+    expect(result.valid).toBe(true);
+    expect(result.errors.length).toBe(0);
+    expect(result.warnings.length).toBeGreaterThan(0);
   });
 });

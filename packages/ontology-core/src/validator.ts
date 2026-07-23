@@ -1,7 +1,7 @@
 import Ajv, { type ErrorObject } from "ajv";
 import addFormats from "ajv-formats";
 import { schema } from "./schema.js";
-import type { Concept, ValidationResult, ValidationError } from "./types.js";
+import type { Concept, ValidationResult, ValidationError, ValidationWarning } from "./types.js";
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
@@ -26,7 +26,7 @@ export function validateConcept(concept: Concept): ValidationResult {
       });
     }
   }
-  return { valid: errors.length === 0, errors };
+  return { valid: errors.length === 0, errors, warnings: [] };
 }
 
 /**
@@ -34,9 +34,11 @@ export function validateConcept(concept: Concept): ValidationResult {
  * - Schema compliance
  * - Duplicate canonical names
  * - Relationship targets that don't exist in the set
+ * - Security vulnerability patterns (as warnings)
  */
 export function validateAll(concepts: Concept[]): ValidationResult {
   const errors: ValidationError[] = [];
+  const warnings: ValidationWarning[] = [];
   const names = new Set<string>();
 
   for (const concept of concepts) {
@@ -71,6 +73,70 @@ export function validateAll(concepts: Concept[]): ValidationResult {
       }
     }
 
+    // ── Security validation rules (warnings, not errors) ──────────────
+
+    // Rule 1: missing_auth — concept has stateMachine transitions but no requiredAuth
+    if (concept.stateMachine?.transitions?.length && !concept.requiredAuth) {
+      warnings.push({
+        file: concept._sourceFile ?? "<unknown>",
+        conceptName: concept.canonicalName,
+        message: `Concept has state transitions but no requiredAuth — transitions are unprotected (missing signer check)`,
+        path: "requiredAuth",
+        severity: "CRITICAL",
+      });
+    }
+
+    // Rule 2: missing_program_id — concept has accountLayout but no programId
+    if (concept.accountLayout && !concept.programId) {
+      warnings.push({
+        file: concept._sourceFile ?? "<unknown>",
+        conceptName: concept.canonicalName,
+        message: `Account layout defined without programId — owner check bypass risk`,
+        path: "programId",
+        severity: "HIGH",
+      });
+    }
+
+    // Rule 3: untyped_pda_seeds — pdaSeeds all string type (no publicKey)
+    if (concept.pdaSeeds?.length) {
+      const hasPublicKey = concept.pdaSeeds.some((s) => s.type === "publicKey");
+      if (!hasPublicKey && concept.pdaSeeds.length > 1) {
+        warnings.push({
+          file: concept._sourceFile ?? "<unknown>",
+          conceptName: concept.canonicalName,
+          message: `PDA seeds contain no publicKey type — account substitution risk`,
+          path: "pdaSeeds",
+          severity: "MEDIUM",
+        });
+      }
+    }
+
+    // Rule 4: missing_token_standard — token category concept without tokenStandard
+    if (concept.category === "token" && !concept.tokenStandard) {
+      warnings.push({
+        file: concept._sourceFile ?? "<unknown>",
+        conceptName: concept.canonicalName,
+        message: `Token concept without tokenStandard — SPL/Token-2022 confusion risk`,
+        path: "tokenStandard",
+        severity: "MEDIUM",
+      });
+    }
+
+    // Rule 5: open_transition — transition without requires precondition
+    if (concept.stateMachine?.transitions) {
+      for (const t of concept.stateMachine.transitions) {
+        if (!t.requires && !t.requiresAuth) {
+          warnings.push({
+            file: concept._sourceFile ?? "<unknown>",
+            conceptName: concept.canonicalName,
+            message: `Transition "${t.from}→${t.to}" via "${t.via}" has no requires or requiresAuth — race condition risk`,
+            path: `stateMachine.transitions.${t.via}`,
+            severity: "HIGH",
+          });
+        }
+      }
+    }
+
     if (names.has(concept.canonicalName)) {
       errors.push({
         file: concept._sourceFile ?? "<unknown>",
@@ -95,5 +161,5 @@ export function validateAll(concepts: Concept[]): ValidationResult {
     }
   }
 
-  return { valid: errors.length === 0, errors };
+  return { valid: errors.length === 0, errors, warnings };
 }
