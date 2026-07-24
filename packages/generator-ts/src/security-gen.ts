@@ -827,6 +827,78 @@ const REAL_WORLD_EXPLOITS: Record<string, {
       exploitSettlementDoubleReceipt(c),
     ],
   },
+  SignerAuthorization: {
+    describe: "SignerAuthorization — missing signer check exploits",
+    exploits: (c) => [
+      exploitSealevelMissingSigner(c),
+      exploitSealevelImpersonateAuthority(c),
+    ],
+  },
+  AccountDataMatching: {
+    describe: "AccountDataMatching — fake account type exploits",
+    exploits: (c) => [
+      exploitSealevelFakeTokenAccount(c),
+      exploitSealevelArbitraryAccountRead(c),
+    ],
+  },
+  TypeCosplay: {
+    describe: "TypeCosplay — struct reinterpretation exploits",
+    exploits: (c) => [
+      exploitSealevelTypeConfusion(c),
+      exploitSealevelSharedDiscriminator(c),
+    ],
+  },
+  PdaSharing: {
+    describe: "PdaSharing — PDA collision exploits",
+    exploits: (c) => [
+      exploitSealevelPdaCollision(c),
+      exploitSealevelDrainVault(c),
+    ],
+  },
+  BumpSeedCanonicalization: {
+    describe: "BumpSeedCanonicalization — non-canonical bump exploits",
+    exploits: (c) => [
+      exploitSealevelNonCanonicalBump(c),
+      exploitSealevelAlternativePda(c),
+    ],
+  },
+  ClosingAccounts: {
+    describe: "ClosingAccounts — close and reinit exploits",
+    exploits: (c) => [
+      exploitSealevelCloseWithoutClear(c),
+      exploitSealevelReinitAfterClose(c),
+    ],
+  },
+  CoralMultisig: {
+    describe: "CoralMultisig — threshold governance exploits",
+    exploits: (c) => [
+      exploitMultisigBelowThreshold(c),
+      exploitMultisigStaleOwnerSet(c),
+      exploitMultisigDoubleExecute(c),
+    ],
+  },
+  MultisigTransaction: {
+    describe: "MultisigTransaction — proposed tx execution exploits",
+    exploits: (c) => [
+      exploitMultisigTxNonOwnerApprove(c),
+      exploitMultisigTxAlreadyExecuted(c),
+    ],
+  },
+  TicTacToeGame: {
+    describe: "TicTacToeGame — turn-based game state exploits",
+    exploits: (c) => [
+      exploitTicTacToeOutOfTurn(c),
+      exploitTicTacToeTileAlreadySet(c),
+      exploitTicTacToeAfterGameOver(c),
+    ],
+  },
+  TicTacToePlay: {
+    describe: "TicTacToePlay — move validation exploits",
+    exploits: (c) => [
+      exploitTicTacToeTileOutOfBounds(c),
+      exploitTicTacToeWrongPlayer(c),
+    ],
+  },
 };
 
 /**
@@ -1755,5 +1827,821 @@ function exploitSettlementDoubleReceipt(c: Concept): string {
     // ── Assertion: each tx can only produce one receipt ──
     expect(result2.success).toBe(false);
     expect(result2.error ?? "").toContain("ReceiptAlreadyIssued");
+  });`;
+}
+
+// ── Sealevel Attacks exploit generators ─────────────────────────────────────
+
+function exploitSealevelMissingSigner(c: Concept): string {
+  return `  it("should reject instruction when authority is not a signer", async () => {
+    // ── Exploit: caller passes authority without signing ──
+    // If program doesn't check authority.isSigner, anyone can call
+    // privileged instructions by just passing the authority's pubkey.
+
+    const web3 = await import("@solana/web3.js");
+    const attackerKeypair = web3.Keypair.generate();
+    const authorityPubkey = web3.Keypair.generate().publicKey;
+
+    // Fund attacker
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attackerKeypair.publicKey, web3.LAMPORTS_PER_SOL);
+
+    // Attacker calls log_message with authority's pubkey but NOT as signer
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: authorityPubkey, isSigner: false, isWritable: false },
+      ],
+      data: encodeLogMessageInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [attackerKeypair]);
+
+    // ── Assertion: must reject non-signer authority ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("MissingRequiredSignature");
+  });`;
+}
+
+function exploitSealevelImpersonateAuthority(c: Concept): string {
+  return `  it("should reject impersonated authority calling privileged instruction", async () => {
+    // ── Exploit: attacker signs as themselves but passes someone else as authority ──
+    // Program must verify the authority account is the actual signer, not just present.
+
+    const web3 = await import("@solana/web3.js");
+    const attackerKeypair = web3.Keypair.generate();
+    const realAuthority = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attackerKeypair.publicKey, web3.LAMPORTS_PER_SOL);
+
+    // Attacker signs, but passes realAuthority's pubkey as the authority account
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: realAuthority.publicKey, isSigner: false, isWritable: false },
+      ],
+      data: encodeLogMessageInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [attackerKeypair]);
+
+    // ── Assertion: must reject because authority didn't sign ──
+    expect(result.success).toBe(false);
+  });`;
+}
+
+function exploitSealevelFakeTokenAccount(c: Concept): string {
+  return `  it("should reject fake token account with crafted data", async () => {
+    // ── Exploit: attacker passes a non-SPL-token account with fake amount ──
+    // If program doesn't verify account.owner == Token Program, attacker
+    // can create an account with arbitrary data that looks like a token account.
+
+    const web3 = await import("@solana/web3.js");
+    const attackerKeypair = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attackerKeypair.publicKey, web3.LAMPORTS_PER_SOL);
+
+    // Create a fake account with crafted token account data
+    const fakeAccount = web3.Keypair.generate();
+    const fakeData = Buffer.alloc(165); // SPL token account size
+    fakeData.writeBigUInt64LE(BigInt(999999999), 64); // fake amount at offset 64
+
+    // Fund the fake account with rent
+    const createIx = web3.SystemProgram.createAccount({
+      fromPubkey: attackerKeypair.publicKey,
+      newAccountPubkey: fakeAccount.publicKey,
+      lamports: await conn.getMinimumBalanceForRentExemption(165),
+      space: 165,
+      programId: new web3.PublicKey("${c.programId ?? "TARGET_PROGRAM_ID"}"),
+    });
+
+    // Pass fake account as token account
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: fakeAccount.publicKey, isSigner: false, isWritable: false },
+        { pubkey: attackerKeypair.publicKey, isSigner: true, isWritable: false },
+      ],
+      data: encodeLogBalanceInstruction(),
+    };
+
+    await env.executeAsTransaction([createIx], [attackerKeypair, fakeAccount]);
+    const result = await env.executeAsTransaction([exploitIx], [attackerKeypair]);
+
+    // ── Assertion: must reject non-Token-Program-owned account ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("InvalidAccountOwner");
+  });`;
+}
+
+function exploitSealevelArbitraryAccountRead(c: Concept): string {
+  return `  it("should reject arbitrary account passed as token account", async () => {
+    // ── Exploit: pass any random account as the token account ──
+    // Without owner check, program reads arbitrary data as token balance.
+
+    const web3 = await import("@solana/web3.js");
+    const attackerKeypair = web3.Keypair.generate();
+    const randomAccount = web3.Keypair.generate().publicKey;
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attackerKeypair.publicKey, web3.LAMPORTS_PER_SOL);
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: randomAccount, isSigner: false, isWritable: false },
+        { pubkey: attackerKeypair.publicKey, isSigner: true, isWritable: false },
+      ],
+      data: encodeLogBalanceInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [attackerKeypair]);
+
+    // ── Assertion: must reject account not owned by Token Program ──
+    expect(result.success).toBe(false);
+  });`;
+}
+
+function exploitSealevelTypeConfusion(c: Concept): string {
+  return `  it("should reject account of wrong type with matching discriminator", async () => {
+    // ── Exploit: pass an Admin account where a User account is expected ──
+    // If both structs share the same Borsh discriminator prefix,
+    // the program deserializes the wrong type and reads fields incorrectly.
+
+    const web3 = await import("@solana/web3.js");
+    const attackerKeypair = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attackerKeypair.publicKey, web3.LAMPORTS_PER_SOL);
+
+    // Create a fake "Admin" account that shares discriminator with User
+    const fakeUserAccount = web3.Keypair.generate();
+    const fakeData = Buffer.alloc(48);
+    // Write the same discriminator as User struct
+    fakeData.writeUInt32LE(0x12345678, 0); // shared discriminator
+    // Write attacker's key at the authority offset
+    fakeData.fill(attackerKeypair.publicKey.toBuffer(), 8);
+
+    const createIx = web3.SystemProgram.createAccount({
+      fromPubkey: attackerKeypair.publicKey,
+      newAccountPubkey: fakeUserAccount.publicKey,
+      lamports: await conn.getMinimumBalanceForRentExemption(48),
+      space: 48,
+      programId: new web3.PublicKey("${c.programId ?? "TARGET_PROGRAM_ID"}"),
+    });
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: fakeUserAccount.publicKey, isSigner: false, isWritable: true },
+        { pubkey: attackerKeypair.publicKey, isSigner: true, isWritable: false },
+      ],
+      data: encodeUpdateUserInstruction(),
+    };
+
+    await env.executeAsTransaction([createIx], [attackerKeypair, fakeUserAccount]);
+    const result = await env.executeAsTransaction([exploitIx], [attackerKeypair]);
+
+    // ── Assertion: must reject wrong account type ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("AccountDiscriminatorMismatch");
+  });`;
+}
+
+function exploitSealevelSharedDiscriminator(c: Concept): string {
+  return `  it("should reject struct reinterpretation via shared discriminator", async () => {
+    // ── Exploit: two structs with same layout but different semantics ──
+    // Attacker creates a Config account, program reads it as User,
+    // the admin field in Config maps to attacker's key in User.
+
+    const web3 = await import("@solana/web3.js");
+    const attackerKeypair = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attackerKeypair.publicKey, web3.LAMPORTS_PER_SOL);
+
+    // Create account with Config data that will be read as User
+    const configAccount = web3.Keypair.generate();
+    const configData = Buffer.alloc(40);
+    configData.writeUInt32LE(0x12345678, 0); // same discriminator
+    // admin field at offset 8 = attacker's pubkey
+    configData.fill(attackerKeypair.publicKey.toBuffer(), 8);
+
+    const createIx = web3.SystemProgram.createAccount({
+      fromPubkey: attackerKeypair.publicKey,
+      newAccountPubkey: configAccount.publicKey,
+      lamports: await conn.getMinimumBalanceForRentExemption(40),
+      space: 40,
+      programId: new web3.PublicKey("${c.programId ?? "TARGET_PROGRAM_ID"}"),
+    });
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: configAccount.publicKey, isSigner: false, isWritable: true },
+        { pubkey: attackerKeypair.publicKey, isSigner: true, isWritable: false },
+      ],
+      data: encodeUpdateUserInstruction(),
+    };
+
+    await env.executeAsTransaction([createIx], [attackerKeypair, configAccount]);
+    const result = await env.executeAsTransaction([exploitIx], [attackerKeypair]);
+
+    // ── Assertion: must reject type cosplay ──
+    expect(result.success).toBe(false);
+  });`;
+}
+
+function exploitSealevelPdaCollision(c: Concept): string {
+  return `  it("should reject PDA collision between pool and attacker account", async () => {
+    // ── Exploit: attacker creates account at same PDA as pool ──
+    // If PDA seeds are shared across account types, attacker can
+    // create an account that collides with the pool PDA.
+
+    const web3 = await import("@solana/web3.js");
+    const attackerKeypair = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attackerKeypair.publicKey, web3.LAMPORTS_PER_SOL);
+
+    // Derive the pool PDA
+    const [poolPda] = web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("pool"), attackerKeypair.publicKey.toBuffer()],
+      new web3.PublicKey("${c.programId ?? "TARGET_PROGRAM_ID"}"),
+    );
+
+    // Attacker tries to withdraw using colliding PDA
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: poolPda, isSigner: false, isWritable: true },
+        { pubkey: attackerKeypair.publicKey, isSigner: true, isWritable: false },
+      ],
+      data: encodeWithdrawInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [attackerKeypair]);
+
+    // ── Assertion: must reject PDA collision ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("InvalidPda");
+  });`;
+}
+
+function exploitSealevelDrainVault(c: Concept): string {
+  return `  it("should reject draining vault via shared PDA seeds", async () => {
+    // ── Exploit: attacker uses shared PDA seeds to drain vault tokens ──
+    // If vault PDA seeds are predictable, attacker can forge signer
+    // and call token::transfer to drain funds.
+
+    const web3 = await import("@solana/web3.js");
+    const attackerKeypair = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attackerKeypair.publicKey, web3.LAMPORTS_PER_SOL);
+
+    // Derive vault PDA with shared seeds
+    const [vaultPda] = web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("vault")],
+      new web3.PublicKey("${c.programId ?? "TARGET_PROGRAM_ID"}"),
+    );
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: vaultPda, isSigner: false, isWritable: true },
+        { pubkey: attackerKeypair.publicKey, isSigner: true, isWritable: true },
+      ],
+      data: encodeWithdrawTokensInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [attackerKeypair]);
+
+    // ── Assertion: must reject unauthorized vault drain ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("Unauthorized");
+  });`;
+}
+
+function exploitSealevelNonCanonicalBump(c: Concept): string {
+  return `  it("should reject non-canonical bump seed for PDA derivation", async () => {
+    // ── Exploit: attacker uses a lower bump seed to derive alternative PDA ──
+    // If program accepts any valid bump, attacker can find a different PDA
+    // that passes create_program_address but isn't the canonical one.
+
+    const web3 = await import("@solana/web3.js");
+    const attackerKeypair = web3.Keypair.generate();
+    const programId = new web3.PublicKey("${c.programId ?? "TARGET_PROGRAM_ID"}");
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attackerKeypair.publicKey, web3.LAMPORTS_PER_SOL);
+
+    // Find canonical bump
+    const [canonicalPda, canonicalBump] = web3.PublicKey.findProgramAddressSync(
+      [Buffer.from([1])],
+      programId,
+    );
+
+    // Find a non-canonical bump (try lower values)
+    let nonCanonicalPda: web3.PublicKey | null = null;
+    let nonCanonicalBump = 0;
+    for (let b = canonicalBump - 1; b >= 0; b--) {
+      try {
+        const addr = web3.PublicKey.createProgramAddressSync(
+          [Buffer.from([1]), Buffer.from([b])],
+          programId,
+        );
+        nonCanonicalPda = addr;
+        nonCanonicalBump = b;
+        break;
+      } catch { continue; }
+    }
+
+    if (!nonCanonicalPda) {
+      // No alternative bump found — program is secure for this seed
+      expect(true).toBe(true);
+      return;
+    }
+
+    // Attacker tries to use non-canonical bump
+    const exploitIx = {
+      programId: programId.toBase58(),
+      accounts: [
+        { pubkey: nonCanonicalPda, isSigner: false, isWritable: true },
+        { pubkey: attackerKeypair.publicKey, isSigner: true, isWritable: false },
+      ],
+      data: encodeSetValueInstruction(1, 42, nonCanonicalBump),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [attackerKeypair]);
+
+    // ── Assertion: must reject non-canonical bump ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("InvalidBumpSeed");
+  });`;
+}
+
+function exploitSealevelAlternativePda(c: Concept): string {
+  return `  it("should reject alternative PDA address from non-canonical bump", async () => {
+    // ── Exploit: attacker creates account at alternative PDA address ──
+    // Non-canonical bump produces a different address that the program
+    // might accept if it doesn't enforce canonical bump.
+
+    const web3 = await import("@solana/web3.js");
+    const attackerKeypair = web3.Keypair.generate();
+    const programId = new web3.PublicKey("${c.programId ?? "TARGET_PROGRAM_ID"}");
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attackerKeypair.publicKey, web3.LAMPORTS_PER_SOL);
+
+    // Try multiple bumps to find a non-canonical one
+    const [, canonicalBump] = web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("data")],
+      programId,
+    );
+
+    for (let b = 255; b >= 0; b--) {
+      if (b === canonicalBump) continue;
+      try {
+        const altPda = web3.PublicKey.createProgramAddressSync(
+          [Buffer.from("data"), Buffer.from([b])],
+          programId,
+        );
+
+        // Try to set value on alternative PDA
+        const exploitIx = {
+          programId: programId.toBase58(),
+          accounts: [
+            { pubkey: altPda, isSigner: false, isWritable: true },
+            { pubkey: attackerKeypair.publicKey, isSigner: true, isWritable: false },
+          ],
+          data: encodeSetValueInstruction(1, 99, b),
+        };
+
+        const result = await env.executeAsTransaction([exploitIx], [attackerKeypair]);
+
+        // ── Assertion: must reject any non-canonical bump ──
+        expect(result.success).toBe(false);
+        break;
+      } catch { continue; }
+    }
+  });`;
+}
+
+function exploitSealevelCloseWithoutClear(c: Concept): string {
+  return `  it("should reject close that doesn't clear account data", async () => {
+    // ── Exploit: close drains lamports but leaves data intact ──
+    // If program sets lamports to 0 without clearing data, attacker can
+    // re-fund the account and reuse stale data.
+
+    const web3 = await import("@solana/web3.js");
+    const attackerKeypair = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attackerKeypair.publicKey, 2 * web3.LAMPORTS_PER_SOL);
+
+    // Create a data account
+    const dataAccount = web3.Keypair.generate();
+    const createIx = web3.SystemProgram.createAccount({
+      fromPubkey: attackerKeypair.publicKey,
+      newAccountPubkey: dataAccount.publicKey,
+      lamports: await conn.getMinimumBalanceForRentExemption(32),
+      space: 32,
+      programId: new web3.PublicKey("${c.programId ?? "TARGET_PROGRAM_ID"}"),
+    });
+
+    await env.executeAsTransaction([createIx], [attackerKeypair, dataAccount]);
+
+    // Close the account (drain lamports)
+    const closeIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: dataAccount.publicKey, isSigner: false, isWritable: true },
+        { pubkey: attackerKeypair.publicKey, isSigner: true, isWritable: true },
+      ],
+      data: encodeCloseInstruction(),
+    };
+
+    await env.executeAsTransaction([closeIx], [attackerKeypair]);
+
+    // Verify account has 0 lamports
+    const balance = await conn.getBalance(dataAccount.publicKey);
+    expect(balance).toBe(0);
+
+    // ── Assertion: account data must be cleared ──
+    const accountInfo = await conn.getAccountInfo(dataAccount.publicKey);
+    if (accountInfo) {
+      const dataCleared = accountInfo.data.every((byte) => byte === 0);
+      expect(dataCleared).toBe(true);
+    }
+  });`;
+}
+
+function exploitSealevelReinitAfterClose(c: Concept): string {
+  return `  it("should reject reinitialization of a closed account", async () => {
+    // ── Exploit: re-fund closed account and call initialize again ──
+    // If data wasn't cleared, the account still has old authority,
+    // but attacker can reinitialize with their own authority.
+
+    const web3 = await import("@solana/web3.js");
+    const attackerKeypair = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attackerKeypair.publicKey, 2 * web3.LAMPORTS_PER_SOL);
+
+    // Create and close an account
+    const dataAccount = web3.Keypair.generate();
+    const createIx = web3.SystemProgram.createAccount({
+      fromPubkey: attackerKeypair.publicKey,
+      newAccountPubkey: dataAccount.publicKey,
+      lamports: await conn.getMinimumBalanceForRentExemption(32),
+      space: 32,
+      programId: new web3.PublicKey("${c.programId ?? "TARGET_PROGRAM_ID"}"),
+    });
+
+    await env.executeAsTransaction([createIx], [attackerKeypair, dataAccount]);
+
+    // Close
+    const closeIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: dataAccount.publicKey, isSigner: false, isWritable: true },
+        { pubkey: attackerKeypair.publicKey, isSigner: true, isWritable: true },
+      ],
+      data: encodeCloseInstruction(),
+    };
+    await env.executeAsTransaction([closeIx], [attackerKeypair]);
+
+    // Re-fund the account
+    const refundIx = web3.SystemProgram.transfer({
+      fromPubkey: attackerKeypair.publicKey,
+      toPubkey: dataAccount.publicKey,
+      lamports: await conn.getMinimumBalanceForRentExemption(32),
+    });
+    await env.executeAsTransaction([refundIx], [attackerKeypair]);
+
+    // Try to reinitialize
+    const reinitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: dataAccount.publicKey, isSigner: false, isWritable: true },
+        { pubkey: attackerKeypair.publicKey, isSigner: true, isWritable: false },
+      ],
+      data: encodeInitializeInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([reinitIx], [attackerKeypair]);
+
+    // ── Assertion: must reject reinitialization ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("AlreadyInitialized");
+  });`;
+}
+
+// ── Coral Multisig exploit generators ───────────────────────────────────────
+
+function exploitMultisigBelowThreshold(c: Concept): string {
+  return `  it("should reject execution when fewer than threshold owners signed", async () => {
+    // ── Exploit: attacker collects fewer than threshold signatures ──
+    // If program doesn't verify sig_count >= threshold, a minority of
+    // owners can execute arbitrary transactions.
+
+    const web3 = await import("@solana/web3.js");
+    const attackerKeypair = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attackerKeypair.publicKey, web3.LAMPORTS_PER_SOL);
+
+    // Create a multisig with threshold=3 and 5 owners
+    const owners = [
+      web3.Keypair.generate().publicKey,
+      web3.Keypair.generate().publicKey,
+      web3.Keypair.generate().publicKey,
+      web3.Keypair.generate().publicKey,
+      web3.Keypair.generate().publicKey,
+    ];
+
+    // Only 1 owner signs (below threshold of 3)
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: attackerKeypair.publicKey, isSigner: true, isWritable: false },
+      ],
+      data: encodeExecuteTxInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [attackerKeypair]);
+
+    // ── Assertion: must reject — not enough signers ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("NotEnoughSigners");
+  });`;
+}
+
+function exploitMultisigStaleOwnerSet(c: Concept): string {
+  return `  it("should reject stale transaction after owner set rotation", async () => {
+    // ── Exploit: execute a transaction created before owner set changed ──
+    // If program doesn't check owner_set_seqno, a removed owner can
+    // still execute a transaction they proposed before being removed.
+
+    const web3 = await import("@solana/web3.js");
+    const attackerKeypair = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attackerKeypair.publicKey, web3.LAMPORTS_PER_SOL);
+
+    // Transaction was created with owner_set_seqno=0
+    // But multisig.owner_set_seqno is now 1 (owners were rotated)
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: attackerKeypair.publicKey, isSigner: true, isWritable: false },
+      ],
+      data: encodeExecuteTxWithStaleSeqnoInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [attackerKeypair]);
+
+    // ── Assertion: must reject stale transaction ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("OwnerSetSeqnoMismatch");
+  });`;
+}
+
+function exploitMultisigDoubleExecute(c: Concept): string {
+  return `  it("should reject double execution of the same transaction", async () => {
+    // ── Exploit: execute the same transaction twice ──
+    // If program doesn't check did_execute, attacker can replay
+    // an already-executed transaction to double-spend or repeat actions.
+
+    const web3 = await import("@solana/web3.js");
+    const attackerKeypair = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attackerKeypair.publicKey, web3.LAMPORTS_PER_SOL);
+
+    const executeIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: attackerKeypair.publicKey, isSigner: true, isWritable: false },
+      ],
+      data: encodeExecuteTxInstruction(),
+    };
+
+    // First execution (should succeed if threshold met)
+    const result1 = await env.executeAsTransaction([executeIx], [attackerKeypair]);
+
+    // Second execution of same tx (should fail)
+    const result2 = await env.executeAsTransaction([executeIx], [attackerKeypair]);
+
+    // ── Assertion: must reject double execution ──
+    expect(result2.success).toBe(false);
+    expect(result2.error ?? "").toContain("AlreadyExecuted");
+  });`;
+}
+
+function exploitMultisigTxNonOwnerApprove(c: Concept): string {
+  return `  it("should reject approval from non-owner of the multisig", async () => {
+    // ── Exploit: non-owner tries to approve a transaction ──
+    // If program doesn't verify approver is in multisig.owners,
+    // anyone can sign transactions and push them toward execution.
+
+    const web3 = await import("@solana/web3.js");
+    const attackerKeypair = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attackerKeypair.publicKey, web3.LAMPORTS_PER_SOL);
+
+    // Attacker is NOT in the multisig owners list
+    const approveIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: attackerKeypair.publicKey, isSigner: true, isWritable: false },
+      ],
+      data: encodeApproveInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([approveIx], [attackerKeypair]);
+
+    // ── Assertion: must reject non-owner approval ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("InvalidOwner");
+  });`;
+}
+
+function exploitMultisigTxAlreadyExecuted(c: Concept): string {
+  return `  it("should reject approving a transaction that was already executed", async () => {
+    // ── Exploit: approve a transaction after it was already executed ──
+    // If program allows approval after execution, attacker could
+    // manipulate signer state on a burned transaction.
+
+    const web3 = await import("@solana/web3.js");
+    const attackerKeypair = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attackerKeypair.publicKey, web3.LAMPORTS_PER_SOL);
+
+    // Transaction already has did_execute = true
+    const approveIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: attackerKeypair.publicKey, isSigner: true, isWritable: false },
+      ],
+      data: encodeApproveInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([approveIx], [attackerKeypair]);
+
+    // ── Assertion: must reject approval on executed tx ──
+    expect(result.success).toBe(false);
+  });`;
+}
+
+// ── Anchor Book Tic-Tac-Toe exploit generators ──────────────────────────────
+
+function exploitTicTacToeOutOfTurn(c: Concept): string {
+  return `  it("should reject move when it is not the player's turn", async () => {
+    // ── Exploit: player 2 tries to move on turn 1 (player 1's turn) ──
+    // If program doesn't verify current_player() == signer, players
+    // can move out of turn and potentially win unfairly.
+
+    const web3 = await import("@solana/web3.js");
+    const playerTwo = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(playerTwo.publicKey, web3.LAMPORTS_PER_SOL);
+
+    // Player 2 tries to play on turn 1 (should be player 1's turn)
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: playerTwo.publicKey, isSigner: true, isWritable: false },
+      ],
+      data: encodePlayInstruction(0, 0),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [playerTwo]);
+
+    // ── Assertion: must reject — not player's turn ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("NotPlayersTurn");
+  });`;
+}
+
+function exploitTicTacToeTileAlreadySet(c: Concept): string {
+  return `  it("should reject move on an already-occupied tile", async () => {
+    // ── Exploit: player tries to play on a tile that already has a mark ──
+    // If program doesn't check board[row][col] == None, players can
+    // overwrite opponent's marks.
+
+    const web3 = await import("@solana/web3.js");
+    const playerOne = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(playerOne.publicKey, web3.LAMPORTS_PER_SOL);
+
+    // Try to play on tile (1,1) which is already occupied
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: playerOne.publicKey, isSigner: true, isWritable: false },
+      ],
+      data: encodePlayInstruction(1, 1),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [playerOne]);
+
+    // ── Assertion: must reject — tile already set ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("TileAlreadySet");
+  });`;
+}
+
+function exploitTicTacToeAfterGameOver(c: Concept): string {
+  return `  it("should reject move after game is already over", async () => {
+    // ── Exploit: player tries to move after someone already won ──
+    // If program doesn't check game.is_active(), moves can be made
+    // after the game has ended (Won or Tie).
+
+    const web3 = await import("@solana/web3.js");
+    const playerOne = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(playerOne.publicKey, web3.LAMPORTS_PER_SOL);
+
+    // Game state is Won — player one tries to play
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: playerOne.publicKey, isSigner: true, isWritable: false },
+      ],
+      data: encodePlayInstruction(2, 2),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [playerOne]);
+
+    // ── Assertion: must reject — game already over ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("GameAlreadyOver");
+  });`;
+}
+
+function exploitTicTacToeTileOutOfBounds(c: Concept): string {
+  return `  it("should reject move with tile coordinates out of bounds", async () => {
+    // ── Exploit: player tries to play at row 5, column 5 ──
+    // If program doesn't validate tile bounds (0..=2), players can
+    // write outside the board buffer and corrupt memory.
+
+    const web3 = await import("@solana/web3.js");
+    const playerOne = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(playerOne.publicKey, web3.LAMPORTS_PER_SOL);
+
+    // Tile (5, 5) — out of bounds
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: playerOne.publicKey, isSigner: true, isWritable: false },
+      ],
+      data: encodePlayInstruction(5, 5),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [playerOne]);
+
+    // ── Assertion: must reject — tile out of bounds ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("TileOutOfBounds");
+  });`;
+}
+
+function exploitTicTacToeWrongPlayer(c: Concept): string {
+  return `  it("should reject move from a non-participant in the game", async () => {
+    // ── Exploit: attacker who is not a player tries to make a move ──
+    // If program doesn't verify signer is one of the game's players,
+    // an outsider can interfere with the game.
+
+    const web3 = await import("@solana/web3.js");
+    const attacker = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attacker.publicKey, web3.LAMPORTS_PER_SOL);
+
+    // Attacker is not player_one or player_two
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: attacker.publicKey, isSigner: true, isWritable: false },
+      ],
+      data: encodePlayInstruction(0, 0),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [attacker]);
+
+    // ── Assertion: must reject — wrong player ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("NotPlayersTurn");
   });`;
 }

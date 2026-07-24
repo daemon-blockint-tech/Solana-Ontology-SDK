@@ -1,0 +1,91 @@
+canonicalName: TicTacToePlay
+aliases:
+  - game-move
+  - play-tile
+  - turn-action
+purpose: "Play instruction from the Anchor Book tic-tac-toe — validates that the signer is the current player, the tile is in bounds and not already set, and the game is still active before updating the board"
+category: primitive
+version: 1.0.0
+owner: examples-team
+programId: "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+properties:
+  - name: game
+    type: publicKey
+    required: true
+    description: "The game account to play against"
+  - name: player
+    type: publicKey
+    required: true
+    description: "The player making the move (must be current player)"
+  - name: tile
+    type: bytes
+    required: true
+    description: "Tile struct with row (u8) and column (u8) coordinates"
+  - name: sign
+    type: string
+    required: false
+    description: "Sign enum (X or O) derived from current_player_index"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: TicTacToeGame
+    cardinality: "many:1"
+  - type: references
+    target: Signer
+    cardinality: "1:1"
+  - type: references
+    target: Instruction
+    cardinality: "1:1"
+accountLayout:
+  discriminator: "706c617900000000"
+  fields:
+    - name: game
+      type: publicKey
+      offset: 0
+    - name: player
+      type: publicKey
+      offset: 32
+    - name: tileRow
+      type: u8
+      offset: 64
+    - name: tileColumn
+      type: u8
+      offset: 65
+stateMachine:
+  states: [Pending, Validated, Executed, Rejected]
+  transitions:
+    - from: Pending
+      to: Validated
+      via: ValidatePlay
+      requires: "player == game.current_player() && game.is_active() && tile in bounds && tile not set"
+    - from: Validated
+      to: Executed
+      via: ExecutePlay
+      requires: "board updated && state checked (Won/Tie/Active) && turn incremented if still active"
+    - from: Pending
+      to: Rejected
+      via: ValidatePlay
+      requires: "any validation fails (wrong player, tile set, out of bounds, game over)"
+constraints:
+  - name: player-is-current
+    expression: "player.key() == game.current_player()"
+    description: "The signer must be the current player whose turn it is"
+  - name: game-active
+    expression: "game.state == GameState::Active"
+    description: "The game must still be active — no moves after Won or Tie"
+  - name: tile-bounds
+    expression: "tile.row in 0..=2 && tile.column in 0..=2"
+    description: "Tile coordinates must be within the 3x3 grid"
+  - name: tile-unoccupied
+    expression: "game.board[tile.row][tile.column] == None"
+    description: "The target tile must not already have a mark"
+  - name: turn-increment
+    expression: "turn += 1 only if game remains Active after move"
+    description: "Turn counter increments only when the game continues"
+links:
+  docs:
+    - "https://github.com/coral-xyz/anchor-book"
+    - "https://github.com/coral-xyz/anchor-book/blob/master/programs/tic-tac-toe/programs/tic-tac-toe/src/instructions/play.rs"
+    - "https://github.com/coral-xyz/anchor-book/blob/master/programs/tic-tac-toe/programs/tic-tac-toe/src/errors.rs"

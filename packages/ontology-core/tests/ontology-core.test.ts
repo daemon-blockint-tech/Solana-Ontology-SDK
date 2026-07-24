@@ -14,7 +14,7 @@ const CONCEPTS_DIR = join(ONTOLOGY_ROOT, "concepts");
 describe("loader", () => {
   it("should load all concept YAML files", () => {
     const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
-    expect(concepts.length).toBe(64);
+    expect(concepts.length).toBe(74);
   });
 
   it("should set _sourceFile on each concept", () => {
@@ -104,7 +104,7 @@ describe("graph", () => {
   it("should build a graph with all concepts as nodes", () => {
     const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
     const graph = buildGraph(concepts);
-    expect(graph.nodes.size).toBe(64);
+    expect(graph.nodes.size).toBe(74);
   });
 
   it("should detect orphans (concepts not referenced by others)", () => {
@@ -118,7 +118,7 @@ describe("graph", () => {
     const graph = buildGraph(concepts);
     expect(graph.components.length).toBeGreaterThan(0);
     const totalNodes = graph.components.reduce((sum, c) => sum + c.length, 0);
-    expect(totalNodes).toBe(64);
+    expect(totalNodes).toBe(74);
   });
 
   it("should find dependencies for Account", () => {
@@ -244,10 +244,10 @@ describe("program-ids", () => {
 });
 
 describe("security validation", () => {
-  it("should load 7 security vulnerability pattern concepts", () => {
+  it("should load 13 security vulnerability pattern concepts", () => {
     const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
     const securityConcepts = concepts.filter((c) => c.category === "security");
-    expect(securityConcepts.length).toBe(7);
+    expect(securityConcepts.length).toBe(13);
     expect(securityConcepts.map((c) => c.canonicalName)).toContain("MissingSignerCheck");
     expect(securityConcepts.map((c) => c.canonicalName)).toContain("AccountSubstitution");
     expect(securityConcepts.map((c) => c.canonicalName)).toContain("MissingOwnerCheck");
@@ -255,6 +255,12 @@ describe("security validation", () => {
     expect(securityConcepts.map((c) => c.canonicalName)).toContain("PdaSeedMismatch");
     expect(securityConcepts.map((c) => c.canonicalName)).toContain("IntegerOverflow");
     expect(securityConcepts.map((c) => c.canonicalName)).toContain("ArbitraryCpiInvocation");
+    expect(securityConcepts.map((c) => c.canonicalName)).toContain("SignerAuthorization");
+    expect(securityConcepts.map((c) => c.canonicalName)).toContain("AccountDataMatching");
+    expect(securityConcepts.map((c) => c.canonicalName)).toContain("TypeCosplay");
+    expect(securityConcepts.map((c) => c.canonicalName)).toContain("PdaSharing");
+    expect(securityConcepts.map((c) => c.canonicalName)).toContain("BumpSeedCanonicalization");
+    expect(securityConcepts.map((c) => c.canonicalName)).toContain("ClosingAccounts");
   });
 
   it("should produce security warnings for concepts with stateMachine but no requiredAuth", () => {

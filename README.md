@@ -44,19 +44,19 @@ packages/
 | `@solana-ontology/cli`              | CLI: validate, generate, list, graph, idl                                | ✅    |
 | `@solana-ontology/deploy`           | Helm chart + K8s configs (devnet/testnet/mainnet)                        | —     |
 
-**Total: 160 tests passing across 13 test suites.**
+**Total: 170 tests passing across 13 test suites.**
 
 ## Concept Categories
 
 | Category           | Concepts                                                                            |
 | ------------------ | ----------------------------------------------------------------------------------- |
-| **primitive**      | Account, Program, Transaction, Instruction, PDA, Signer, ComputeBudget, Rent, Counter  |
+| **primitive**      | Account, Program, Transaction, Instruction, PDA, Signer, ComputeBudget, Rent, Counter, TicTacToeGame, TicTacToePlay  |
 | **token**          | TokenMint, TokenAccount, TokenExtension, NFT, Collection, Metadata, TransferHook      |
 | **defi**           | LiquidityPool, Position, Vault, OracleFeed, LendingMarket, SwapRoute, Escrow, AutomatedMarketMaker, Fundraiser, PaymentChallenge, MultiPartyPayment, PaymentSettlement |
-| **governance**     | Proposal, Vote, Multisig, DAO, StakeAccount, ValidatorGovernance, NcnBallot, MerkleProofVerifier |
+| **governance**     | Proposal, Vote, Multisig, DAO, StakeAccount, ValidatorGovernance, NcnBallot, MerkleProofVerifier, CoralMultisig, MultisigTransaction |
 | **infrastructure** | Cluster, Slot, Epoch, Validator                                                     |
 | **delivery**       | ProgramRelease, ReleaseChannel, Environment, UpgradeAuthority, DeploymentConstraint |
-| **security**       | MissingSignerCheck, AccountSubstitution, MissingOwnerCheck, SplTokenConfusion, PdaSeedMismatch, IntegerOverflow, ArbitraryCpiInvocation |
+| **security**       | MissingSignerCheck, AccountSubstitution, MissingOwnerCheck, SplTokenConfusion, PdaSeedMismatch, IntegerOverflow, ArbitraryCpiInvocation, SignerAuthorization, AccountDataMatching, TypeCosplay, PdaSharing, BumpSeedCanonicalization, ClosingAccounts |
 | **fuzzing**        | FuzzStrategy, FuzzFlow, FuzzInvariant                                                                       |
 | **verification**   | QedspecContract, KaniHarness, ProptestStrategy, LeanProof, CrucibleFuzz                                   |
 
@@ -338,6 +338,16 @@ Integration with [Solana Foundation program-examples](https://github.com/solana-
 | **PaymentChallenge** | defi | [pay-kit (x402)](https://github.com/solana-foundation/pay-kit) | Nonce replay, wrong amount, expired challenge |
 | **MultiPartyPayment** | defi | [pay-kit (MPP)](https://github.com/solana-foundation/pay-kit) | Split mismatch, non-fee-payer settle |
 | **PaymentSettlement** | defi | [pay-kit](https://github.com/solana-foundation/pay-kit) | Fake tx signature, double receipt |
+| **SignerAuthorization** | security | [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks) | Missing signer, impersonated authority |
+| **AccountDataMatching** | security | [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks) | Fake token account, arbitrary account read |
+| **TypeCosplay** | security | [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks) | Wrong type with matching discriminator, struct reinterpretation |
+| **PdaSharing** | security | [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks) | PDA collision, vault drain |
+| **BumpSeedCanonicalization** | security | [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks) | Non-canonical bump, alternative PDA |
+| **ClosingAccounts** | security | [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks) | Close without clearing data, reinit after close |
+| **CoralMultisig** | governance | [coral-xyz/multisig](https://github.com/coral-xyz/multisig) | Below-threshold execution, stale owner set, double execute |
+| **MultisigTransaction** | governance | [coral-xyz/multisig](https://github.com/coral-xyz/multisig) | Non-owner approval, approve after execution |
+| **TicTacToeGame** | primitive | [coral-xyz/anchor-book](https://github.com/coral-xyz/anchor-book) | Out-of-turn move, tile already set, move after game over |
+| **TicTacToePlay** | primitive | [coral-xyz/anchor-book](https://github.com/coral-xyz/anchor-book) | Tile out of bounds, non-participant move |
 
 ### Generate Real-World Exploit Tests
 
@@ -347,7 +357,7 @@ import { loadConcepts } from "@solana-ontology/core";
 
 const concepts = loadConcepts("./ontology/concepts", "./ontology");
 const tests = generateAllRealWorldPoCTests(concepts);
-// → 11 .test.ts files with 28 total exploit scenarios using PoCEnvironment
+// → 21 .test.ts files with 52 total exploit scenarios using PoCEnvironment
 ```
 
 Each concept includes:

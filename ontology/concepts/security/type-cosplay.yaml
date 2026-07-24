@@ -1,0 +1,65 @@
+canonicalName: TypeCosplay
+aliases:
+  - type-confusion
+  - account-type-bypass
+  - struct-reinterpretation
+purpose: "Type cosplay concept from sealevel-attacks — programs that deserialize account data into different struct types with the same discriminator allow attackers to pass accounts of the wrong type, reinterpreting fields to bypass authorization"
+category: security
+version: 1.0.0
+owner: security-team
+programId: "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+properties:
+  - name: userAccount
+    type: publicKey
+    required: true
+    description: "Account claimed to be a User struct"
+  - name: authority
+    type: publicKey
+    required: true
+    description: "Signer for the instruction"
+  - name: discriminator
+    type: bytes
+    required: true
+    description: "Borsh discriminator that should uniquely identify the account type"
+  - name: authorityField
+    type: publicKey
+    required: true
+    description: "Authority field within the deserialized struct"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: Account
+    cardinality: "1:1"
+  - type: references
+    target: Signer
+    cardinality: "1:1"
+  - type: references
+    target: MissingOwnerCheck
+    cardinality: "0:1"
+stateMachine:
+  states: [Uninitialized, ValidType, TypeConfused]
+  transitions:
+    - from: Uninitialized
+      to: ValidType
+      via: UpdateUser
+      requires: "account discriminator matches User type && owner == program"
+    - from: Uninitialized
+      to: TypeConfused
+      via: UpdateUser
+      requires: "account is wrong type but shares discriminator (insecure path)"
+constraints:
+  - name: discriminator-unique
+    expression: "discriminator uniquely identifies the struct type"
+    description: "Each account type must have a unique discriminator"
+  - name: owner-is-program
+    expression: "userAccount.owner == program_id"
+    description: "Account must be owned by the program"
+  - name: authority-matches
+    expression: "deserialized.authority == signer.pubkey"
+    description: "Authority field in the struct must match the signer"
+links:
+  docs:
+    - "https://github.com/coral-xyz/sealevel-attacks/tree/master/programs/3-type-cosplay"
+    - "https://github.com/coral-xyz/sealevel-attacks/blob/master/programs/3-type-cosplay/insecure/src/lib.rs"

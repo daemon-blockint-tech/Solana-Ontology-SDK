@@ -1,0 +1,76 @@
+canonicalName: PdaSharing
+aliases:
+  - pda-collision
+  - shared-pda-seeds
+  - pda-confusion
+purpose: "PDA sharing concept from sealevel-attacks — programs that derive PDAs with shared seeds across different account types allow attackers to collide PDA addresses and drain vaults or bypass authorization"
+category: security
+version: 1.0.0
+owner: security-team
+programId: "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+properties:
+  - name: poolPda
+    type: publicKey
+    required: true
+    description: "PDA for the token pool account"
+  - name: vault
+    type: publicKey
+    required: true
+    description: "Token account holding the pool's funds"
+  - name: withdrawDestination
+    type: publicKey
+    required: true
+    description: "Destination for token withdrawals"
+  - name: bump
+    type: u8
+    required: true
+    description: "Bump seed stored in the pool account"
+  - name: mint
+    type: publicKey
+    required: true
+    description: "Token mint for the pool"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: PDA
+    cardinality: "1:1"
+  - type: references
+    target: TokenAccount
+    cardinality: "1:1"
+  - type: references
+    target: PdaSeedMismatch
+    cardinality: "1:1"
+  - type: references
+    target: Signer
+    cardinality: "1:1"
+stateMachine:
+  states: [Uninitialized, Funded, Withdrawn, Drained]
+  transitions:
+    - from: Uninitialized
+      to: Funded
+      via: Deposit
+      requires: "signer deposits tokens into vault"
+    - from: Funded
+      to: Withdrawn
+      via: WithdrawTokens
+      requires: "authority signs && vault == pool.vault && destination == pool.withdraw_destination"
+    - from: Funded
+      to: Drained
+      via: WithdrawTokens
+      requires: "PDA seeds shared with attacker account (insecure path)"
+constraints:
+  - name: pda-seeds-unique
+    expression: "pool PDA seeds do not collide with other account types"
+    description: "PDA seeds must be unique per account type to prevent collision"
+  - name: vault-matches
+    expression: "vault == pool.vault"
+    description: "Vault account must match the pool's configured vault"
+  - name: destination-matches
+    expression: "withdrawDestination == pool.withdraw_destination"
+    description: "Withdraw destination must match pool configuration"
+links:
+  docs:
+    - "https://github.com/coral-xyz/sealevel-attacks/tree/master/programs/8-pda-sharing"
+    - "https://github.com/coral-xyz/sealevel-attacks/blob/master/programs/8-pda-sharing/insecure/src/lib.rs"

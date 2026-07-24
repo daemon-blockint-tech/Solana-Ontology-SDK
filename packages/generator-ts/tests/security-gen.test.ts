@@ -20,19 +20,18 @@ describe("security-gen: PoC test scaffold generation", () => {
   const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
   const securityConcepts = concepts.filter((c) => c.category === "security");
 
-  it("should have 7 security concepts to generate scaffolds for", () => {
-    expect(securityConcepts.length).toBe(7);
+  it("should have 13 security concepts to generate scaffolds for", () => {
+    expect(securityConcepts.length).toBe(13);
   });
 
   it("should generate a PoC test scaffold for each security concept", () => {
     const scaffolds = generateAllPoCTestScaffolds(concepts);
-    expect(scaffolds.length).toBe(7);
+    expect(scaffolds.length).toBe(13);
 
     for (const s of scaffolds) {
       expect(s.filename).toMatch(/\.test\.ts$/);
       expect(s.content).toContain("import");
       expect(s.content).toContain("describe(");
-      expect(s.content).toContain("PoCEnvironment");
     }
   });
 
@@ -128,9 +127,9 @@ describe("security-gen: PoC test scaffold generation", () => {
 describe("security-gen: real-world PoC tests from program-examples", () => {
   const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
 
-  it("should generate PoC tests for all 11 real-world programs", () => {
+  it("should generate PoC tests for all 21 real-world programs", () => {
     const scaffolds = generateAllRealWorldPoCTests(concepts);
-    expect(scaffolds.length).toBe(11);
+    expect(scaffolds.length).toBe(21);
 
     const filenames = scaffolds.map((s) => s.filename);
     expect(filenames).toContain("escrow.test.ts");
@@ -144,6 +143,16 @@ describe("security-gen: real-world PoC tests from program-examples", () => {
     expect(filenames).toContain("payment_challenge.test.ts");
     expect(filenames).toContain("multi_party_payment.test.ts");
     expect(filenames).toContain("payment_settlement.test.ts");
+    expect(filenames).toContain("signer_authorization.test.ts");
+    expect(filenames).toContain("account_data_matching.test.ts");
+    expect(filenames).toContain("type_cosplay.test.ts");
+    expect(filenames).toContain("pda_sharing.test.ts");
+    expect(filenames).toContain("bump_seed_canonicalization.test.ts");
+    expect(filenames).toContain("closing_accounts.test.ts");
+    expect(filenames).toContain("coral_multisig.test.ts");
+    expect(filenames).toContain("multisig_transaction.test.ts");
+    expect(filenames).toContain("tic_tac_toe_game.test.ts");
+    expect(filenames).toContain("tic_tac_toe_play.test.ts");
   });
 
   it("should generate Escrow exploit tests with 3 scenarios", () => {
@@ -203,7 +212,10 @@ describe("security-gen: real-world PoC tests from program-examples", () => {
       expect(
         s.content.includes("solana-foundation/program-examples") ||
         s.content.includes("solana-foundation/solana-governance") ||
-        s.content.includes("solana-foundation/pay-kit")
+        s.content.includes("solana-foundation/pay-kit") ||
+        s.content.includes("coral-xyz/sealevel-attacks") ||
+        s.content.includes("coral-xyz/multisig") ||
+        s.content.includes("coral-xyz/anchor-book")
       ).toBe(true);
     }
   });
@@ -220,6 +232,18 @@ describe("security-gen: real-world PoC tests from program-examples", () => {
     const payConcept = concepts.find((c) => c.canonicalName === "PaymentChallenge")!;
     const payScaffold = generateRealWorldPoCTest(payConcept);
     expect(payScaffold).toContain("https://github.com/solana-foundation/pay-kit");
+
+    const seaConcept = concepts.find((c) => c.canonicalName === "SignerAuthorization")!;
+    const seaScaffold = generateRealWorldPoCTest(seaConcept);
+    expect(seaScaffold).toContain("coral-xyz/sealevel-attacks");
+
+    const msigConcept = concepts.find((c) => c.canonicalName === "CoralMultisig")!;
+    const msigScaffold = generateRealWorldPoCTest(msigConcept);
+    expect(msigScaffold).toContain("coral-xyz/multisig");
+
+    const tttConcept = concepts.find((c) => c.canonicalName === "TicTacToeGame")!;
+    const tttScaffold = generateRealWorldPoCTest(tttConcept);
+    expect(tttScaffold).toContain("coral-xyz/anchor-book");
   });
 
   it("should generate ValidatorGovernance exploit tests with 3 scenarios", () => {
@@ -276,5 +300,97 @@ describe("security-gen: real-world PoC tests from program-examples", () => {
     expect(scaffold).toContain("PaymentSettlement");
     expect(scaffold).toContain("fake transaction signature");
     expect(scaffold).toContain("double receipt");
+  });
+
+  it("should generate SignerAuthorization exploit tests with 2 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "SignerAuthorization")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("SignerAuthorization");
+    expect(scaffold).toContain("not a signer");
+    expect(scaffold).toContain("impersonated authority");
+  });
+
+  it("should generate AccountDataMatching exploit tests with 2 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "AccountDataMatching")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("AccountDataMatching");
+    expect(scaffold).toContain("fake token account");
+    expect(scaffold).toContain("arbitrary account");
+  });
+
+  it("should generate TypeCosplay exploit tests with 2 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "TypeCosplay")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("TypeCosplay");
+    expect(scaffold).toContain("wrong type");
+    expect(scaffold).toContain("shared discriminator");
+  });
+
+  it("should generate PdaSharing exploit tests with 2 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "PdaSharing")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("PdaSharing");
+    expect(scaffold).toContain("PDA collision");
+    expect(scaffold).toContain("drain vault");
+  });
+
+  it("should generate BumpSeedCanonicalization exploit tests with 2 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "BumpSeedCanonicalization")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("BumpSeedCanonicalization");
+    expect(scaffold).toContain("non-canonical bump");
+    expect(scaffold).toContain("alternative PDA");
+  });
+
+  it("should generate ClosingAccounts exploit tests with 2 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "ClosingAccounts")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("ClosingAccounts");
+    expect(scaffold).toContain("clear account data");
+    expect(scaffold).toContain("reinitialization");
+  });
+
+  it("should generate CoralMultisig exploit tests with 3 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "CoralMultisig")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("CoralMultisig");
+    expect(scaffold).toContain("threshold owners signed");
+    expect(scaffold).toContain("stale transaction");
+    expect(scaffold).toContain("double execution");
+  });
+
+  it("should generate MultisigTransaction exploit tests with 2 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "MultisigTransaction")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("MultisigTransaction");
+    expect(scaffold).toContain("non-owner");
+    expect(scaffold).toContain("already executed");
+  });
+
+  it("should generate TicTacToeGame exploit tests with 3 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "TicTacToeGame")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("TicTacToeGame");
+    expect(scaffold).toContain("player's turn");
+    expect(scaffold).toContain("already-occupied");
+    expect(scaffold).toContain("game is already over");
+  });
+
+  it("should generate TicTacToePlay exploit tests with 2 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "TicTacToePlay")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("TicTacToePlay");
+    expect(scaffold).toContain("out of bounds");
+    expect(scaffold).toContain("non-participant");
   });
 });

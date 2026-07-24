@@ -1,0 +1,132 @@
+canonicalName: MultisigTransaction
+aliases:
+  - multisig-tx
+  - proposed-transaction
+  - threshold-tx
+purpose: "Proposed transaction within a coral-xyz multisig — stores program_id, accounts, instruction data, and signer bitmap; owners approve via the approve instruction and execution requires threshold signatures"
+category: governance
+version: 1.0.0
+owner: governance-team
+programId: "msigUdDBsR4zSUYqYEDrc1LcgtmuSDDM7KxpRUXNC6U"
+properties:
+  - name: multisig
+    type: publicKey
+    required: true
+    description: "The multisig account this transaction belongs to"
+  - name: programId
+    type: publicKey
+    required: true
+    description: "Target program to execute against"
+  - name: accounts
+    type: bytes
+    required: true
+    description: "Vec<TransactionAccount> with pubkey, is_signer, is_writable per account"
+  - name: data
+    type: bytes
+    required: true
+    description: "Instruction data for the target transaction"
+  - name: signers
+    type: bytes
+    required: true
+    description: "Vec<bool> where signers[index] is true iff multisig.owners[index] signed"
+  - name: didExecute
+    type: bool
+    required: true
+    description: "Boolean ensuring one-time execution — burned after execute_transaction"
+  - name: ownerSetSeqno
+    type: u32
+    required: true
+    description: "Snapshot of multisig.owner_set_seqno at creation time — must match at execution"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: CoralMultisig
+    cardinality: "many:1"
+  - type: references
+    target: Instruction
+    cardinality: "1:1"
+  - type: references
+    target: Signer
+    cardinality: "many:1"
+accountLayout:
+  discriminator: "7472616e73616374"
+  fields:
+    - name: multisig
+      type: publicKey
+      offset: 0
+    - name: programId
+      type: publicKey
+      offset: 32
+    - name: accounts
+      type: bytes
+      offset: 64
+    - name: data
+      type: bytes
+      offset: 72
+    - name: signers
+      type: bytes
+      offset: 80
+    - name: didExecute
+      type: bool
+      offset: 88
+    - name: ownerSetSeqno
+      type: u32
+      offset: 89
+pdaSeeds:
+  - name: multisigKey
+    type: publicKey
+  - name: nonce
+    type: u8
+stateMachine:
+  states: [Draft, Proposed, PartiallySigned, ReadyToExecute, Executed, Stale]
+  transitions:
+    - from: Draft
+      to: Proposed
+      via: CreateTransaction
+      requires: "proposer is one of the multisig owners"
+    - from: Proposed
+      to: PartiallySigned
+      via: Approve
+      requires: "owner is in multisig.owners && owner_set_seqno matches"
+    - from: PartiallySigned
+      to: ReadyToExecute
+      via: Approve
+      requires: "signer count >= threshold"
+    - from: ReadyToExecute
+      to: Executed
+      via: ExecuteTransaction
+      requires: "did_execute == false && sig_count >= threshold && owner_set_seqno matches"
+    - from: PartiallySigned
+      to: Stale
+      via: OwnerSetRotation
+      requires: "multisig.owner_set_seqno != transaction.owner_set_seqno"
+    - from: Executed
+      to: Executed
+      via: ExecuteTransaction
+      requires: "rejected — already executed (did_execute == true)"
+constraints:
+  - name: one-time-execution
+    expression: "did_execute == false at execution time"
+    description: "Transaction can only be executed once — did_execute burned after execution"
+  - name: threshold-met
+    expression: "sig_count >= multisig.threshold"
+    description: "At least threshold owners must have signed before execution"
+  - name: owner-set-seqno-match
+    expression: "transaction.owner_set_seqno == multisig.owner_set_seqno"
+    description: "Transaction must be executed with the same owner set that was active at creation"
+  - name: proposer-is-owner
+    expression: "proposer is in multisig.owners"
+    description: "Only multisig owners can propose transactions"
+  - name: approver-is-owner
+    expression: "approver is in multisig.owners"
+    description: "Only multisig owners can approve transactions"
+  - name: pda-signer-injection
+    expression: "multisig_signer PDA is injected as signer in executed instruction"
+    description: "Execute_transaction maps multisig_signer to is_signer=true in the inner instruction"
+links:
+  docs:
+    - "https://github.com/coral-xyz/multisig"
+    - "https://github.com/coral-xyz/multisig/blob/master/programs/multisig/src/lib.rs"
+    - "https://github.com/coral-xyz/multisig/blob/master/SECURITY_AUDIT_REPORT.pdf"

@@ -1,0 +1,69 @@
+canonicalName: ClosingAccounts
+aliases:
+  - close-account
+  - account-reinitialization
+  - lamport-drain
+purpose: "Closing accounts concept from sealevel-attacks — programs that drain lamports to close accounts without clearing data or checking the account is still valid allow reinitialization attacks and use of closed accounts"
+category: security
+version: 1.0.0
+owner: security-team
+programId: "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+properties:
+  - name: account
+    type: publicKey
+    required: true
+    description: "Account to be closed"
+  - name: destination
+    type: publicKey
+    required: true
+    description: "Destination to receive lamports"
+  - name: data
+    type: u64
+    required: false
+    description: "Data stored in the account being closed"
+  - name: lamports
+    type: u64
+    required: true
+    description: "Lamport balance of the account"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: Account
+    cardinality: "1:1"
+  - type: references
+    target: Signer
+    cardinality: "0:1"
+stateMachine:
+  states: [Active, Closed, Reinitialized]
+  transitions:
+    - from: Active
+      to: Closed
+      via: CloseAccount
+      requires: "lamports drained to 0 && data cleared"
+    - from: Closed
+      to: Reinitialized
+      via: Initialize
+      requires: "data NOT cleared after close (insecure path)"
+    - from: Active
+      to: Closed
+      via: CloseAccount
+      requires: "account authority is signer"
+constraints:
+  - name: data-cleared-on-close
+    expression: "account.data is zeroed after lamports drained"
+    description: "Account data must be cleared when account is closed"
+  - name: lamports-zeroed
+    expression: "account.lamports == 0 after close"
+    description: "Account lamports must be zero after close"
+  - name: no-reuse-after-close
+    expression: "closed accounts cannot be used in subsequent instructions"
+    description: "Closed accounts must not be reusable"
+  - name: authority-signs-close
+    expression: "account.authority is signer on close"
+    description: "Only the account authority can close the account"
+links:
+  docs:
+    - "https://github.com/coral-xyz/sealevel-attacks/tree/master/programs/9-closing-accounts"
+    - "https://github.com/coral-xyz/sealevel-attacks/blob/master/programs/9-closing-accounts/insecure/src/lib.rs"

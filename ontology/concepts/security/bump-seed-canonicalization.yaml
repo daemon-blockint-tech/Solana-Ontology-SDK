@@ -1,0 +1,63 @@
+canonicalName: BumpSeedCanonicalization
+aliases:
+  - bump-seed
+  - non-canonical-bump
+  - pda-bypass
+purpose: "Bump seed canonicalization concept from sealevel-attacks — programs that accept arbitrary bump seeds instead of the canonical (highest) bump allow attackers to derive alternative PDA addresses and bypass account validation"
+category: security
+version: 1.0.0
+owner: security-team
+programId: "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+properties:
+  - name: dataPda
+    type: publicKey
+    required: true
+    description: "PDA account storing data"
+  - name: key
+    type: u64
+    required: true
+    description: "Seed key for PDA derivation"
+  - name: bump
+    type: u8
+    required: true
+    description: "Bump seed provided by caller (should be canonical)"
+  - name: value
+    type: u64
+    required: false
+    description: "Value stored in the data account"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: PDA
+    cardinality: "1:1"
+  - type: references
+    target: PdaSeedMismatch
+    cardinality: "1:1"
+stateMachine:
+  states: [Uninitialized, SetValue, Bypassed]
+  transitions:
+    - from: Uninitialized
+      to: SetValue
+      via: SetValue
+      requires: "canonical bump used for PDA derivation"
+    - from: Uninitialized
+      to: Bypassed
+      via: SetValue
+      requires: "non-canonical bump accepted (insecure path)"
+    - from: SetValue
+      to: SetValue
+      via: SetValue
+      requires: "canonical bump verified"
+constraints:
+  - name: canonical-bump-only
+    expression: "bump == find_program_address(seeds, program_id).1"
+    description: "Only the canonical (highest) bump seed should be accepted"
+  - name: no-alternative-pda
+    expression: "cannot derive alternative PDA with non-canonical bump"
+    description: "Attackers must not be able to use a different bump to create a valid PDA"
+links:
+  docs:
+    - "https://github.com/coral-xyz/sealevel-attacks/tree/master/programs/7-bump-seed-canonicalization"
+    - "https://github.com/coral-xyz/sealevel-attacks/blob/master/programs/7-bump-seed-canonicalization/insecure/src/lib.rs"

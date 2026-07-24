@@ -1,0 +1,62 @@
+canonicalName: AccountDataMatching
+aliases:
+  - account-matching
+  - fake-token-account
+  - account-confusion
+purpose: "Account data matching concept from sealevel-attacks — programs that accept arbitrary accounts without verifying they are the expected type (e.g., SPL token accounts) allow attackers to pass fake accounts with crafted data"
+category: security
+version: 1.0.0
+owner: security-team
+programId: "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+properties:
+  - name: tokenAccount
+    type: publicKey
+    required: true
+    description: "Account claimed to be an SPL token account"
+  - name: owner
+    type: publicKey
+    required: true
+    description: "Expected owner program (e.g., Token Program)"
+  - name: amount
+    type: u64
+    required: false
+    description: "Token amount read from the account data"
+  - name: authority
+    type: publicKey
+    required: true
+    description: "Signer for the instruction"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: TokenAccount
+    cardinality: "1:1"
+  - type: references
+    target: MissingOwnerCheck
+    cardinality: "1:1"
+  - type: references
+    target: Signer
+    cardinality: "1:1"
+stateMachine:
+  states: [Uninitialized, Verified, Spoofed]
+  transitions:
+    - from: Uninitialized
+      to: Verified
+      via: LogBalance
+      requires: "token account owner == Token Program && account is SPL token"
+    - from: Uninitialized
+      to: Spoofed
+      via: LogBalance
+      requires: "token account NOT verified as SPL token (insecure path)"
+constraints:
+  - name: owner-is-token-program
+    expression: "tokenAccount.owner == TOKEN_PROGRAM_ID"
+    description: "Token account must be owned by the SPL Token program"
+  - name: account-is-deserialized
+    expression: "account data unpacks as SplTokenAccount"
+    description: "Account data must deserialize as a valid SPL token account"
+links:
+  docs:
+    - "https://github.com/coral-xyz/sealevel-attacks/tree/master/programs/1-account-data-matching"
+    - "https://github.com/coral-xyz/sealevel-attacks/blob/master/programs/1-account-data-matching/insecure/src/lib.rs"

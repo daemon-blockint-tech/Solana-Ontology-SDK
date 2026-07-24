@@ -1,0 +1,106 @@
+canonicalName: TicTacToeGame
+aliases:
+  - tic-tac-toe
+  - anchor-game
+  - turn-based-game
+purpose: "Tic-tac-toe game program from the Anchor Book — demonstrates turn-based state machine, multi-player authorization, and game state transitions (Active, Won, Tie) on-chain"
+category: primitive
+version: 1.0.0
+owner: examples-team
+programId: "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+properties:
+  - name: players
+    type: bytes
+    required: true
+    description: "[Pubkey; 2] — the two player addresses"
+  - name: turn
+    type: u8
+    required: true
+    description: "Current turn number (starts at 1, increments each move)"
+  - name: board
+    type: bytes
+    required: true
+    description: "[[Option<Sign>; 3]; 3] — 3x3 board with optional X/O marks"
+  - name: state
+    type: string
+    required: true
+    description: "GameState enum: Active, Tie, or Won { winner: Pubkey }"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: Signer
+    cardinality: "2:1"
+  - type: references
+    target: TicTacToePlay
+    cardinality: "1:many"
+  - type: references
+    target: Account
+    cardinality: "1:1"
+accountLayout:
+  discriminator: "67616d6500000000"
+  fields:
+    - name: players
+      type: bytes
+      offset: 0
+    - name: turn
+      type: u8
+      offset: 64
+    - name: board
+      type: bytes
+      offset: 65
+    - name: state
+      type: string
+      offset: 83
+stateMachine:
+  states: [Uninitialized, Active, Won, Tie]
+  transitions:
+    - from: Uninitialized
+      to: Active
+      via: SetupGame
+      requires: "player_one is signer && game not yet started (turn == 0)"
+    - from: Active
+      to: Active
+      via: Play
+      requires: "current_player is signer && tile not already set && tile in bounds && game active"
+    - from: Active
+      to: Won
+      via: Play
+      requires: "three in a row, column, or diagonal after move"
+    - from: Active
+      to: Tie
+      via: Play
+      requires: "all tiles filled && no winner"
+    - from: Won
+      to: Won
+      via: Play
+      requires: "rejected — game already over"
+    - from: Tie
+      to: Tie
+      via: Play
+      requires: "rejected — game already over"
+constraints:
+  - name: turn-alternates
+    expression: "current_player_index = (turn - 1) % 2"
+    description: "Players alternate turns — player 1 on odd turns, player 2 on even turns"
+  - name: tile-in-bounds
+    expression: "tile.row >= 0 && tile.row <= 2 && tile.column >= 0 && tile.column <= 2"
+    description: "Tile coordinates must be within the 3x3 board"
+  - name: tile-not-already-set
+    expression: "board[tile.row][tile.column] == None"
+    description: "Cannot play on a tile that already has a mark"
+  - name: game-must-be-active
+    expression: "state == GameState::Active"
+    description: "Moves are only allowed while the game is in Active state"
+  - name: current-player-must-sign
+    expression: "game.current_player() == player.key()"
+    description: "Only the current player can make a move"
+  - name: winner-detection
+    expression: "check rows, columns, and both diagonals for three matching signs"
+    description: "Game ends with Won state when any row, column, or diagonal has three of the same sign"
+links:
+  docs:
+    - "https://github.com/coral-xyz/anchor-book"
+    - "https://github.com/coral-xyz/anchor-book/tree/master/programs/tic-tac-toe"
+    - "https://github.com/coral-xyz/anchor-book/blob/master/programs/tic-tac-toe/programs/tic-tac-toe/src/state/game.rs"

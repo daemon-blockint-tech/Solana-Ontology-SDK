@@ -1,0 +1,109 @@
+canonicalName: CoralMultisig
+aliases:
+  - coral-multisig
+  - multisig-wallet
+  - threshold-signature
+purpose: "Audited multisig program from coral-xyz — allows a set of owners to collectively govern any Solana resource (program upgrade authority, mint authority, etc.) by proposing transactions and collecting threshold signatures before execution"
+category: governance
+version: 1.0.0
+owner: governance-team
+programId: "msigUdDBsR4zSUYqYEDrc1LcgtmuSDDM7KxpRUXNC6U"
+properties:
+  - name: owners
+    type: bytes
+    required: true
+    description: "Vec<Pubkey> of multisig owner addresses"
+  - name: threshold
+    type: u64
+    required: true
+    description: "Number of signer approvals required to execute a transaction"
+  - name: nonce
+    type: u8
+    required: true
+    description: "Bump seed nonce for PDA signer derivation"
+  - name: ownerSetSeqno
+    type: u32
+    required: true
+    description: "Incremented each time owners change — prevents stale tx execution after owner set rotation"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: MultisigTransaction
+    cardinality: "1:many"
+  - type: references
+    target: Signer
+    cardinality: "many:1"
+  - type: references
+    target: PDA
+    cardinality: "1:1"
+  - type: references
+    target: Multisig
+    cardinality: "0:1"
+accountLayout:
+  discriminator: "6d756c7469736967"
+  fields:
+    - name: owners
+      type: bytes
+      offset: 0
+    - name: threshold
+      type: u64
+      offset: 8
+    - name: nonce
+      type: u8
+      offset: 16
+    - name: ownerSetSeqno
+      type: u32
+      offset: 17
+pdaSeeds:
+  - name: multisigKey
+    type: publicKey
+  - name: nonce
+    type: u8
+stateMachine:
+  states: [Uninitialized, Active, OwnerSetChanged, ThresholdChanged]
+  transitions:
+    - from: Uninitialized
+      to: Active
+      via: CreateMultisig
+      requires: "owners non-empty && unique && threshold <= owners.length && threshold > 0"
+    - from: Active
+      to: OwnerSetChanged
+      via: SetOwners
+      requires: "executed via multisig PDA signer (recursive CPI from execute_transaction)"
+    - from: Active
+      to: ThresholdChanged
+      via: ChangeThreshold
+      requires: "threshold > 0 && threshold <= owners.length && executed via multisig PDA signer"
+    - from: OwnerSetChanged
+      to: Active
+      via: CompleteChange
+      requires: "owner_set_seqno incremented"
+constraints:
+  - name: owners-unique
+    expression: "no duplicate pubkeys in owners array"
+    description: "All owners must be unique — checked by assert_unique_owners"
+  - name: owners-non-empty
+    expression: "owners.length > 0"
+    description: "Owners vector must not be empty"
+  - name: threshold-positive
+    expression: "threshold > 0"
+    description: "Threshold must be at least 1"
+  - name: threshold-bounded
+    expression: "threshold <= owners.length"
+    description: "Threshold cannot exceed the number of owners"
+  - name: threshold-adjusted-on-owner-removal
+    expression: "if owners.length < threshold then threshold = owners.length"
+    description: "Threshold auto-adjusts when owner set shrinks below current threshold"
+  - name: owner-set-seqno-incremented
+    expression: "owner_set_seqno increments on every set_owners call"
+    description: "Prevents stale transactions from executing after owner rotation"
+  - name: auth-via-pda-signer
+    expression: "set_owners and change_threshold require multisig_signer PDA"
+    description: "Only executable via recursive CPI from execute_transaction using PDA seeds"
+links:
+  docs:
+    - "https://github.com/coral-xyz/multisig"
+    - "https://github.com/coral-xyz/multisig/blob/master/programs/multisig/src/lib.rs"
+    - "https://github.com/coral-xyz/multisig/blob/master/SECURITY_AUDIT_REPORT.pdf"

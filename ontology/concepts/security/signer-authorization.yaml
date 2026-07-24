@@ -1,0 +1,58 @@
+canonicalName: SignerAuthorization
+aliases:
+  - signer-check
+  - missing-signer
+  - authority-bypass
+purpose: "Signer authorization concept from sealevel-attacks — programs that fail to verify the caller is a signer allow any account to impersonate the authority and execute privileged instructions"
+category: security
+version: 1.0.0
+owner: security-team
+programId: "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+properties:
+  - name: authority
+    type: publicKey
+    required: true
+    description: "The authority account that should sign the instruction"
+  - name: isSigner
+    type: bool
+    required: true
+    description: "Whether the authority account is marked as signer in the instruction"
+  - name: message
+    type: string
+    required: false
+    description: "Message to log (demonstrates arbitrary execution without auth)"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: Signer
+    cardinality: "1:1"
+  - type: references
+    target: MissingSignerCheck
+    cardinality: "1:1"
+  - type: references
+    target: PDA
+    cardinality: "0:1"
+stateMachine:
+  states: [Uninitialized, Active, Compromised]
+  transitions:
+    - from: Uninitialized
+      to: Active
+      via: Initialize
+      requires: "authority is signer"
+    - from: Active
+      to: Compromised
+      via: LogMessage
+      requires: "authority NOT verified as signer (insecure path)"
+constraints:
+  - name: authority-must-sign
+    expression: "authority.isSigner == true"
+    description: "The authority account must be a signer on the instruction"
+  - name: no-impersonation
+    expression: "instruction cannot be called by non-authority account"
+    description: "Only the designated authority can call privileged instructions"
+links:
+  docs:
+    - "https://github.com/coral-xyz/sealevel-attacks/tree/master/programs/0-signer-authorization"
+    - "https://github.com/coral-xyz/sealevel-attacks/blob/master/programs/0-signer-authorization/insecure/src/lib.rs"
