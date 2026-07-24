@@ -38,5 +38,18 @@
     "@solana/kit": {
       "optional": true
     }
+  },
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/daemon-blockint-tech/Solana-Ontology-SDK/tree/main/packages/sdk#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daemon-blockint-tech/Solana-Ontology-SDK.git",
+    "directory": "packages/sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/daemon-blockint-tech/Solana-Ontology-SDK/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
