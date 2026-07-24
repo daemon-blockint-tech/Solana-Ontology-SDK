@@ -20,13 +20,14 @@
   "scripts": {
     "build": "turbo build",
     "test": "turbo test",
+    "test:integration": "vitest run --config tests/integration/vitest.config.ts",
     "lint": "eslint . && turbo lint",
     "typecheck": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,mjs,cjs,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,cjs,json,md}\"",
     "generate": "turbo generate",
     "docs": "turbo docs",
-    "validate": "solana-ontology validate",
+    "validate": "node packages/cli/dist/index.js validate",
     "clean": "turbo clean && rm -rf node_modules"
   },
   "devDependencies": {
@@ -42,6 +43,6 @@
   },
   "packageManager": "pnpm@11.16.0",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.13.0"
   }
 }

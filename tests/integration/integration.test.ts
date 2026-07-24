@@ -18,6 +18,7 @@ const CONCEPTS_DIR = resolve(ONTOLOGY_ROOT, "concepts");
 const fixtureIdlV0: IdlV0 = {
   version: "0.1.0",
   name: "token_mint",
+  metadata: { address: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" },
   instructions: [
     {
       name: "MintToken",
@@ -63,7 +64,7 @@ describe("Cross-Package Integration", () => {
     expect(v1.instructions[0].discriminator).toBeDefined();
 
     // ── Step 2: Generate concepts from IDL ──────────────────────────────
-    const generatedConcepts = generateConceptsFromIdl(v1, "token_mint");
+    const generatedConcepts = generateConceptsFromIdl(v1);
     expect(generatedConcepts.length).toBeGreaterThan(0);
 
     // Should have a concept for the MintAccount
@@ -81,7 +82,8 @@ describe("Cross-Package Integration", () => {
 
     // ── Step 4: Load seed ontology concepts and merge with generated ────
     const seedConcepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
-    expect(seedConcepts.length).toBe(34);
+    // Floor rather than exact count so adding ontology concepts doesn't break CI.
+    expect(seedConcepts.length).toBeGreaterThanOrEqual(34);
 
     const allValid = validateAll(seedConcepts);
     expect(allValid.valid).toBe(true);

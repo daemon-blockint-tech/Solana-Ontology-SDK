@@ -6,18 +6,18 @@ The Solana Ontology SDK is an **independent** semantic abstraction layer for Sol
 
 ## Package Overview
 
-| Package | Purpose |
-|---------|---------|
-| `@solana-ontology/core` | Core types, YAML loader, JSON Schema validator, graph builder, program ID registry |
-| `@solana-ontology/idl-parser` | Anchor IDL v0/v1 parser, codemod, concept generator from IDL |
-| `@solana-ontology/sdk` | Runtime SDK: transaction lifecycle, signers, PDA derivation, queries, account fetching |
-| `@solana-ontology/generator-ts` | TypeScript code generator from concepts (interfaces, decoders, PDA helpers, actions, CPI) |
-| `@solana-ontology/generator-rust` | Rust code generator from concepts |
-| `@solana-ontology/generator-client` | Client library generator (React hooks, queries, API client) |
-| `@solana-ontology/oms` | Ontology Metadata Service — REST API for Object/Link/Action Types |
-| `@solana-ontology/mcp-server` | MCP server exposing ontology as resources/tools for LLM agents |
-| `@solana-ontology/ingestion` | IDL ingestion pipeline (file watcher + auto-import) |
-| `@solana-ontology/cli` | Command-line interface for all operations |
+| Package                             | Purpose                                                                                   |
+| ----------------------------------- | ----------------------------------------------------------------------------------------- |
+| `@solana-ontology/core`             | Core types, YAML loader, JSON Schema validator, graph builder, program ID registry        |
+| `@solana-ontology/idl-parser`       | Anchor IDL v0/v1 parser, codemod, concept generator from IDL                              |
+| `@solana-ontology/sdk`              | Runtime SDK: transaction lifecycle, signers, PDA derivation, queries, account fetching    |
+| `@solana-ontology/generator-ts`     | TypeScript code generator from concepts (interfaces, decoders, PDA helpers, actions, CPI) |
+| `@solana-ontology/generator-rust`   | Rust code generator from concepts                                                         |
+| `@solana-ontology/generator-client` | Client library generator (React hooks, queries, API client)                               |
+| `@solana-ontology/oms`              | Ontology Metadata Service — REST API for Object/Link/Action Types                         |
+| `@solana-ontology/mcp-server`       | MCP server exposing ontology as resources/tools for LLM agents                            |
+| `@solana-ontology/ingestion`        | IDL ingestion pipeline (file watcher + auto-import)                                       |
+| `@solana-ontology/cli`              | Command-line interface for all operations                                                 |
 
 ## Data Flow
 

@@ -215,12 +215,12 @@ describe("security-gen: real-world PoC tests from program-examples", () => {
       // Each test should reference a solana-foundation repo
       expect(
         s.content.includes("solana-foundation/program-examples") ||
-        s.content.includes("solana-foundation/solana-governance") ||
-        s.content.includes("solana-foundation/pay-kit") ||
-        s.content.includes("coral-xyz/sealevel-attacks") ||
-        s.content.includes("coral-xyz/multisig") ||
-        s.content.includes("coral-xyz/anchor-book") ||
-        s.content.includes("Lightprotocol/light-protocol")
+          s.content.includes("solana-foundation/solana-governance") ||
+          s.content.includes("solana-foundation/pay-kit") ||
+          s.content.includes("coral-xyz/sealevel-attacks") ||
+          s.content.includes("coral-xyz/multisig") ||
+          s.content.includes("coral-xyz/anchor-book") ||
+          s.content.includes("Lightprotocol/light-protocol"),
       ).toBe(true);
     }
   });
@@ -228,7 +228,9 @@ describe("security-gen: real-world PoC tests from program-examples", () => {
   it("should use concept links.docs for source attribution", () => {
     const escrowConcept = concepts.find((c) => c.canonicalName === "Escrow")!;
     const scaffold = generateRealWorldPoCTest(escrowConcept);
-    expect(scaffold).toContain("https://github.com/solana-foundation/program-examples/tree/main/tokens/escrow");
+    expect(scaffold).toContain(
+      "https://github.com/solana-foundation/program-examples/tree/main/tokens/escrow",
+    );
 
     const govConcept = concepts.find((c) => c.canonicalName === "ValidatorGovernance")!;
     const govScaffold = generateRealWorldPoCTest(govConcept);

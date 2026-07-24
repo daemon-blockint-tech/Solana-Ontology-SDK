@@ -7,3 +7,4 @@ pnpm-lock.yaml
 *.tsbuildinfo
 packages/deploy/templates/
 .agents/
+.windsurf/

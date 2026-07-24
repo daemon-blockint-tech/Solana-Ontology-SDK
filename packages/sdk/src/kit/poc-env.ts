@@ -117,10 +117,7 @@ export interface IPoCEnvironment {
   ): Promise<PoCTransactionResult>;
 
   /** Create a token account for the given mint */
-  createTokenAccount(
-    account: unknown,
-    mint: string,
-  ): Promise<PoCTransactionResult>;
+  createTokenAccount(account: unknown, mint: string): Promise<PoCTransactionResult>;
 
   /** Create an Associated Token Account. Returns the ATA address. */
   createAssociatedTokenAccount(owner: string, mint: string): Promise<string>;
@@ -231,9 +228,7 @@ export class PoCEnvironment implements IPoCEnvironment {
     const info = await c.getAccountInfo(pubkey);
     if (!info) return null;
     const data =
-      info.data instanceof Uint8Array
-        ? info.data
-        : (info.data as { get: () => Uint8Array }).get();
+      info.data instanceof Uint8Array ? info.data : (info.data as { get: () => Uint8Array }).get();
     return {
       pubkey,
       lamports: BigInt(info.lamports),
@@ -279,11 +274,7 @@ export class PoCEnvironment implements IPoCEnvironment {
     const allSigners = [this.config.payer, ...extraSigners];
 
     try {
-      const sig = await sendAndConfirmTransaction(
-        conn as never,
-        tx,
-        allSigners as never,
-      );
+      const sig = await sendAndConfirmTransaction(conn as never, tx, allSigners as never);
       return {
         signature: sig,
         success: true,
@@ -336,11 +327,13 @@ export class PoCEnvironment implements IPoCEnvironment {
       [
         {
           programId: ix.programId.toString(),
-          accounts: ix.keys.map((k: { pubkey: { toString(): string }; isSigner: boolean; isWritable: boolean }) => ({
-            pubkey: k.pubkey.toString(),
-            isSigner: k.isSigner,
-            isWritable: k.isWritable,
-          })),
+          accounts: ix.keys.map(
+            (k: { pubkey: { toString(): string }; isSigner: boolean; isWritable: boolean }) => ({
+              pubkey: k.pubkey.toString(),
+              isSigner: k.isSigner,
+              isWritable: k.isWritable,
+            }),
+          ),
           data: new Uint8Array(ix.data),
         },
       ],
@@ -384,12 +377,12 @@ export class PoCEnvironment implements IPoCEnvironment {
     );
 
     // Need to create account first, then initialize mint
-    const lamports = await this.getRentExemption(spl.MINT_LEN);
+    const lamports = await this.getRentExemption(spl.MINT_SIZE);
     const createIx = web3.SystemProgram.createAccount({
       fromPubkey: new web3.PublicKey(this.payer()),
       newAccountPubkey: new web3.PublicKey(mintKp.publicKey.toString()),
       lamports,
-      space: spl.MINT_LEN,
+      space: spl.MINT_SIZE,
       programId: spl.TOKEN_PROGRAM_ID,
     });
 
@@ -397,20 +390,24 @@ export class PoCEnvironment implements IPoCEnvironment {
       [
         {
           programId: createIx.programId.toString(),
-          accounts: createIx.keys.map((k: { pubkey: { toString(): string }; isSigner: boolean; isWritable: boolean }) => ({
-            pubkey: k.pubkey.toString(),
-            isSigner: k.isSigner,
-            isWritable: k.isWritable,
-          })),
+          accounts: createIx.keys.map(
+            (k: { pubkey: { toString(): string }; isSigner: boolean; isWritable: boolean }) => ({
+              pubkey: k.pubkey.toString(),
+              isSigner: k.isSigner,
+              isWritable: k.isWritable,
+            }),
+          ),
           data: new Uint8Array(createIx.data),
         },
         {
           programId: ix.programId.toString(),
-          accounts: ix.keys.map((k: { pubkey: { toString(): string }; isSigner: boolean; isWritable: boolean }) => ({
-            pubkey: k.pubkey.toString(),
-            isSigner: k.isSigner,
-            isWritable: k.isWritable,
-          })),
+          accounts: ix.keys.map(
+            (k: { pubkey: { toString(): string }; isSigner: boolean; isWritable: boolean }) => ({
+              pubkey: k.pubkey.toString(),
+              isSigner: k.isSigner,
+              isWritable: k.isWritable,
+            }),
+          ),
           data: new Uint8Array(ix.data),
         },
       ],
@@ -442,11 +439,13 @@ export class PoCEnvironment implements IPoCEnvironment {
       [
         {
           programId: ix.programId.toString(),
-          accounts: ix.keys.map((k: { pubkey: { toString(): string }; isSigner: boolean; isWritable: boolean }) => ({
-            pubkey: k.pubkey.toString(),
-            isSigner: k.isSigner,
-            isWritable: k.isWritable,
-          })),
+          accounts: ix.keys.map(
+            (k: { pubkey: { toString(): string }; isSigner: boolean; isWritable: boolean }) => ({
+              pubkey: k.pubkey.toString(),
+              isSigner: k.isSigner,
+              isWritable: k.isWritable,
+            }),
+          ),
           data: new Uint8Array(ix.data),
         },
       ],
@@ -458,21 +457,18 @@ export class PoCEnvironment implements IPoCEnvironment {
    * Create a token account for the given mint.
    * Mirrors: Environment::create_token_account()
    */
-  async createTokenAccount(
-    account: unknown,
-    mint: string,
-  ): Promise<PoCTransactionResult> {
+  async createTokenAccount(account: unknown, mint: string): Promise<PoCTransactionResult> {
     const web3 = await import("@solana/web3.js");
     const spl = await import("@solana/spl-token");
 
     const accountKp = account as { publicKey: { toString(): string }; secretKey: Uint8Array };
-    const lamports = await this.getRentExemption(spl.ACCOUNT_LEN);
+    const lamports = await this.getRentExemption(spl.ACCOUNT_SIZE);
 
     const createIx = web3.SystemProgram.createAccount({
       fromPubkey: new web3.PublicKey(this.payer()),
       newAccountPubkey: new web3.PublicKey(accountKp.publicKey.toString()),
       lamports,
-      space: spl.ACCOUNT_LEN,
+      space: spl.ACCOUNT_SIZE,
       programId: spl.TOKEN_PROGRAM_ID,
     });
 
@@ -486,20 +482,24 @@ export class PoCEnvironment implements IPoCEnvironment {
       [
         {
           programId: createIx.programId.toString(),
-          accounts: createIx.keys.map((k: { pubkey: { toString(): string }; isSigner: boolean; isWritable: boolean }) => ({
-            pubkey: k.pubkey.toString(),
-            isSigner: k.isSigner,
-            isWritable: k.isWritable,
-          })),
+          accounts: createIx.keys.map(
+            (k: { pubkey: { toString(): string }; isSigner: boolean; isWritable: boolean }) => ({
+              pubkey: k.pubkey.toString(),
+              isSigner: k.isSigner,
+              isWritable: k.isWritable,
+            }),
+          ),
           data: new Uint8Array(createIx.data),
         },
         {
           programId: initIx.programId.toString(),
-          accounts: initIx.keys.map((k: { pubkey: { toString(): string }; isSigner: boolean; isWritable: boolean }) => ({
-            pubkey: k.pubkey.toString(),
-            isSigner: k.isSigner,
-            isWritable: k.isWritable,
-          })),
+          accounts: initIx.keys.map(
+            (k: { pubkey: { toString(): string }; isSigner: boolean; isWritable: boolean }) => ({
+              pubkey: k.pubkey.toString(),
+              isSigner: k.isSigner,
+              isWritable: k.isWritable,
+            }),
+          ),
           data: new Uint8Array(initIx.data),
         },
       ],
@@ -512,10 +512,7 @@ export class PoCEnvironment implements IPoCEnvironment {
    * Mirrors: Environment::create_associated_token_account()
    * Returns the ATA address.
    */
-  async createAssociatedTokenAccount(
-    owner: string,
-    mint: string,
-  ): Promise<string> {
+  async createAssociatedTokenAccount(owner: string, mint: string): Promise<string> {
     const web3 = await import("@solana/web3.js");
     const spl = await import("@solana/spl-token");
 
@@ -534,11 +531,13 @@ export class PoCEnvironment implements IPoCEnvironment {
     await this.executeTransaction([
       {
         programId: ix.programId.toString(),
-        accounts: ix.keys.map((k: { pubkey: { toString(): string }; isSigner: boolean; isWritable: boolean }) => ({
-          pubkey: k.pubkey.toString(),
-          isSigner: k.isSigner,
-          isWritable: k.isWritable,
-        })),
+        accounts: ix.keys.map(
+          (k: { pubkey: { toString(): string }; isSigner: boolean; isWritable: boolean }) => ({
+            pubkey: k.pubkey.toString(),
+            isSigner: k.isSigner,
+            isWritable: k.isWritable,
+          }),
+        ),
         data: new Uint8Array(ix.data),
       },
     ]);
@@ -550,17 +549,13 @@ export class PoCEnvironment implements IPoCEnvironment {
    * Get or create an Associated Token Account.
    * Mirrors: Environment::get_or_create_associated_token_account()
    */
-  async getOrCreateAssociatedTokenAccount(
-    owner: string,
-    mint: string,
-  ): Promise<string> {
+  async getOrCreateAssociatedTokenAccount(owner: string, mint: string): Promise<string> {
+    const web3 = await import("@solana/web3.js");
+    const spl = await import("@solana/spl-token");
     const existing = await this.getAccount(
-      (
-        await import("@solana/web3.js")
-      ).PublicKey.findProgramAddressSync(
-        [Buffer.from(owner), Buffer.from(mint)],
-        new (await import("@solana/spl-token")).TOKEN_PROGRAM_ID,
-      )[0].toString(),
+      spl
+        .getAssociatedTokenAddressSync(new web3.PublicKey(mint), new web3.PublicKey(owner))
+        .toString(),
     );
 
     if (existing) {

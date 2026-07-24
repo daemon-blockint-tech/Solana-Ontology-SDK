@@ -150,57 +150,40 @@ import type { ConceptCategory } from "@solana-ontology/core";
  * Vulnerability pattern → exploit test mapping.
  * Each pattern generates a specific exploit scenario using PoCEnvironment.
  */
-const EXPLOIT_PATTERNS: Record<string, {
-  describe: string;
-  exploits: (concept: Concept) => string[];
-}> = {
+const EXPLOIT_PATTERNS: Record<
+  string,
+  {
+    describe: string;
+    exploits: (concept: Concept) => string[];
+  }
+> = {
   MissingSignerCheck: {
     describe: "MissingSignerCheck — call transition without signing",
-    exploits: (c) => [
-      exploitMissingSigner(c),
-      exploitWrongSigner(c),
-    ],
+    exploits: (c) => [exploitMissingSigner(c), exploitWrongSigner(c)],
   },
   AccountSubstitution: {
     describe: "AccountSubstitution — substitute a fake account",
-    exploits: (c) => [
-      exploitFakeAccount(c),
-      exploitCrossProgramAccount(c),
-    ],
+    exploits: (c) => [exploitFakeAccount(c), exploitCrossProgramAccount(c)],
   },
   MissingOwnerCheck: {
     describe: "MissingOwnerCheck — pass account with wrong owner",
-    exploits: (c) => [
-      exploitWrongOwner(c),
-      exploitSystemOwnedAccount(c),
-    ],
+    exploits: (c) => [exploitWrongOwner(c), exploitSystemOwnedAccount(c)],
   },
   SplTokenConfusion: {
     describe: "SplTokenConfusion — swap mint/token accounts",
-    exploits: (c) => [
-      exploitTokenMintSwap(c),
-      exploitWrongTokenAccount(c),
-    ],
+    exploits: (c) => [exploitTokenMintSwap(c), exploitWrongTokenAccount(c)],
   },
   PdaSeedMismatch: {
     describe: "PdaSeedMismatch — derive PDA with wrong seeds",
-    exploits: (c) => [
-      exploitWrongSeeds(c),
-      exploitCollidingSeeds(c),
-    ],
+    exploits: (c) => [exploitWrongSeeds(c), exploitCollidingSeeds(c)],
   },
   IntegerOverflow: {
     describe: "IntegerOverflow — pass max values to trigger wrap-around",
-    exploits: (c) => [
-      exploitOverflowAmount(c),
-      exploitUnderflowBalance(c),
-    ],
+    exploits: (c) => [exploitOverflowAmount(c), exploitUnderflowBalance(c)],
   },
   ArbitraryCpiInvocation: {
     describe: "ArbitraryCpiInvocation — substitute fake program for CPI",
-    exploits: (c) => [
-      exploitFakeCpiTarget(c),
-    ],
+    exploits: (c) => [exploitFakeCpiTarget(c)],
   },
 };
 
@@ -212,7 +195,10 @@ export function generatePoCTestScaffold(concept: Concept): string {
   const pattern = EXPLOIT_PATTERNS[concept.canonicalName];
   if (!pattern) return generateGenericPoCTest(concept);
 
-  const testName = concept.canonicalName.replace(/([A-Z])/g, "_$1").toLowerCase().slice(1);
+  const testName = concept.canonicalName
+    .replace(/([A-Z])/g, "_$1")
+    .toLowerCase()
+    .slice(1);
   const exploits = pattern.exploits(concept);
 
   return `/**
@@ -263,7 +249,10 @@ ${exploits.join("\n")}
  * Generate a generic PoC test for concepts without a specific pattern.
  */
 function generateGenericPoCTest(concept: Concept): string {
-  const testName = concept.canonicalName.replace(/([A-Z])/g, "_$1").toLowerCase().slice(1);
+  const testName = concept.canonicalName
+    .replace(/([A-Z])/g, "_$1")
+    .toLowerCase()
+    .slice(1);
 
   return `/**
  * PoC Exploit Test: ${concept.canonicalName}
@@ -723,7 +712,10 @@ export function generateAllPoCTestScaffolds(
   const results: { filename: string; content: string }[] = [];
 
   for (const concept of securityConcepts) {
-    const testName = concept.canonicalName.replace(/([A-Z])/g, "_$1").toLowerCase().slice(1);
+    const testName = concept.canonicalName
+      .replace(/([A-Z])/g, "_$1")
+      .toLowerCase()
+      .slice(1);
     results.push({
       filename: `${testName}.test.ts`,
       content: generatePoCTestScaffold(concept),
@@ -740,10 +732,13 @@ export function generateAllPoCTestScaffolds(
  * These generate targeted exploit tests based on the actual vulnerability
  * surface of each program from solana-foundation/program-examples.
  */
-const REAL_WORLD_EXPLOITS: Record<string, {
-  describe: string;
-  exploits: (concept: Concept) => string[];
-}> = {
+const REAL_WORLD_EXPLOITS: Record<
+  string,
+  {
+    describe: string;
+    exploits: (concept: Concept) => string[];
+  }
+> = {
   Escrow: {
     describe: "Escrow — atomic swap exploit scenarios",
     exploits: (c) => [
@@ -793,17 +788,11 @@ const REAL_WORLD_EXPLOITS: Record<string, {
   },
   NcnBallot: {
     describe: "NcnBallot — NCN consensus ballot exploit scenarios",
-    exploits: (c) => [
-      exploitNcnNonOperatorClose(c),
-      exploitNcnBallotAfterDeadline(c),
-    ],
+    exploits: (c) => [exploitNcnNonOperatorClose(c), exploitNcnBallotAfterDeadline(c)],
   },
   MerkleProofVerifier: {
     describe: "MerkleProofVerifier — merkle proof bypass scenarios",
-    exploits: (c) => [
-      exploitMerkleFakeProof(c),
-      exploitMerkleNonAuthorityFreeze(c),
-    ],
+    exploits: (c) => [exploitMerkleFakeProof(c), exploitMerkleNonAuthorityFreeze(c)],
   },
   PaymentChallenge: {
     describe: "PaymentChallenge — x402 paywall exploit scenarios",
@@ -815,59 +804,35 @@ const REAL_WORLD_EXPLOITS: Record<string, {
   },
   MultiPartyPayment: {
     describe: "MultiPartyPayment — MPP split exploit scenarios",
-    exploits: (c) => [
-      exploitMppSplitMismatch(c),
-      exploitMppNonFeePayerSettle(c),
-    ],
+    exploits: (c) => [exploitMppSplitMismatch(c), exploitMppNonFeePayerSettle(c)],
   },
   PaymentSettlement: {
     describe: "PaymentSettlement — settlement verification exploits",
-    exploits: (c) => [
-      exploitSettlementFakeTxSignature(c),
-      exploitSettlementDoubleReceipt(c),
-    ],
+    exploits: (c) => [exploitSettlementFakeTxSignature(c), exploitSettlementDoubleReceipt(c)],
   },
   SignerAuthorization: {
     describe: "SignerAuthorization — missing signer check exploits",
-    exploits: (c) => [
-      exploitSealevelMissingSigner(c),
-      exploitSealevelImpersonateAuthority(c),
-    ],
+    exploits: (c) => [exploitSealevelMissingSigner(c), exploitSealevelImpersonateAuthority(c)],
   },
   AccountDataMatching: {
     describe: "AccountDataMatching — fake account type exploits",
-    exploits: (c) => [
-      exploitSealevelFakeTokenAccount(c),
-      exploitSealevelArbitraryAccountRead(c),
-    ],
+    exploits: (c) => [exploitSealevelFakeTokenAccount(c), exploitSealevelArbitraryAccountRead(c)],
   },
   TypeCosplay: {
     describe: "TypeCosplay — struct reinterpretation exploits",
-    exploits: (c) => [
-      exploitSealevelTypeConfusion(c),
-      exploitSealevelSharedDiscriminator(c),
-    ],
+    exploits: (c) => [exploitSealevelTypeConfusion(c), exploitSealevelSharedDiscriminator(c)],
   },
   PdaSharing: {
     describe: "PdaSharing — PDA collision exploits",
-    exploits: (c) => [
-      exploitSealevelPdaCollision(c),
-      exploitSealevelDrainVault(c),
-    ],
+    exploits: (c) => [exploitSealevelPdaCollision(c), exploitSealevelDrainVault(c)],
   },
   BumpSeedCanonicalization: {
     describe: "BumpSeedCanonicalization — non-canonical bump exploits",
-    exploits: (c) => [
-      exploitSealevelNonCanonicalBump(c),
-      exploitSealevelAlternativePda(c),
-    ],
+    exploits: (c) => [exploitSealevelNonCanonicalBump(c), exploitSealevelAlternativePda(c)],
   },
   ClosingAccounts: {
     describe: "ClosingAccounts — close and reinit exploits",
-    exploits: (c) => [
-      exploitSealevelCloseWithoutClear(c),
-      exploitSealevelReinitAfterClose(c),
-    ],
+    exploits: (c) => [exploitSealevelCloseWithoutClear(c), exploitSealevelReinitAfterClose(c)],
   },
   CoralMultisig: {
     describe: "CoralMultisig — threshold governance exploits",
@@ -879,10 +844,7 @@ const REAL_WORLD_EXPLOITS: Record<string, {
   },
   MultisigTransaction: {
     describe: "MultisigTransaction — proposed tx execution exploits",
-    exploits: (c) => [
-      exploitMultisigTxNonOwnerApprove(c),
-      exploitMultisigTxAlreadyExecuted(c),
-    ],
+    exploits: (c) => [exploitMultisigTxNonOwnerApprove(c), exploitMultisigTxAlreadyExecuted(c)],
   },
   TicTacToeGame: {
     describe: "TicTacToeGame — turn-based game state exploits",
@@ -894,10 +856,7 @@ const REAL_WORLD_EXPLOITS: Record<string, {
   },
   TicTacToePlay: {
     describe: "TicTacToePlay — move validation exploits",
-    exploits: (c) => [
-      exploitTicTacToeTileOutOfBounds(c),
-      exploitTicTacToeWrongPlayer(c),
-    ],
+    exploits: (c) => [exploitTicTacToeTileOutOfBounds(c), exploitTicTacToeWrongPlayer(c)],
   },
   LightProtocolRegistry: {
     describe: "LightProtocolRegistry — ZK compression registry exploits",
@@ -938,7 +897,10 @@ export function generateRealWorldPoCTest(concept: Concept): string {
   const pattern = REAL_WORLD_EXPLOITS[concept.canonicalName];
   if (!pattern) return generateGenericPoCTest(concept);
 
-  const testName = concept.canonicalName.replace(/([A-Z])/g, "_$1").toLowerCase().slice(1);
+  const testName = concept.canonicalName
+    .replace(/([A-Z])/g, "_$1")
+    .toLowerCase()
+    .slice(1);
   const exploits = pattern.exploits(concept);
 
   const sourceUrl =
@@ -998,7 +960,10 @@ export function generateAllRealWorldPoCTests(
 
   for (const concept of concepts) {
     if (REAL_WORLD_EXPLOITS[concept.canonicalName]) {
-      const testName = concept.canonicalName.replace(/([A-Z])/g, "_$1").toLowerCase().slice(1);
+      const testName = concept.canonicalName
+        .replace(/([A-Z])/g, "_$1")
+        .toLowerCase()
+        .slice(1);
       results.push({
         filename: `${testName}.test.ts`,
         content: generateRealWorldPoCTest(concept),

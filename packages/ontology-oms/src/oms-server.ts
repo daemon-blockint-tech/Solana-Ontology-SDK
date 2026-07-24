@@ -46,7 +46,7 @@ export class OntologyOmsServer {
   static async create(config?: Partial<OmsApiConfig>): Promise<OntologyOmsServer> {
     const server = new OntologyOmsServer(config);
     if (server.config.storage === "sqlite") {
-      const sqlite = await SqliteStorage.create(server.config.dbPath ?? "./ontology-oms.db");
+      const sqlite = new SqliteStorage(server.config.dbPath ?? "./ontology-oms.db");
       server.setStorage(sqlite);
     }
     return server;

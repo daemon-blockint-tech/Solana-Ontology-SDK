@@ -44,21 +44,21 @@ packages/
 | `@solana-ontology/cli`              | CLI: validate, generate, list, graph, idl                                | ✅    |
 | `@solana-ontology/deploy`           | Helm chart + K8s configs (devnet/testnet/mainnet)                        | —     |
 
-**Total: 174 tests passing across 13 test suites.**
+**All packages ship unit tests, plus a cross-package integration suite; run `pnpm test` and `pnpm test:integration`.**
 
 ## Concept Categories
 
-| Category           | Concepts                                                                            |
-| ------------------ | ----------------------------------------------------------------------------------- |
-| **primitive**      | Account, Program, Transaction, Instruction, PDA, Signer, ComputeBudget, Rent, Counter, TicTacToeGame, TicTacToePlay  |
-| **token**          | TokenMint, TokenAccount, TokenExtension, NFT, Collection, Metadata, TransferHook, CompressedToken      |
-| **defi**           | LiquidityPool, Position, Vault, OracleFeed, LendingMarket, SwapRoute, Escrow, AutomatedMarketMaker, Fundraiser, PaymentChallenge, MultiPartyPayment, PaymentSettlement |
-| **governance**     | Proposal, Vote, Multisig, DAO, StakeAccount, ValidatorGovernance, NcnBallot, MerkleProofVerifier, CoralMultisig, MultisigTransaction |
-| **infrastructure** | Cluster, Slot, Epoch, Validator, LightProtocolRegistry, AccountCompressionTree, LightSystemInvoke                     |
-| **delivery**       | ProgramRelease, ReleaseChannel, Environment, UpgradeAuthority, DeploymentConstraint |
+| Category           | Concepts                                                                                                                                                                                                                                              |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **primitive**      | Account, Program, Transaction, Instruction, PDA, Signer, ComputeBudget, Rent, Counter, TicTacToeGame, TicTacToePlay                                                                                                                                   |
+| **token**          | TokenMint, TokenAccount, TokenExtension, NFT, Collection, Metadata, TransferHook, CompressedToken                                                                                                                                                     |
+| **defi**           | LiquidityPool, Position, Vault, OracleFeed, LendingMarket, SwapRoute, Escrow, AutomatedMarketMaker, Fundraiser, PaymentChallenge, MultiPartyPayment, PaymentSettlement                                                                                |
+| **governance**     | Proposal, Vote, Multisig, DAO, StakeAccount, ValidatorGovernance, NcnBallot, MerkleProofVerifier, CoralMultisig, MultisigTransaction                                                                                                                  |
+| **infrastructure** | Cluster, Slot, Epoch, Validator, LightProtocolRegistry, AccountCompressionTree, LightSystemInvoke                                                                                                                                                     |
+| **delivery**       | ProgramRelease, ReleaseChannel, Environment, UpgradeAuthority, DeploymentConstraint                                                                                                                                                                   |
 | **security**       | MissingSignerCheck, AccountSubstitution, MissingOwnerCheck, SplTokenConfusion, PdaSeedMismatch, IntegerOverflow, ArbitraryCpiInvocation, SignerAuthorization, AccountDataMatching, TypeCosplay, PdaSharing, BumpSeedCanonicalization, ClosingAccounts |
-| **fuzzing**        | FuzzStrategy, FuzzFlow, FuzzInvariant                                                                       |
-| **verification**   | QedspecContract, KaniHarness, ProptestStrategy, LeanProof, CrucibleFuzz                                   |
+| **fuzzing**        | FuzzStrategy, FuzzFlow, FuzzInvariant                                                                                                                                                                                                                 |
+| **verification**   | QedspecContract, KaniHarness, ProptestStrategy, LeanProof, CrucibleFuzz                                                                                                                                                                               |
 
 ## Quick Start
 
@@ -212,13 +212,13 @@ The SDK includes a security validation framework based on [Neodyme's Solana Secu
 
 The validator produces **warnings** (not errors) for concepts that exhibit vulnerability patterns:
 
-| Rule | Severity | Trigger |
-|------|----------|---------|
-| `missing_auth` | CRITICAL | State transitions without `requiredAuth` |
-| `missing_program_id` | HIGH | `accountLayout` without `programId` |
-| `untyped_pda_seeds` | MEDIUM | PDA seeds with no `publicKey` type |
-| `missing_token_standard` | MEDIUM | Token concept without `tokenStandard` |
-| `open_transition` | HIGH | Transition without `requires` or `requiresAuth` |
+| Rule                     | Severity | Trigger                                         |
+| ------------------------ | -------- | ----------------------------------------------- |
+| `missing_auth`           | CRITICAL | State transitions without `requiredAuth`        |
+| `missing_program_id`     | HIGH     | `accountLayout` without `programId`             |
+| `untyped_pda_seeds`      | MEDIUM   | PDA seeds with no `publicKey` type              |
+| `missing_token_standard` | MEDIUM   | Token concept without `tokenStandard`           |
+| `open_transition`        | HIGH     | Transition without `requires` or `requiresAuth` |
 
 ### PoC Environment
 
@@ -238,13 +238,16 @@ await env.createTokenAccount(tokenAcctKp, mintPubkey);
 await env.mintTokens(mintPubkey, authority, tokenAcct, 1_000_000);
 
 // Execute exploit: call without signer
-const result = await env.executeAsTransaction([{
-  programId: targetProgram,
-  accounts: [{ pubkey: attacker, isSigner: false, isWritable: true }],
-  data: new Uint8Array(0),
-}]);
+const result = await env.executeAsTransaction([
+  {
+    programId: targetProgram,
+    accounts: [{ pubkey: attacker, isSigner: false, isWritable: true }],
+    data: new Uint8Array(0),
+  },
+]);
 expect(result.success).toBe(false); // should reject
 ```
+
 ### Auto-Generated PoC Test Scaffolds
 
 Generate exploit test files for all 7 security vulnerability patterns:
@@ -259,6 +262,7 @@ const scaffolds = generateAllPoCTestScaffolds(concepts);
 ```
 
 Each scaffold includes:
+
 - `beforeAll` setup with `PoCEnvironment` + airdrop
 - Exploit-specific test cases (e.g., unsigned authority, fake account, overflow amount)
 - Assertions that the program rejects the attack
@@ -282,10 +286,10 @@ Integration with [Trident](https://github.com/Ackee-Blockchain/trident) — a Ru
 
 Three ontology concepts define fuzz campaigns:
 
-| Concept | Purpose |
-|---------|---------|
-| `FuzzStrategy` | Target program, instruction list, iteration count, flow weights |
-| `FuzzFlow` | Ordered instruction sequences with preconditions and postconditions |
+| Concept         | Purpose                                                                     |
+| --------------- | --------------------------------------------------------------------------- |
+| `FuzzStrategy`  | Target program, instruction list, iteration count, flow weights             |
+| `FuzzFlow`      | Ordered instruction sequences with preconditions and postconditions         |
 | `FuzzInvariant` | State properties checked after every transaction (derived from constraints) |
 
 ### Generate Trident Fuzz Tests
@@ -303,10 +307,11 @@ const fuzzTests = generateAllTridentFuzzTests(concepts);
 // → { filename: "vault_fuzz.rs", content: "#[init] fn start() ..." }
 
 // Generate Trident.toml config
-const config = generateTridentConfig(concepts.find(c => c.canonicalName === "Vault")!);
+const config = generateTridentConfig(concepts.find((c) => c.canonicalName === "Vault")!);
 ```
 
 Each generated fuzz test includes:
+
 - `#[init]` — setup function with initial instruction execution
 - `#[flow]` per state transition — randomized instruction execution with signer randomization
 - `#[invariant]` per constraint — state property checks after every transaction
@@ -325,33 +330,33 @@ Integration with [Solana Foundation program-examples](https://github.com/solana-
 
 ### Modeled Programs
 
-| Program | Category | Source | Exploit Tests |
-|---------|----------|--------|---------------|
-| **Escrow** | defi | [tokens/escrow](https://github.com/solana-foundation/program-examples/tree/main/tokens/escrow) | Non-maker refund, wrong taker mint, double Take |
-| **AMM** | defi | [tokens/token-swap](https://github.com/solana-foundation/program-examples/tree/main/tokens/token-swap) | Constant product violation, token confusion, reserve overflow |
-| **Fundraiser** | defi | [tokens/token-fundraiser](https://github.com/solana-foundation/program-examples/tree/main/tokens/token-fundraiser) | Non-creator close, past deadline, overflow contribution |
-| **TransferHook** | token | [tokens/token-2022/transfer-hook](https://github.com/solana-foundation/program-examples/tree/main/tokens/token-2022/transfer-hook) | Block list bypass, non-authority pause |
-| **Counter** | primitive | [basics/counter](https://github.com/solana-foundation/program-examples/tree/main/basics/counter) | Non-authority increment, overflow, fake PDA |
-| **ValidatorGovernance** | governance | [svmgov/program](https://github.com/solana-foundation/solana-governance/tree/main/svmgov/program) | Non-proposer finalize, fake merkle proof, vote overflow |
-| **NcnBallot** | governance | [ncn](https://github.com/solana-foundation/solana-governance/tree/main/ncn) | Non-operator close, ballot after deadline |
-| **MerkleProofVerifier** | governance | [svmgov/program](https://github.com/solana-foundation/solana-governance) | Invalid merkle proof, non-authority freeze |
-| **PaymentChallenge** | defi | [pay-kit (x402)](https://github.com/solana-foundation/pay-kit) | Nonce replay, wrong amount, expired challenge |
-| **MultiPartyPayment** | defi | [pay-kit (MPP)](https://github.com/solana-foundation/pay-kit) | Split mismatch, non-fee-payer settle |
-| **PaymentSettlement** | defi | [pay-kit](https://github.com/solana-foundation/pay-kit) | Fake tx signature, double receipt |
-| **SignerAuthorization** | security | [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks) | Missing signer, impersonated authority |
-| **AccountDataMatching** | security | [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks) | Fake token account, arbitrary account read |
-| **TypeCosplay** | security | [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks) | Wrong type with matching discriminator, struct reinterpretation |
-| **PdaSharing** | security | [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks) | PDA collision, vault drain |
-| **BumpSeedCanonicalization** | security | [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks) | Non-canonical bump, alternative PDA |
-| **ClosingAccounts** | security | [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks) | Close without clearing data, reinit after close |
-| **CoralMultisig** | governance | [coral-xyz/multisig](https://github.com/coral-xyz/multisig) | Below-threshold execution, stale owner set, double execute |
-| **MultisigTransaction** | governance | [coral-xyz/multisig](https://github.com/coral-xyz/multisig) | Non-owner approval, approve after execution |
-| **TicTacToeGame** | primitive | [coral-xyz/anchor-book](https://github.com/coral-xyz/anchor-book) | Out-of-turn move, tile already set, move after game over |
-| **TicTacToePlay** | primitive | [coral-xyz/anchor-book](https://github.com/coral-xyz/anchor-book) | Tile out of bounds, non-participant move |
-| **LightProtocolRegistry** | infrastructure | [Lightprotocol/light-protocol](https://github.com/Lightprotocol/light-protocol) | Unauthorized config update, double forester registration, insufficient funds |
-| **AccountCompressionTree** | infrastructure | [Lightprotocol/light-protocol](https://github.com/Lightprotocol/light-protocol) | Invalid Merkle proof, write to rolled-over tree, batch limit exceeded |
-| **CompressedToken** | token | [Lightprotocol/light-protocol](https://github.com/Lightprotocol/light-protocol) | Sum check bypass, frozen account transfer |
-| **LightSystemInvoke** | infrastructure | [Lightprotocol/light-protocol](https://github.com/Lightprotocol/light-protocol) | Signer check bypass, CPI context hijack |
+| Program                      | Category       | Source                                                                                                                             | Exploit Tests                                                                |
+| ---------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| **Escrow**                   | defi           | [tokens/escrow](https://github.com/solana-foundation/program-examples/tree/main/tokens/escrow)                                     | Non-maker refund, wrong taker mint, double Take                              |
+| **AMM**                      | defi           | [tokens/token-swap](https://github.com/solana-foundation/program-examples/tree/main/tokens/token-swap)                             | Constant product violation, token confusion, reserve overflow                |
+| **Fundraiser**               | defi           | [tokens/token-fundraiser](https://github.com/solana-foundation/program-examples/tree/main/tokens/token-fundraiser)                 | Non-creator close, past deadline, overflow contribution                      |
+| **TransferHook**             | token          | [tokens/token-2022/transfer-hook](https://github.com/solana-foundation/program-examples/tree/main/tokens/token-2022/transfer-hook) | Block list bypass, non-authority pause                                       |
+| **Counter**                  | primitive      | [basics/counter](https://github.com/solana-foundation/program-examples/tree/main/basics/counter)                                   | Non-authority increment, overflow, fake PDA                                  |
+| **ValidatorGovernance**      | governance     | [svmgov/program](https://github.com/solana-foundation/solana-governance/tree/main/svmgov/program)                                  | Non-proposer finalize, fake merkle proof, vote overflow                      |
+| **NcnBallot**                | governance     | [ncn](https://github.com/solana-foundation/solana-governance/tree/main/ncn)                                                        | Non-operator close, ballot after deadline                                    |
+| **MerkleProofVerifier**      | governance     | [svmgov/program](https://github.com/solana-foundation/solana-governance)                                                           | Invalid merkle proof, non-authority freeze                                   |
+| **PaymentChallenge**         | defi           | [pay-kit (x402)](https://github.com/solana-foundation/pay-kit)                                                                     | Nonce replay, wrong amount, expired challenge                                |
+| **MultiPartyPayment**        | defi           | [pay-kit (MPP)](https://github.com/solana-foundation/pay-kit)                                                                      | Split mismatch, non-fee-payer settle                                         |
+| **PaymentSettlement**        | defi           | [pay-kit](https://github.com/solana-foundation/pay-kit)                                                                            | Fake tx signature, double receipt                                            |
+| **SignerAuthorization**      | security       | [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks)                                                                  | Missing signer, impersonated authority                                       |
+| **AccountDataMatching**      | security       | [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks)                                                                  | Fake token account, arbitrary account read                                   |
+| **TypeCosplay**              | security       | [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks)                                                                  | Wrong type with matching discriminator, struct reinterpretation              |
+| **PdaSharing**               | security       | [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks)                                                                  | PDA collision, vault drain                                                   |
+| **BumpSeedCanonicalization** | security       | [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks)                                                                  | Non-canonical bump, alternative PDA                                          |
+| **ClosingAccounts**          | security       | [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks)                                                                  | Close without clearing data, reinit after close                              |
+| **CoralMultisig**            | governance     | [coral-xyz/multisig](https://github.com/coral-xyz/multisig)                                                                        | Below-threshold execution, stale owner set, double execute                   |
+| **MultisigTransaction**      | governance     | [coral-xyz/multisig](https://github.com/coral-xyz/multisig)                                                                        | Non-owner approval, approve after execution                                  |
+| **TicTacToeGame**            | primitive      | [coral-xyz/anchor-book](https://github.com/coral-xyz/anchor-book)                                                                  | Out-of-turn move, tile already set, move after game over                     |
+| **TicTacToePlay**            | primitive      | [coral-xyz/anchor-book](https://github.com/coral-xyz/anchor-book)                                                                  | Tile out of bounds, non-participant move                                     |
+| **LightProtocolRegistry**    | infrastructure | [Lightprotocol/light-protocol](https://github.com/Lightprotocol/light-protocol)                                                    | Unauthorized config update, double forester registration, insufficient funds |
+| **AccountCompressionTree**   | infrastructure | [Lightprotocol/light-protocol](https://github.com/Lightprotocol/light-protocol)                                                    | Invalid Merkle proof, write to rolled-over tree, batch limit exceeded        |
+| **CompressedToken**          | token          | [Lightprotocol/light-protocol](https://github.com/Lightprotocol/light-protocol)                                                    | Sum check bypass, frozen account transfer                                    |
+| **LightSystemInvoke**        | infrastructure | [Lightprotocol/light-protocol](https://github.com/Lightprotocol/light-protocol)                                                    | Signer check bypass, CPI context hijack                                      |
 
 ### Generate Real-World Exploit Tests
 
@@ -365,6 +370,7 @@ const tests = generateAllRealWorldPoCTests(concepts);
 ```
 
 Each concept includes:
+
 - Full `stateMachine` with real transitions (e.g., Escrow: Uninitialized → Initialized → Funded → Completed/Cancelled)
 - `accountLayout` with Borsh field offsets matching real on-chain data
 - `pdaSeeds` for type-safe PDA derivation

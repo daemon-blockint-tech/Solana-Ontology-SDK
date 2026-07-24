@@ -59,7 +59,10 @@ function toRustStructName(name: string): string {
  * Convert a transition name to a Rust function name.
  */
 function toRustFnName(name: string): string {
-  const snake = name.replace(/([A-Z])/g, "_$1").toLowerCase().replace(/^_/, "");
+  const snake = name
+    .replace(/([A-Z])/g, "_$1")
+    .toLowerCase()
+    .replace(/^_/, "");
   return snake.replace(/[^a-zA-Z0-9_]/g, "_");
 }
 
@@ -124,9 +127,7 @@ function generateInitFunction(concept: Concept, structName: string): string {
     (t) => t.from === concept.stateMachine?.states[0],
   );
 
-  const initIxName = initTransition
-    ? toRustFnName(initTransition.via)
-    : "initialize";
+  const initIxName = initTransition ? toRustFnName(initTransition.via) : "initialize";
 
   return `#[init]
 fn start(&mut self) {
@@ -191,10 +192,7 @@ fn ${fnName}_flow(&mut self) {
 /**
  * Generate an #[invariant] function for a concept constraint.
  */
-function generateInvariantFunction(
-  constraint: ConceptConstraint,
-  structName: string,
-): string {
+function generateInvariantFunction(constraint: ConceptConstraint, structName: string): string {
   const fnName = toRustFnName(constraint.name ?? "unnamed");
 
   return `#[invariant]

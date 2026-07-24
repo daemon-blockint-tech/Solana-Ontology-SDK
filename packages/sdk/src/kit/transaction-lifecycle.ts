@@ -80,7 +80,10 @@ export class TransactionLifecycle {
       if (simulation.unitsConsumed && simulation.unitsConsumed > 0) {
         const adjustedLimit = Math.ceil(simulation.unitsConsumed * 1.2);
         builder.setComputeUnitLimit(adjustedLimit);
-        this.events.emit("computeAdjusted", { requested: simulation.unitsConsumed, limit: adjustedLimit });
+        this.events.emit("computeAdjusted", {
+          requested: simulation.unitsConsumed,
+          limit: adjustedLimit,
+        });
       }
     }
 

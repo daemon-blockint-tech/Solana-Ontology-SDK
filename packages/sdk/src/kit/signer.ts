@@ -85,10 +85,7 @@ export class KmsSigner implements SignerProvider {
 
     // Reconstruct the transaction and attach the KMS signature
     const tx = Transaction.from(Buffer.from(messageBytes));
-    tx.addSignature(
-      new (web3.PublicKey)(this.publicKey),
-      Buffer.from(result.signature),
-    );
+    tx.addSignature(new web3.PublicKey(this.publicKey), Buffer.from(result.signature));
 
     const serialized = tx.serialize();
     return { serialized: new Uint8Array(serialized), signature: result.signature };

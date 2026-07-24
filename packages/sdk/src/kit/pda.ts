@@ -32,8 +32,10 @@ export async function derivePdaKit(programId: string, seeds: Uint8Array[]): Prom
 
     // Kit v7: getProgramDerivedAddress(seeds, programAddress)
     // Cast to any because @solana/kit is an optional peer dep — types may not resolve
-    const fn = getProgramDerivedAddress as unknown as
-      (seeds: Uint8Array[], programAddress: string) => Promise<readonly [string, number]>;
+    const fn = getProgramDerivedAddress as unknown as (
+      seeds: Uint8Array[],
+      programAddress: string,
+    ) => Promise<readonly [string, number]>;
     const result = await fn(seeds, address(programId));
 
     // Kit returns a tuple [Address<string>, bump] — destructure it
@@ -44,9 +46,7 @@ export async function derivePdaKit(programId: string, seeds: Uint8Array[]): Prom
       bump,
     };
   } catch {
-    throw new Error(
-      "Failed to derive PDA with @solana/kit. Ensure it is installed.",
-    );
+    throw new Error("Failed to derive PDA with @solana/kit. Ensure it is installed.");
   }
 }
 
@@ -99,7 +99,10 @@ export async function derivePdaFromConcept(
   return derivePda(pid, seeds);
 }
 
-async function convertSeedToBytes(value: string | number | Uint8Array, type: string): Promise<Uint8Array> {
+async function convertSeedToBytes(
+  value: string | number | Uint8Array,
+  type: string,
+): Promise<Uint8Array> {
   if (typeof value === "object" && value !== null && "byteLength" in value) {
     return value as Uint8Array;
   }
@@ -129,8 +132,8 @@ async function convertSeedToBytes(value: string | number | Uint8Array, type: str
       return new PublicKey(String(value)).toBytes();
     }
     case "bytes":
-      return (typeof value === "object" && value !== null && "byteLength" in value)
-        ? value as Uint8Array
+      return typeof value === "object" && value !== null && "byteLength" in value
+        ? (value as Uint8Array)
         : new TextEncoder().encode(String(value));
     default:
       return new TextEncoder().encode(String(value));

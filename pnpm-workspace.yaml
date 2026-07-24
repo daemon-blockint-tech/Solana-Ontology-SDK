@@ -2,6 +2,10 @@ packages:
   - "packages/*"
 
 allowBuilds:
+  # bigint-buffer ships an optional native addon with a pure-JS fallback; we do
+  # not need the native build, so deny it (this also stops pnpm 11 from failing
+  # the install with ERR_PNPM_IGNORED_BUILDS).
+  bigint-buffer: false
   bufferutil: true
   esbuild: true
   utf-8-validate: true

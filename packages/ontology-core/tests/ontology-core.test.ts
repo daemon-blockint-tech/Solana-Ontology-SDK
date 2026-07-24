@@ -160,10 +160,14 @@ describe("on-chain linkage fields", () => {
     expect(amountField!.type).toBe("u64");
     expect(amountField!.offset).toBe(64);
     // Verify COption offsets are correct
-    const delegatedAmountField = tokenAccount!.accountLayout!.fields.find((f) => f.name === "delegatedAmount");
+    const delegatedAmountField = tokenAccount!.accountLayout!.fields.find(
+      (f) => f.name === "delegatedAmount",
+    );
     expect(delegatedAmountField).toBeDefined();
     expect(delegatedAmountField!.offset).toBe(121);
-    const closeAuthorityField = tokenAccount!.accountLayout!.fields.find((f) => f.name === "closeAuthority");
+    const closeAuthorityField = tokenAccount!.accountLayout!.fields.find(
+      (f) => f.name === "closeAuthority",
+    );
     expect(closeAuthorityField).toBeDefined();
     expect(closeAuthorityField!.offset).toBe(129);
   });

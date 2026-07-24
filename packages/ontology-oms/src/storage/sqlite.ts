@@ -1,36 +1,43 @@
 /**
  * SQLite storage backend for OMS.
- * Uses better-sqlite3 for synchronous, fast, in-process SQLite.
+ *
+ * Uses Node's built-in `node:sqlite` module (stable enough for our synchronous,
+ * in-process needs and available on Node >= 22.5) — no native dependency, no
+ * build step. Loaded via `createRequire` so TypeScript does not try to resolve
+ * `node:sqlite` against @types/node (which only ships those types on newer
+ * releases) and so construction stays synchronous.
  */
 
+import { createRequire } from "node:module";
 import type { OmsStorage } from "./interface.js";
-import type {
-  ObjectTypeDefinition,
-  LinkTypeDefinition,
-  ActionTypeDefinition,
-} from "../types.js";
+import type { ObjectTypeDefinition, LinkTypeDefinition, ActionTypeDefinition } from "../types.js";
 
 interface DbRow {
   name: string;
   data: string;
 }
 
+interface SqliteStatement {
+  run(...params: unknown[]): unknown;
+  get(...params: unknown[]): DbRow | undefined;
+  all(...params: unknown[]): DbRow[];
+}
+
+interface SqliteDatabase {
+  prepare(sql: string): SqliteStatement;
+  exec(sql: string): void;
+  close(): void;
+}
+
 export class SqliteStorage implements OmsStorage {
-  private db: {
-    prepare: (sql: string) => {
-      run: (params: unknown[]) => void;
-      get: (params: unknown[]) => DbRow | undefined;
-      all: () => DbRow[];
-    };
-    exec: (sql: string) => void;
-    close: () => void;
-  };
+  private db: SqliteDatabase;
 
   constructor(dbPath: string) {
-    // Dynamic import to avoid hard dependency in browser/edge environments
-    // Use eval to bypass TypeScript module resolution for optional peer dep
-    const Database = (eval("require") as (mod: string) => new (path: string) => typeof this.db)("better-sqlite3");
-    this.db = new Database(dbPath);
+    const require = createRequire(import.meta.url);
+    const { DatabaseSync } = require("node:sqlite") as {
+      DatabaseSync: new (path: string) => SqliteDatabase;
+    };
+    this.db = new DatabaseSync(dbPath);
 
     // Auto-create tables
     this.db.exec(`
@@ -50,23 +57,23 @@ export class SqliteStorage implements OmsStorage {
   }
 
   async insertObjectType(type: ObjectTypeDefinition): Promise<void> {
-    this.db.prepare(
-      "INSERT OR REPLACE INTO object_types (name, data) VALUES (?, ?)",
-    ).run([type.name, JSON.stringify(type)]);
+    this.db
+      .prepare("INSERT OR REPLACE INTO object_types (name, data) VALUES (?, ?)")
+      .run(type.name, JSON.stringify(type));
   }
 
   async updateObjectType(name: string, updates: Partial<ObjectTypeDefinition>): Promise<void> {
-    const row = this.db.prepare("SELECT data FROM object_types WHERE name = ?").get([name]);
+    const row = this.db.prepare("SELECT data FROM object_types WHERE name = ?").get(name);
     if (!row) throw new Error(`Object type "${name}" not found`);
     const existing = JSON.parse(row.data) as ObjectTypeDefinition;
     const updated = { ...existing, ...updates };
-    this.db.prepare(
-      "UPDATE object_types SET data = ? WHERE name = ?",
-    ).run([JSON.stringify(updated), name]);
+    this.db
+      .prepare("UPDATE object_types SET data = ? WHERE name = ?")
+      .run(JSON.stringify(updated), name);
   }
 
   async getObjectType(name: string): Promise<ObjectTypeDefinition | null> {
-    const row = this.db.prepare("SELECT data FROM object_types WHERE name = ?").get([name]);
+    const row = this.db.prepare("SELECT data FROM object_types WHERE name = ?").get(name);
     return row ? (JSON.parse(row.data) as ObjectTypeDefinition) : null;
   }
 
@@ -76,17 +83,17 @@ export class SqliteStorage implements OmsStorage {
   }
 
   async deleteObjectType(name: string): Promise<void> {
-    this.db.prepare("DELETE FROM object_types WHERE name = ?").run([name]);
+    this.db.prepare("DELETE FROM object_types WHERE name = ?").run(name);
   }
 
   async insertLinkType(type: LinkTypeDefinition): Promise<void> {
-    this.db.prepare(
-      "INSERT OR REPLACE INTO link_types (name, data) VALUES (?, ?)",
-    ).run([type.name, JSON.stringify(type)]);
+    this.db
+      .prepare("INSERT OR REPLACE INTO link_types (name, data) VALUES (?, ?)")
+      .run(type.name, JSON.stringify(type));
   }
 
   async getLinkType(name: string): Promise<LinkTypeDefinition | null> {
-    const row = this.db.prepare("SELECT data FROM link_types WHERE name = ?").get([name]);
+    const row = this.db.prepare("SELECT data FROM link_types WHERE name = ?").get(name);
     return row ? (JSON.parse(row.data) as LinkTypeDefinition) : null;
   }
 
@@ -96,17 +103,17 @@ export class SqliteStorage implements OmsStorage {
   }
 
   async deleteLinkType(name: string): Promise<void> {
-    this.db.prepare("DELETE FROM link_types WHERE name = ?").run([name]);
+    this.db.prepare("DELETE FROM link_types WHERE name = ?").run(name);
   }
 
   async insertActionType(type: ActionTypeDefinition): Promise<void> {
-    this.db.prepare(
-      "INSERT OR REPLACE INTO action_types (name, data) VALUES (?, ?)",
-    ).run([type.name, JSON.stringify(type)]);
+    this.db
+      .prepare("INSERT OR REPLACE INTO action_types (name, data) VALUES (?, ?)")
+      .run(type.name, JSON.stringify(type));
   }
 
   async getActionType(name: string): Promise<ActionTypeDefinition | null> {
-    const row = this.db.prepare("SELECT data FROM action_types WHERE name = ?").get([name]);
+    const row = this.db.prepare("SELECT data FROM action_types WHERE name = ?").get(name);
     return row ? (JSON.parse(row.data) as ActionTypeDefinition) : null;
   }
 
@@ -116,7 +123,7 @@ export class SqliteStorage implements OmsStorage {
   }
 
   async deleteActionType(name: string): Promise<void> {
-    this.db.prepare("DELETE FROM action_types WHERE name = ?").run([name]);
+    this.db.prepare("DELETE FROM action_types WHERE name = ?").run(name);
   }
 
   async clear(): Promise<void> {
