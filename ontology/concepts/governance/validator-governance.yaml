@@ -1,0 +1,138 @@
+canonicalName: ValidatorGovernance
+aliases:
+  - svmgov
+  - validator-voting
+  - protocol-governance
+purpose: "On-chain governance program for Solana validators featuring stake-weighted voting, merkle proof verification for vote eligibility, and proposal lifecycle management"
+category: governance
+version: 1.0.0
+owner: governance-team
+programId: "GovVeCi1E2HTkT3q8jXwK7mR1NfP9Ys2vKj4hLU"
+properties:
+  - name: proposalId
+    type: u64
+    required: true
+    description: "Unique proposal identifier"
+  - name: proposer
+    type: publicKey
+    required: true
+    description: "Validator that created the proposal"
+  - name: voteType
+    type: string
+    required: true
+    description: "Voting mechanism (stake_weighted, ballot, simple_majority)"
+  - name: quorum
+    type: u64
+    required: true
+    description: "Minimum stake required for proposal to pass"
+  - name: yesVotes
+    type: u64
+    required: true
+    description: "Total stake-weight of yes votes"
+  - name: noVotes
+    type: u64
+    required: true
+    description: "Total stake-weight of no votes"
+  - name: startTime
+    type: i64
+    required: true
+    description: "When voting opens"
+  - name: endTime
+    type: i64
+    required: true
+    description: "When voting closes"
+  - name: merkleRoot
+    type: bytes
+    required: true
+    description: "Merkle root for validator eligibility verification"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: Proposal
+    cardinality: "1:1"
+  - type: references
+    target: Vote
+    cardinality: "1:many"
+  - type: references
+    target: StakeAccount
+    cardinality: "many:1"
+  - type: references
+    target: PDA
+    cardinality: "1:1"
+accountLayout:
+  discriminator: "676f767000000000"
+  fields:
+    - name: proposalId
+      type: u64
+      offset: 0
+    - name: proposer
+      type: publicKey
+      offset: 8
+    - name: quorum
+      type: u64
+      offset: 40
+    - name: yesVotes
+      type: u64
+      offset: 48
+    - name: noVotes
+      type: u64
+      offset: 56
+    - name: startTime
+      type: i64
+      offset: 64
+    - name: endTime
+      type: i64
+      offset: 72
+pdaSeeds:
+  - name: proposalId
+    type: u64
+stateMachine:
+  states: [Draft, Active, Passed, Rejected, Executed]
+  transitions:
+    - from: Draft
+      to: Active
+      via: ActivateProposal
+      requiresAuth: proposer
+      requires: "current_time >= startTime"
+    - from: Active
+      to: Active
+      via: CastVote
+      requires: "current_time < endTime && merkle_proof_valid && voter_is_validator"
+    - from: Active
+      to: Passed
+      via: FinalizeProposal
+      requiresAuth: proposer
+      requires: "current_time >= endTime && yesVotes > noVotes && yesVotes >= quorum"
+    - from: Active
+      to: Rejected
+      via: FinalizeProposal
+      requiresAuth: proposer
+      requires: "current_time >= endTime && (yesVotes <= noVotes || yesVotes < quorum)"
+    - from: Passed
+      to: Executed
+      via: ExecuteProposal
+      requiresAuth: proposer
+requiredAuth: proposer
+requireOwnerCheck: true
+constraints:
+  - name: quorum-positive
+    expression: "quorum > 0"
+    description: "Quorum threshold must be positive"
+  - name: end-after-start
+    expression: "endTime > startTime"
+    description: "Voting end must be after start"
+  - name: checked-vote-arithmetic
+    expression: "yesVotes and noVotes use checked_add"
+    description: "Vote tally must use checked arithmetic to prevent overflow"
+  - name: merkle-root-set
+    expression: "merkleRoot is not zero"
+    description: "Merkle root must be set before activation"
+  - name: only-proposer-finalizes
+    expression: "finalize requires proposer signature"
+    description: "Only the original proposer can finalize"
+links:
+  docs:
+    - "https://github.com/solana-foundation/solana-governance"
+    - "https://github.com/solana-foundation/solana-governance/tree/main/svmgov/program"

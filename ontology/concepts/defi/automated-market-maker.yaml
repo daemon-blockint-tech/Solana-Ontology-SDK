@@ -1,0 +1,132 @@
+canonicalName: AutomatedMarketMaker
+aliases:
+  - amm
+  - token-swap
+  - liquidity-pool-amm
+purpose: "Automated Market Maker that creates liquidity pools allowing users to trade token pairs without a counterparty, with LPs earning fees"
+category: defi
+version: 1.0.0
+owner: defi-team
+programId: "SwapsVeCi1E2HTkT3q8jXwK7mR1NfP9Ys2vKj4hLU"
+properties:
+  - name: tokenA
+    type: publicKey
+    required: true
+    description: "First token mint in the trading pair"
+  - name: tokenB
+    type: publicKey
+    required: true
+    description: "Second token mint in the trading pair"
+  - name: poolTokenMint
+    type: publicKey
+    required: true
+    description: "LP token mint representing share of the pool"
+  - name: tokenAReserve
+    type: u64
+    required: true
+    description: "Current reserve of token A in the pool"
+  - name: tokenBReserve
+    type: u64
+    required: true
+    description: "Current reserve of token B in the pool"
+  - name: feeNumerator
+    type: u64
+    required: true
+    description: "Fee numerator (fee = feeNumerator / feeDenominator)"
+  - name: feeDenominator
+    type: u64
+    required: true
+    description: "Fee denominator"
+  - name: curveType
+    type: string
+    required: true
+    description: "Pricing curve type (constant_product, stable, etc.)"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: TokenMint
+    cardinality: "many:1"
+    description: "Three token mints: token A, token B, and LP token"
+  - type: references
+    target: LiquidityPool
+    cardinality: "1:1"
+  - type: references
+    target: PDA
+    cardinality: "1:1"
+accountLayout:
+  discriminator: "616d6d7000000000"
+  fields:
+    - name: tokenA
+      type: publicKey
+      offset: 0
+    - name: tokenB
+      type: publicKey
+      offset: 32
+    - name: poolTokenMint
+      type: publicKey
+      offset: 64
+    - name: tokenAReserve
+      type: u64
+      offset: 96
+    - name: tokenBReserve
+      type: u64
+      offset: 104
+    - name: feeNumerator
+      type: u64
+      offset: 112
+    - name: feeDenominator
+      type: u64
+      offset: 120
+pdaSeeds:
+  - name: tokenA
+    type: publicKey
+  - name: tokenB
+    type: publicKey
+stateMachine:
+  states: [Uninitialized, Initialized, LiquidityProvided, Active, Withdrawn]
+  transitions:
+    - from: Uninitialized
+      to: Initialized
+      via: CreatePool
+      requiresAuth: authority
+    - from: Initialized
+      to: LiquidityProvided
+      via: ProvideLiquidity
+      requires: "depositor has both token A and B"
+    - from: LiquidityProvided
+      to: Active
+      via: Swap
+      requires: "constant_product invariant holds after swap"
+    - from: Active
+      to: Active
+      via: Swap
+      requires: "constant_product invariant holds after swap"
+    - from: Active
+      to: Withdrawn
+      via: WithdrawLiquidity
+      requiresAuth: liquidityProvider
+      requires: "LP has pool tokens to burn"
+requiredAuth: authority
+requireOwnerCheck: true
+constraints:
+  - name: constant-product-invariant
+    expression: "tokenAReserve * tokenBReserve >= k_prev"
+    description: "Constant product k = A * B must not decrease after any swap"
+  - name: non-zero-reserves
+    expression: "tokenAReserve > 0 && tokenBReserve > 0"
+    description: "Reserves must remain positive after initialization"
+  - name: fee-bounds
+    expression: "feeNumerator < feeDenominator"
+    description: "Fee must be less than 100%"
+  - name: distinct-pair-tokens
+    expression: "tokenA != tokenB"
+    description: "Cannot create a pool with the same token on both sides"
+  - name: checked-arithmetic
+    expression: "all reserve calculations use checked_mul and checked_div"
+    description: "All arithmetic must use checked math to prevent overflow"
+links:
+  docs:
+    - "https://github.com/solana-foundation/program-examples/tree/main/tokens/token-swap"
+    - "https://github.com/solana-foundation/program-examples/blob/main/tokens/token-swap/anchor"

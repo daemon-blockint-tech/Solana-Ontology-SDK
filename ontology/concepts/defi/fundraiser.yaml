@@ -1,0 +1,116 @@
+canonicalName: Fundraiser
+aliases:
+  - token-fundraiser
+  - crowdfunding
+purpose: "On-chain fundraiser where a creator sets a token mint and target amount, contributors deposit tokens until the goal is reached or the fundraiser is closed"
+category: defi
+version: 1.0.0
+owner: defi-team
+programId: "FundrVeCi1E2HTkT3q8jXwK7mR1NfP9Ys2vKj4hLU"
+properties:
+  - name: creator
+    type: publicKey
+    required: true
+    description: "The party who created the fundraiser"
+  - name: mint
+    type: publicKey
+    required: true
+    description: "Token mint accepted for contributions"
+  - name: targetAmount
+    type: u64
+    required: true
+    description: "Goal amount of tokens to raise"
+  - name: raisedAmount
+    type: u64
+    required: true
+    description: "Current total contributed"
+  - name: deadline
+    type: i64
+    required: true
+    description: "Unix timestamp after which contributions are rejected"
+  - name: vaultTokenAccount
+    type: publicKey
+    required: true
+    description: "Token account (PDA) holding raised funds"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: TokenMint
+    cardinality: "1:1"
+  - type: references
+    target: TokenAccount
+    cardinality: "1:1"
+  - type: references
+    target: PDA
+    cardinality: "1:1"
+accountLayout:
+  discriminator: "66756e6400000000"
+  fields:
+    - name: creator
+      type: publicKey
+      offset: 0
+    - name: mint
+      type: publicKey
+      offset: 32
+    - name: targetAmount
+      type: u64
+      offset: 64
+    - name: raisedAmount
+      type: u64
+      offset: 72
+    - name: deadline
+      type: i64
+      offset: 80
+pdaSeeds:
+  - name: creator
+    type: publicKey
+  - name: mint
+    type: publicKey
+stateMachine:
+  states: [Uninitialized, Active, Funded, Closed, Refunded]
+  transitions:
+    - from: Uninitialized
+      to: Active
+      via: Create
+      requiresAuth: creator
+    - from: Active
+      to: Active
+      via: Contribute
+      requires: "current_time < deadline && raisedAmount + contribution <= targetAmount"
+    - from: Active
+      to: Funded
+      via: Contribute
+      requires: "raisedAmount + contribution == targetAmount"
+    - from: Active
+      to: Closed
+      via: Close
+      requiresAuth: creator
+      requires: "current_time >= deadline && raisedAmount < targetAmount"
+    - from: Funded
+      to: Funded
+      via: Withdraw
+      requiresAuth: creator
+requiredAuth: creator
+requireOwnerCheck: true
+constraints:
+  - name: positive-target
+    expression: "targetAmount > 0"
+    description: "Fundraiser target must be positive"
+  - name: deadline-in-future
+    expression: "deadline > current_time at creation"
+    description: "Deadline must be set in the future"
+  - name: no-overflow-raised
+    expression: "raisedAmount + contribution does not overflow u64"
+    description: "Contribution amounts must use checked addition"
+  - name: only-creator-can-close
+    expression: "close requires creator signature"
+    description: "Only the creator can close the fundraiser"
+  - name: refund-on-failure
+    expression: "if raisedAmount < targetAmount after deadline, contributors can refund"
+    description: "Contributors must be able to reclaim funds if goal not reached"
+links:
+  docs:
+    - "https://github.com/solana-foundation/program-examples/tree/main/tokens/token-fundraiser"
+    - "https://github.com/solana-foundation/program-examples/blob/main/tokens/token-fundraiser/anchor"

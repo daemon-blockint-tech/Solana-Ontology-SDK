@@ -1,0 +1,107 @@
+canonicalName: NcnBallot
+aliases:
+  - ncn-voting
+  - node-consensus-ballot
+  - operator-ballot
+purpose: "NCN (Node Consensus Network) ballot voting system with operator whitelisting, merkle proof verification for ballot eligibility, and on-chain tally verification"
+category: governance
+version: 1.0.0
+owner: governance-team
+programId: "NcnVeCi1E2HTkT3q8jXwK7mR1NfP9Ys2vKj4hLU"
+properties:
+  - name: ballotId
+    type: u64
+    required: true
+    description: "Unique ballot identifier"
+  - name: operator
+    type: publicKey
+    required: true
+    description: "NCN operator that created the ballot"
+  - name: whitelistRoot
+    type: bytes
+    required: true
+    description: "Merkle root of operator whitelist"
+  - name: totalBallots
+    type: u64
+    required: true
+    description: "Total ballots cast"
+  - name: approvedBallots
+    type: u64
+    required: true
+    description: "Ballots that passed verification"
+  - name: deadline
+    type: i64
+    required: true
+    description: "Ballot submission deadline"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: Vote
+    cardinality: "1:many"
+  - type: references
+    target: PDA
+    cardinality: "1:1"
+accountLayout:
+  discriminator: "6e636e6200000000"
+  fields:
+    - name: ballotId
+      type: u64
+      offset: 0
+    - name: operator
+      type: publicKey
+      offset: 8
+    - name: totalBallots
+      type: u64
+      offset: 40
+    - name: approvedBallots
+      type: u64
+      offset: 48
+    - name: deadline
+      type: i64
+      offset: 56
+pdaSeeds:
+  - name: ballotId
+    type: u64
+  - name: operator
+    type: publicKey
+stateMachine:
+  states: [Uninitialized, Open, Closed, Verified]
+  transitions:
+    - from: Uninitialized
+      to: Open
+      via: CreateBallot
+      requiresAuth: operator
+    - from: Open
+      to: Open
+      via: SubmitBallot
+      requires: "current_time < deadline && merkle_proof_valid && submitter_is_whitelisted"
+    - from: Open
+      to: Closed
+      via: CloseBallot
+      requiresAuth: operator
+      requires: "current_time >= deadline"
+    - from: Closed
+      to: Verified
+      via: VerifyTally
+      requiresAuth: operator
+      requires: "approvedBallots == verifier_service_result"
+requiredAuth: operator
+requireOwnerCheck: true
+constraints:
+  - name: only-operator-closes
+    expression: "close requires operator signature"
+    description: "Only the NCN operator can close the ballot"
+  - name: whitelist-verification
+    expression: "submitter must provide valid merkle proof against whitelistRoot"
+    description: "Ballot submission requires merkle proof of whitelist membership"
+  - name: checked-ballot-count
+    expression: "totalBallots uses checked_add"
+    description: "Ballot counting must use checked arithmetic"
+  - name: deadline-enforced
+    expression: "submitBallot rejects if current_time >= deadline"
+    description: "No ballots accepted after deadline"
+links:
+  docs:
+    - "https://github.com/solana-foundation/solana-governance/tree/main/ncn"

@@ -44,16 +44,16 @@ packages/
 | `@solana-ontology/cli`              | CLI: validate, generate, list, graph, idl                                | ✅    |
 | `@solana-ontology/deploy`           | Helm chart + K8s configs (devnet/testnet/mainnet)                        | —     |
 
-**Total: 146 tests passing across 13 test suites.**
+**Total: 159 tests passing across 13 test suites.**
 
 ## Concept Categories
 
 | Category           | Concepts                                                                            |
 | ------------------ | ----------------------------------------------------------------------------------- |
-| **primitive**      | Account, Program, Transaction, Instruction, PDA, Signer, ComputeBudget, Rent        |
-| **token**          | TokenMint, TokenAccount, TokenExtension, NFT, Collection, Metadata                  |
-| **defi**           | LiquidityPool, Position, Vault, OracleFeed, LendingMarket, SwapRoute                |
-| **governance**     | Proposal, Vote, Multisig, DAO, StakeAccount                                         |
+| **primitive**      | Account, Program, Transaction, Instruction, PDA, Signer, ComputeBudget, Rent, Counter  |
+| **token**          | TokenMint, TokenAccount, TokenExtension, NFT, Collection, Metadata, TransferHook      |
+| **defi**           | LiquidityPool, Position, Vault, OracleFeed, LendingMarket, SwapRoute, Escrow, AutomatedMarketMaker, Fundraiser, PaymentChallenge, MultiPartyPayment, PaymentSettlement |
+| **governance**     | Proposal, Vote, Multisig, DAO, StakeAccount, ValidatorGovernance, NcnBallot, MerkleProofVerifier |
 | **infrastructure** | Cluster, Slot, Epoch, Validator                                                     |
 | **delivery**       | ProgramRelease, ReleaseChannel, Environment, UpgradeAuthority, DeploymentConstraint |
 | **security**       | MissingSignerCheck, AccountSubstitution, MissingOwnerCheck, SplTokenConfusion, PdaSeedMismatch, IntegerOverflow, ArbitraryCpiInvocation |
@@ -317,6 +317,45 @@ Each generated fuzz test includes:
 cargo install trident-cli
 trident fuzz run vault_fuzz
 ```
+
+## Real-World Program Examples
+
+Integration with [Solana Foundation program-examples](https://github.com/solana-foundation/program-examples) — 5 real-world programs modeled as ontology concepts with full exploit test generation.
+
+### Modeled Programs
+
+| Program | Category | Source | Exploit Tests |
+|---------|----------|--------|---------------|
+| **Escrow** | defi | [tokens/escrow](https://github.com/solana-foundation/program-examples/tree/main/tokens/escrow) | Non-maker refund, wrong taker mint, double Take |
+| **AMM** | defi | [tokens/token-swap](https://github.com/solana-foundation/program-examples/tree/main/tokens/token-swap) | Constant product violation, token confusion, reserve overflow |
+| **Fundraiser** | defi | [tokens/token-fundraiser](https://github.com/solana-foundation/program-examples/tree/main/tokens/token-fundraiser) | Non-creator close, past deadline, overflow contribution |
+| **TransferHook** | token | [tokens/token-2022/transfer-hook](https://github.com/solana-foundation/program-examples/tree/main/tokens/token-2022/transfer-hook) | Block list bypass, non-authority pause |
+| **Counter** | primitive | [basics/counter](https://github.com/solana-foundation/program-examples/tree/main/basics/counter) | Non-authority increment, overflow, fake PDA |
+| **ValidatorGovernance** | governance | [svmgov/program](https://github.com/solana-foundation/solana-governance/tree/main/svmgov/program) | Non-proposer finalize, fake merkle proof, vote overflow |
+| **NcnBallot** | governance | [ncn](https://github.com/solana-foundation/solana-governance/tree/main/ncn) | Non-operator close, ballot after deadline |
+| **MerkleProofVerifier** | governance | [svmgov/program](https://github.com/solana-foundation/solana-governance) | Invalid merkle proof, non-authority freeze |
+| **PaymentChallenge** | defi | [pay-kit (x402)](https://github.com/solana-foundation/pay-kit) | Nonce replay, wrong amount, expired challenge |
+| **MultiPartyPayment** | defi | [pay-kit (MPP)](https://github.com/solana-foundation/pay-kit) | Split mismatch, non-fee-payer settle |
+| **PaymentSettlement** | defi | [pay-kit](https://github.com/solana-foundation/pay-kit) | Fake tx signature, double receipt |
+
+### Generate Real-World Exploit Tests
+
+```typescript
+import { generateAllRealWorldPoCTests } from "@solana-ontology/generator-ts";
+import { loadConcepts } from "@solana-ontology/core";
+
+const concepts = loadConcepts("./ontology/concepts", "./ontology");
+const tests = generateAllRealWorldPoCTests(concepts);
+// → 11 .test.ts files with 28 total exploit scenarios using PoCEnvironment
+```
+
+Each concept includes:
+- Full `stateMachine` with real transitions (e.g., Escrow: Uninitialized → Initialized → Funded → Completed/Cancelled)
+- `accountLayout` with Borsh field offsets matching real on-chain data
+- `pdaSeeds` for type-safe PDA derivation
+- `constraints` derived from actual program invariants (e.g., constant product for AMM)
+- `requiredAuth` and `requireOwnerCheck` security fields
+- Links to the original source code in program-examples
 
 ## Testing
 

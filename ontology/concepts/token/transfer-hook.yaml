@@ -1,0 +1,96 @@
+canonicalName: TransferHook
+aliases:
+  - token-transfer-hook
+  - transfer-hook-program
+purpose: "Custom logic executed on every token transfer for a specific mint, enabling allow/block lists, fees, counters, and other transfer restrictions"
+category: token
+version: 1.0.0
+owner: token-team
+programId: "HookVeCi1E2HTkT3q8jXwK7mR1NfP9Ys2vKj4hLU"
+properties:
+  - name: authority
+    type: publicKey
+    required: true
+    description: "Authority that can update hook configuration"
+  - name: hookMint
+    type: publicKey
+    required: true
+    description: "Token mint that triggers this hook on transfer"
+  - name: hookType
+    type: string
+    required: true
+    description: "Type of hook (allow_block_list, counter, fee, custom)"
+  - name: transferCount
+    type: u64
+    required: false
+    description: "Number of transfers processed (for counter type)"
+  - name: feeBps
+    type: u16
+    required: false
+    description: "Fee in basis points (for fee type)"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: TokenMint
+    cardinality: "1:1"
+  - type: references
+    target: TokenExtension
+    cardinality: "1:1"
+  - type: references
+    target: PDA
+    cardinality: "1:1"
+accountLayout:
+  discriminator: "686f6f6b00000000"
+  fields:
+    - name: authority
+      type: publicKey
+      offset: 0
+    - name: hookMint
+      type: publicKey
+      offset: 32
+    - name: transferCount
+      type: u64
+      offset: 64
+pdaSeeds:
+  - name: hookMint
+    type: publicKey
+stateMachine:
+  states: [Uninitialized, Active, Paused]
+  transitions:
+    - from: Uninitialized
+      to: Active
+      via: Initialize
+      requiresAuth: authority
+    - from: Active
+      to: Active
+      via: ExecuteTransfer
+      requires: "sender and receiver are not on block list"
+    - from: Active
+      to: Paused
+      via: Pause
+      requiresAuth: authority
+    - from: Paused
+      to: Active
+      via: Unpause
+      requiresAuth: authority
+requiredAuth: authority
+requireOwnerCheck: true
+constraints:
+  - name: only-authority-can-pause
+    expression: "pause and unpause require authority signature"
+    description: "Only the designated authority can pause/unpause the hook"
+  - name: block-list-enforced
+    expression: "transfers from blocked addresses are rejected"
+    description: "Block list must be checked on every transfer"
+  - name: hook-mint-match
+    expression: "hook is only triggered for the configured mint"
+    description: "Hook must verify the transfer mint matches hookMint"
+  - name: checked-transfer-count
+    expression: "transferCount uses checked_add"
+    description: "Transfer counter must use checked arithmetic to prevent overflow"
+links:
+  docs:
+    - "https://github.com/solana-foundation/program-examples/tree/main/tokens/token-2022/transfer-hook"
+    - "https://github.com/solana-foundation/program-examples/blob/main/tokens/token-2022/transfer-hook/allow-block-list-token/anchor"

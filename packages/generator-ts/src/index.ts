@@ -32,6 +32,8 @@ export {
   generateSecurityArtifacts,
   generatePoCTestScaffold,
   generateAllPoCTestScaffolds,
+  generateRealWorldPoCTest,
+  generateAllRealWorldPoCTests,
 } from "./security-gen.js";
 
 export {

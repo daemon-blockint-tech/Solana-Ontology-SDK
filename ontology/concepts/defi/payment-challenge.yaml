@@ -1,0 +1,117 @@
+canonicalName: PaymentChallenge
+aliases:
+  - x402
+  - http-402-payment
+  - stablecoin-paywall
+purpose: "HTTP 402 Payment Required protocol for stablecoin paywalls — server issues a payment challenge with amount, recipient, and nonce; client pays on Solana and replays the request with a signed proof of payment"
+category: defi
+version: 1.0.0
+owner: payments-team
+programId: "PayVeCi1E2HTkT3q8jXwK7mR1NfP9Ys2vKj4hLU"
+properties:
+  - name: amount
+    type: u64
+    required: true
+    description: "Payment amount in base units of the stablecoin (e.g., micro-USDC)"
+  - name: tokenMint
+    type: publicKey
+    required: true
+    description: "Stablecoin mint address (USDC, USDT, PYUSD, EURC)"
+  - name: recipient
+    type: publicKey
+    required: true
+    description: "Wallet address that receives the payment"
+  - name: nonce
+    type: bytes
+    required: true
+    description: "Unique nonce to prevent replay attacks"
+  - name: deadline
+    type: i64
+    required: true
+    description: "Challenge expiry timestamp"
+  - name: resource
+    type: string
+    required: true
+    description: "HTTP resource path being paywalled"
+  - name: facilitator
+    type: publicKey
+    required: false
+    description: "Optional facilitator that pays the network fee"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: TokenMint
+    cardinality: "1:1"
+  - type: references
+    target: TokenAccount
+    cardinality: "1:1"
+  - type: references
+    target: PDA
+    cardinality: "1:1"
+accountLayout:
+  discriminator: "7834303200000000"
+  fields:
+    - name: amount
+      type: u64
+      offset: 0
+    - name: tokenMint
+      type: publicKey
+      offset: 8
+    - name: recipient
+      type: publicKey
+      offset: 40
+    - name: deadline
+      type: i64
+      offset: 72
+pdaSeeds:
+  - name: nonce
+    type: bytes
+  - name: recipient
+    type: publicKey
+stateMachine:
+  states: [Issued, Paid, Verified, Expired, Refunded]
+  transitions:
+    - from: Issued
+      to: Paid
+      via: SubmitPayment
+      requires: "client submits tx signature of token transfer"
+    - from: Paid
+      to: Verified
+      via: VerifySettlement
+      requires: "tx confirmed on-chain && amount matches && recipient matches && nonce matches"
+    - from: Issued
+      to: Expired
+      via: ExpireChallenge
+      requires: "current_time >= deadline"
+    - from: Verified
+      to: Refunded
+      via: Refund
+      requiresAuth: recipient
+requiredAuth: recipient
+requireOwnerCheck: true
+constraints:
+  - name: positive-amount
+    expression: "amount > 0"
+    description: "Payment amount must be positive"
+  - name: valid-stablecoin
+    expression: "tokenMint is a known stablecoin mint"
+    description: "Only accepted stablecoin mints are allowed"
+  - name: nonce-unique
+    expression: "nonce not previously used in a verified challenge"
+    description: "Nonce must be unique to prevent replay"
+  - name: deadline-future
+    expression: "deadline > current_time at issuance"
+    description: "Challenge deadline must be in the future"
+  - name: amount-matches-transfer
+    expression: "on-chain transfer amount == challenge amount"
+    description: "Verified transfer amount must exactly match challenge"
+  - name: recipient-matches-transfer
+    expression: "on-chain transfer destination == challenge recipient"
+    description: "Verified transfer destination must match challenge recipient"
+links:
+  docs:
+    - "https://github.com/solana-foundation/pay-kit"
+    - "https://x402.org"
+    - "https://pay.sh/docs/sdk"

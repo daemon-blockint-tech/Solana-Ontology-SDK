@@ -732,3 +732,1028 @@ export function generateAllPoCTestScaffolds(
 
   return results;
 }
+
+// ── Real-World Exploit Generators (from Solana program-examples) ────────────
+
+/**
+ * Real-world exploit patterns mapped to specific program examples.
+ * These generate targeted exploit tests based on the actual vulnerability
+ * surface of each program from solana-foundation/program-examples.
+ */
+const REAL_WORLD_EXPLOITS: Record<string, {
+  describe: string;
+  exploits: (concept: Concept) => string[];
+}> = {
+  Escrow: {
+    describe: "Escrow — atomic swap exploit scenarios",
+    exploits: (c) => [
+      exploitEscrowNonMakerRefund(c),
+      exploitEscrowWrongTakerMint(c),
+      exploitEscrowDoubleTake(c),
+    ],
+  },
+  AutomatedMarketMaker: {
+    describe: "AMM — token swap exploit scenarios",
+    exploits: (c) => [
+      exploitAmmConstantProductViolation(c),
+      exploitAmmTokenConfusion(c),
+      exploitAmmOverflowReserve(c),
+    ],
+  },
+  Fundraiser: {
+    describe: "Fundraiser — crowdfunding exploit scenarios",
+    exploits: (c) => [
+      exploitFundraiserNonCreatorClose(c),
+      exploitFundraiserPastDeadline(c),
+      exploitFundraiserOverflowContribution(c),
+    ],
+  },
+  TransferHook: {
+    describe: "TransferHook — transfer restriction bypass",
+    exploits: (c) => [
+      exploitTransferHookBlockListBypass(c),
+      exploitTransferHookNonAuthorityPause(c),
+    ],
+  },
+  Counter: {
+    describe: "Counter — minimal state exploit scenarios",
+    exploits: (c) => [
+      exploitCounterNonAuthorityIncrement(c),
+      exploitCounterOverflow(c),
+      exploitCounterFakePda(c),
+    ],
+  },
+  ValidatorGovernance: {
+    describe: "ValidatorGovernance — protocol governance exploit scenarios",
+    exploits: (c) => [
+      exploitGovernanceNonProposerFinalize(c),
+      exploitGovernanceFakeMerkleProof(c),
+      exploitGovernanceVoteOverflow(c),
+    ],
+  },
+  NcnBallot: {
+    describe: "NcnBallot — NCN consensus ballot exploit scenarios",
+    exploits: (c) => [
+      exploitNcnNonOperatorClose(c),
+      exploitNcnBallotAfterDeadline(c),
+    ],
+  },
+  MerkleProofVerifier: {
+    describe: "MerkleProofVerifier — merkle proof bypass scenarios",
+    exploits: (c) => [
+      exploitMerkleFakeProof(c),
+      exploitMerkleNonAuthorityFreeze(c),
+    ],
+  },
+  PaymentChallenge: {
+    describe: "PaymentChallenge — x402 paywall exploit scenarios",
+    exploits: (c) => [
+      exploitPaymentReplayAttack(c),
+      exploitPaymentWrongAmount(c),
+      exploitPaymentExpiredChallenge(c),
+    ],
+  },
+  MultiPartyPayment: {
+    describe: "MultiPartyPayment — MPP split exploit scenarios",
+    exploits: (c) => [
+      exploitMppSplitMismatch(c),
+      exploitMppNonFeePayerSettle(c),
+    ],
+  },
+  PaymentSettlement: {
+    describe: "PaymentSettlement — settlement verification exploits",
+    exploits: (c) => [
+      exploitSettlementFakeTxSignature(c),
+      exploitSettlementDoubleReceipt(c),
+    ],
+  },
+};
+
+/**
+ * Generate a PoC test file for a real-world program concept.
+ */
+export function generateRealWorldPoCTest(concept: Concept): string {
+  const pattern = REAL_WORLD_EXPLOITS[concept.canonicalName];
+  if (!pattern) return generateGenericPoCTest(concept);
+
+  const testName = concept.canonicalName.replace(/([A-Z])/g, "_$1").toLowerCase().slice(1);
+  const exploits = pattern.exploits(concept);
+
+  const sourceUrl =
+    concept.links && !Array.isArray(concept.links) && concept.links.docs?.[0]
+      ? concept.links.docs[0]
+      : "https://github.com/solana-foundation/program-examples";
+
+  return `/**
+ * Real-World PoC Exploit Test: ${concept.canonicalName}
+ *
+ * Based on: ${sourceUrl}
+ * Concept: ${concept.purpose}
+ *
+ * Auto-generated from ontology with real-world exploit scenarios.
+ * Requires: local validator running at http://localhost:8899
+ *
+ * Run: npx vitest run tests/poc/${testName}.test.ts
+ */
+
+import { describe, it, expect, beforeAll } from "vitest";
+import { PoCEnvironment, type IPoCEnvironment } from "@solana-ontology/sdk";
+
+describe("${pattern.describe}", () => {
+  let env: IPoCEnvironment;
+  let payerKeypair: unknown;
+
+  beforeAll(async () => {
+    const web3 = await import("@solana/web3.js");
+    payerKeypair = web3.Keypair.generate();
+
+    env = new PoCEnvironment({
+      rpcUrl: "http://localhost:8899",
+      payer: payerKeypair,
+      commitment: "confirmed",
+    });
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    const sig = await conn.requestAirdrop(
+      new web3.PublicKey(env.payer()),
+      10 * web3.LAMPORTS_PER_SOL,
+    );
+    await conn.confirmTransaction(sig);
+  });
+
+${exploits.join("\n")}
+});
+`;
+}
+
+/**
+ * Generate PoC tests for all real-world program concepts.
+ */
+export function generateAllRealWorldPoCTests(
+  concepts: Concept[],
+): { filename: string; content: string }[] {
+  const results: { filename: string; content: string }[] = [];
+
+  for (const concept of concepts) {
+    if (REAL_WORLD_EXPLOITS[concept.canonicalName]) {
+      const testName = concept.canonicalName.replace(/([A-Z])/g, "_$1").toLowerCase().slice(1);
+      results.push({
+        filename: `${testName}.test.ts`,
+        content: generateRealWorldPoCTest(concept),
+      });
+    }
+  }
+
+  return results;
+}
+
+// ── Escrow exploits ─────────────────────────────────────────────────────────
+
+function exploitEscrowNonMakerRefund(c: Concept): string {
+  return `  it("should reject refund from non-maker (taker tries to steal maker tokens)", async () => {
+    // ── Exploit: taker calls Refund instead of maker ──
+    // If program doesn't verify maker is signer on refund,
+    // taker can cancel the swap and steal maker's deposited tokens.
+
+    const web3 = await import("@solana/web3.js");
+    const takerKeypair = web3.Keypair.generate();
+
+    // Fund taker
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(takerKeypair.publicKey, web3.LAMPORTS_PER_SOL);
+
+    // Setup: maker has funded the escrow (assumes prior Initialize + Deposit)
+    // Now taker tries to call Refund
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: escrowPda, isSigner: false, isWritable: true },
+        { pubkey: makerTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: takerKeypair.publicKey.toString(), isSigner: true, isWritable: false }, // NOT maker!
+      ],
+      data: encodeRefundInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [takerKeypair]);
+
+    // ── Assertion: program should reject — only maker can refund ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("Unauthorized");
+  });`;
+}
+
+function exploitEscrowWrongTakerMint(c: Concept): string {
+  return `  it("should reject Take with wrong taker mint (token confusion attack)", async () => {
+    // ── Exploit: taker deposits fake mint B' instead of real mint B ──
+    // If program doesn't verify taker_mint matches the escrow config,
+    // taker can swap maker's real tokens for worthless fake tokens.
+
+    const web3 = await import("@solana/web3.js");
+    const realMintB = web3.Keypair.generate();
+    const fakeMintB = web3.Keypair.generate();
+
+    // Create real and fake mints
+    await env.createTokenMint(realMintB, env.payer(), null, 6);
+    await env.createTokenMint(fakeMintB, env.payer(), null, 6);
+
+    // Taker deposits fake mint tokens instead of real mint B
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: escrowPda, isSigner: false, isWritable: true },
+        { pubkey: fakeMintB.publicKey.toString(), isSigner: false, isWritable: false }, // WRONG mint!
+        { pubkey: takerSourceAccount, isSigner: false, isWritable: true },
+        { pubkey: makerDestinationAccount, isSigner: false, isWritable: true },
+      ],
+      data: encodeTakeInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx]);
+
+    // ── Assertion: program should verify taker_mint matches escrow config ──
+    expect(result.success).toBe(false);
+  });`;
+}
+
+function exploitEscrowDoubleTake(c: Concept): string {
+  return `  it("should reject double Take (replay attack on completed escrow)", async () => {
+    // ── Exploit: call Take twice on the same escrow ──
+    // If program doesn't check escrow state == Funded (not Completed),
+    // attacker can drain maker tokens multiple times.
+
+    // First Take succeeds (legitimate)
+    // Second Take attempts to drain again
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: escrowPda, isSigner: false, isWritable: true },
+        { pubkey: takerSourceAccount, isSigner: false, isWritable: true },
+        { pubkey: makerDestinationAccount, isSigner: false, isWritable: true },
+      ],
+      data: encodeTakeInstruction(),
+    };
+
+    // First call (should succeed if escrow is Funded)
+    const result1 = await env.executeAsTransaction([exploitIx]);
+
+    // Second call (should fail — escrow is now Completed)
+    const result2 = await env.executeAsTransaction([exploitIx]);
+
+    // ── Assertion: second Take must fail ──
+    expect(result2.success).toBe(false);
+    expect(result2.error ?? "").toContain("InvalidState");
+  });`;
+}
+
+// ── AMM exploits ────────────────────────────────────────────────────────────
+
+function exploitAmmConstantProductViolation(c: Concept): string {
+  return `  it("should reject swap that violates constant product invariant (k = A * B)", async () => {
+    // ── Exploit: craft a swap that extracts more tokens than allowed ──
+    // If program doesn't enforce k_new >= k_old after swap,
+    // attacker can drain the pool by manipulating reserves.
+
+    // Attempt to swap 1 token A for an enormous amount of token B
+    const data = new Uint8Array(16);
+    const view = new DataView(data.buffer);
+    view.setBigUint64(0, BigInt(1), true);          // amount_in = 1
+    view.setBigUint64(8, BigInt("18446744073709551615"), true); // min_out = u64::MAX
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: poolPda, isSigner: false, isWritable: true },
+        { pubkey: sourceAccount, isSigner: false, isWritable: true },
+        { pubkey: destinationAccount, isSigner: false, isWritable: true },
+      ],
+      data,
+    };
+
+    const result = await env.executeAsTransaction([exploitIx]);
+
+    // ── Assertion: program must enforce constant product invariant ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("invariant");
+  });`;
+}
+
+function exploitAmmTokenConfusion(c: Concept): string {
+  return `  it("should reject swap with wrong token accounts (pool token confusion)", async () => {
+    // ── Exploit: pass token accounts from a different mint pair ──
+    // If program doesn't verify token accounts belong to the pool's mints,
+    // attacker can swap worthless tokens for pool's real tokens.
+
+    const web3 = await import("@solana/web3.js");
+    const fakeMint = web3.Keypair.generate();
+    const fakeTokenAccount = web3.Keypair.generate();
+
+    await env.createTokenMint(fakeMint, env.payer(), null, 6);
+    await env.createTokenAccount(fakeTokenAccount, fakeMint.publicKey.toString());
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: poolPda, isSigner: false, isWritable: true },
+        { pubkey: fakeTokenAccount.publicKey.toString(), isSigner: false, isWritable: true }, // WRONG!
+        { pubkey: poolTokenBAccount, isSigner: false, isWritable: true },
+      ],
+      data: encodeSwapInstruction(1_000_000, 0),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx]);
+
+    // ── Assertion: program must verify token account mints match pool ──
+    expect(result.success).toBe(false);
+  });`;
+}
+
+function exploitAmmOverflowReserve(c: Concept): string {
+  return `  it("should reject swap that overflows reserve calculation", async () => {
+    // ── Exploit: swap amount that causes reserve overflow ──
+    // If program uses unchecked arithmetic for reserve updates,
+    // overflow wraps around and attacker gets free tokens.
+
+    const data = new Uint8Array(8);
+    const view = new DataView(data.buffer);
+    view.setBigUint64(0, BigInt("18446744073709551615"), true); // u64::MAX
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: poolPda, isSigner: false, isWritable: true },
+        { pubkey: sourceAccount, isSigner: false, isWritable: true },
+        { pubkey: destinationAccount, isSigner: false, isWritable: true },
+      ],
+      data,
+    };
+
+    const result = await env.executeAsTransaction([exploitIx]);
+
+    // ── Assertion: program must use checked_mul/checked_add ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("overflow");
+  });`;
+}
+
+// ── Fundraiser exploits ─────────────────────────────────────────────────────
+
+function exploitFundraiserNonCreatorClose(c: Concept): string {
+  return `  it("should reject Close from non-creator (steal raised funds)", async () => {
+    // ── Exploit: attacker calls Close to steal raised funds ──
+    // If program doesn't verify creator is signer on Close,
+    // anyone can close the fundraiser and withdraw the vault.
+
+    const web3 = await import("@solana/web3.js");
+    const attacker = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attacker.publicKey, web3.LAMPORTS_PER_SOL);
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: fundraiserPda, isSigner: false, isWritable: true },
+        { pubkey: vaultTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: attacker.publicKey.toString(), isSigner: true, isWritable: true }, // NOT creator!
+      ],
+      data: encodeCloseInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [attacker]);
+
+    // ── Assertion: only creator can close ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("Unauthorized");
+  });`;
+}
+
+function exploitFundraiserPastDeadline(c: Concept): string {
+  return `  it("should reject contribution past deadline", async () => {
+    // ── Exploit: contribute after the fundraiser deadline ──
+    // If program doesn't check current_time < deadline,
+    // attacker can contribute to a closed fundraiser.
+
+    // Wait for deadline to pass (or set deadline in the past for test)
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: fundraiserPda, isSigner: false, isWritable: true },
+        { pubkey: contributorTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: vaultTokenAccount, isSigner: false, isWritable: true },
+      ],
+      data: encodeContributeInstruction(1_000_000),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx]);
+
+    // ── Assertion: program must check deadline ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("deadline");
+  });`;
+}
+
+function exploitFundraiserOverflowContribution(c: Concept): string {
+  return `  it("should reject contribution that overflows raisedAmount", async () => {
+    // ── Exploit: contribute u64::MAX to overflow raisedAmount ──
+    // If raisedAmount + contribution wraps around to a small number,
+    // attacker can bypass the targetAmount check.
+
+    const data = new Uint8Array(8);
+    const view = new DataView(data.buffer);
+    view.setBigUint64(0, BigInt("18446744073709551615"), true);
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: fundraiserPda, isSigner: false, isWritable: true },
+        { pubkey: contributorTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: vaultTokenAccount, isSigner: false, isWritable: true },
+      ],
+      data,
+    };
+
+    const result = await env.executeAsTransaction([exploitIx]);
+
+    // ── Assertion: program must use checked_add ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("overflow");
+  });`;
+}
+
+// ── TransferHook exploits ───────────────────────────────────────────────────
+
+function exploitTransferHookBlockListBypass(c: Concept): string {
+  return `  it("should reject transfer from blocklisted address", async () => {
+    // ── Exploit: blocked address attempts to transfer tokens ──
+    // If hook doesn't properly check the block list,
+    // blocked addresses can still transfer.
+
+    const web3 = await import("@solana/web3.js");
+    const blockedUser = web3.Keypair.generate();
+    const receiver = web3.Keypair.generate();
+
+    // Assume blockedUser is on the block list
+    const exploitIx = {
+      programId: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      accounts: [
+        { pubkey: blockedUserTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: receiverTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: blockedUser.publicKey.toString(), isSigner: true, isWritable: false },
+      ],
+      data: encodeTransferInstruction(1_000),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [blockedUser]);
+
+    // ── Assertion: hook must reject blocked address ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("blocked");
+  });`;
+}
+
+function exploitTransferHookNonAuthorityPause(c: Concept): string {
+  return `  it("should reject Pause from non-authority (DoS attack)", async () => {
+    // ── Exploit: attacker pauses the transfer hook to DoS all transfers ──
+    // If program doesn't verify authority is signer on Pause,
+    // anyone can pause the hook and block all token transfers.
+
+    const web3 = await import("@solana/web3.js");
+    const attacker = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attacker.publicKey, web3.LAMPORTS_PER_SOL);
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: hookConfigPda, isSigner: false, isWritable: true },
+        { pubkey: attacker.publicKey.toString(), isSigner: true, isWritable: false }, // NOT authority!
+      ],
+      data: encodePauseInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [attacker]);
+
+    // ── Assertion: only authority can pause ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("Unauthorized");
+  });`;
+}
+
+// ── Counter exploits ────────────────────────────────────────────────────────
+
+function exploitCounterNonAuthorityIncrement(c: Concept): string {
+  return `  it("should reject increment from non-authority", async () => {
+    // ── Exploit: unauthorized user increments the counter ──
+    // If program doesn't verify authority is signer,
+    // anyone can increment the counter.
+
+    const web3 = await import("@solana/web3.js");
+    const attacker = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attacker.publicKey, web3.LAMPORTS_PER_SOL);
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: counterPda, isSigner: false, isWritable: true },
+        { pubkey: attacker.publicKey.toString(), isSigner: true, isWritable: false }, // NOT authority!
+      ],
+      data: encodeIncrementInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [attacker]);
+
+    // ── Assertion: only authority can increment ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("Unauthorized");
+  });`;
+}
+
+function exploitCounterOverflow(c: Concept): string {
+  return `  it("should reject increment at u64::MAX (overflow protection)", async () => {
+    // ── Exploit: increment counter when it's already at u64::MAX ──
+    // If program uses unchecked addition, count wraps to 0.
+    // This could break invariants that depend on monotonic counting.
+
+    // Setup: set counter to u64::MAX (requires prior state manipulation)
+    // Then attempt to increment
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: counterPda, isSigner: false, isWritable: true },
+        { pubkey: env.payer(), isSigner: true, isWritable: false },
+      ],
+      data: encodeIncrementInstruction(),
+    };
+
+    // Note: this test requires counter to be at u64::MAX first
+    // In practice, you'd set this up by manipulating account data directly
+    const result = await env.executeAsTransaction([exploitIx]);
+
+    // ── Assertion: program must use checked_add ──
+    // If counter is at MAX, this should fail with overflow
+    expect(result.success).toBe(false);
+  });`;
+}
+
+function exploitCounterFakePda(c: Concept): string {
+  return `  it("should reject fake PDA (account substitution attack)", async () => {
+    // ── Exploit: pass a different account that's not the real counter PDA ──
+    // If program doesn't re-derive and verify the PDA,
+    // attacker can pass a fake account with their own counter value.
+
+    const web3 = await import("@solana/web3.js");
+    const fakeAccountKeypair = web3.Keypair.generate();
+
+    // Create a fake account owned by System Program
+    await env.createAccount(
+      fakeAccountKeypair,
+      1_000_000,
+      49, // same size as counter account
+      web3.SystemProgram.programId.toString(), // wrong owner
+    );
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: fakeAccountKeypair.publicKey.toString(), isSigner: false, isWritable: true }, // FAKE!
+        { pubkey: env.payer(), isSigner: true, isWritable: false },
+      ],
+      data: encodeIncrementInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx]);
+
+    // ── Assertion: program must verify PDA derivation ──
+    expect(result.success).toBe(false);
+  });`;
+}
+
+// ── ValidatorGovernance exploits ────────────────────────────────────────────
+
+function exploitGovernanceNonProposerFinalize(c: Concept): string {
+  return `  it("should reject FinalizeProposal from non-proposer (vote manipulation)", async () => {
+    // ── Exploit: attacker finalizes proposal before voting ends ──
+    // If program doesn't verify proposer is signer on finalize,
+    // attacker can finalize a proposal with manipulated vote counts.
+
+    const web3 = await import("@solana/web3.js");
+    const attacker = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attacker.publicKey, web3.LAMPORTS_PER_SOL);
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: proposalPda, isSigner: false, isWritable: true },
+        { pubkey: attacker.publicKey.toString(), isSigner: true, isWritable: false }, // NOT proposer!
+      ],
+      data: encodeFinalizeInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [attacker]);
+
+    // ── Assertion: only proposer can finalize ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("Unauthorized");
+  });`;
+}
+
+function exploitGovernanceFakeMerkleProof(c: Concept): string {
+  return `  it("should reject vote with invalid merkle proof (ineligible voter)", async () => {
+    // ── Exploit: non-validator submits fake merkle proof to vote ──
+    // If program doesn't properly verify the merkle proof against root,
+    // non-validators can cast votes and manipulate governance outcomes.
+
+    const web3 = await import("@solana/web3.js");
+    const fakeVoter = web3.Keypair.generate();
+
+    // Craft a fake merkle proof (random bytes)
+    const fakeProof = new Uint8Array(32 * 20); // 20 levels of fake siblings
+    crypto.getRandomValues(fakeProof);
+
+    const data = new Uint8Array(8 + 32 + fakeProof.length);
+    const view = new DataView(data.buffer);
+    view.setBigUint64(0, BigInt(1), true); // vote = yes
+    data.set(fakeVoter.publicKey.toBytes(), 8);
+    data.set(fakeProof, 40);
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: proposalPda, isSigner: false, isWritable: true },
+        { pubkey: fakeVoter.publicKey.toString(), isSigner: true, isWritable: false },
+        { pubkey: merkleVerifierPda, isSigner: false, isWritable: false },
+      ],
+      data,
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [fakeVoter]);
+
+    // ── Assertion: program must verify merkle proof against root ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("InvalidProof");
+  });`;
+}
+
+function exploitGovernanceVoteOverflow(c: Concept): string {
+  return `  it("should reject vote that overflows yesVotes tally", async () => {
+    // ── Exploit: cast vote with u64::MAX stake weight to overflow tally ──
+    // If yesVotes + stakeWeight wraps around, attacker can make
+    // yesVotes appear smaller than noVotes, flipping the result.
+
+    const data = new Uint8Array(16);
+    const view = new DataView(data.buffer);
+    view.setBigUint64(0, BigInt("18446744073709551615"), true); // u64::MAX stake
+    view.setBigUint64(8, BigInt(1), true); // vote = yes
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: proposalPda, isSigner: false, isWritable: true },
+        { pubkey: voterPubkey, isSigner: true, isWritable: false },
+      ],
+      data,
+    };
+
+    const result = await env.executeAsTransaction([exploitIx]);
+
+    // ── Assertion: program must use checked_add for vote tally ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("overflow");
+  });`;
+}
+
+// ── NcnBallot exploits ──────────────────────────────────────────────────────
+
+function exploitNcnNonOperatorClose(c: Concept): string {
+  return `  it("should reject CloseBallot from non-operator (governance DoS)", async () => {
+    // ── Exploit: attacker closes ballot early to prevent votes ──
+    // If program doesn't verify operator is signer on close,
+    // attacker can close the ballot before all NCN members vote.
+
+    const web3 = await import("@solana/web3.js");
+    const attacker = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attacker.publicKey, web3.LAMPORTS_PER_SOL);
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: ballotPda, isSigner: false, isWritable: true },
+        { pubkey: attacker.publicKey.toString(), isSigner: true, isWritable: false }, // NOT operator!
+      ],
+      data: encodeCloseBallotInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [attacker]);
+
+    // ── Assertion: only operator can close ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("Unauthorized");
+  });`;
+}
+
+function exploitNcnBallotAfterDeadline(c: Concept): string {
+  return `  it("should reject ballot submission after deadline", async () => {
+    // ── Exploit: submit ballot after deadline to manipulate tally ──
+    // If program doesn't check current_time < deadline,
+    // attacker can submit late ballots to change the outcome.
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: ballotPda, isSigner: false, isWritable: true },
+        { pubkey: submitterPubkey, isSigner: true, isWritable: false },
+        { pubkey: whitelistVerifierPda, isSigner: false, isWritable: false },
+      ],
+      data: encodeSubmitBallotInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx]);
+
+    // ── Assertion: program must enforce deadline ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("deadline");
+  });`;
+}
+
+// ── MerkleProofVerifier exploits ─────────────────────────────────────────────
+
+function exploitMerkleFakeProof(c: Concept): string {
+  return `  it("should reject invalid merkle proof (eligibility bypass)", async () => {
+    // ── Exploit: submit forged proof that doesn't match the root ──
+    // If program doesn't properly recompute the merkle root from
+    // the proof path, non-eligible voters can bypass verification.
+
+    const fakeLeaf = new Uint8Array(32);
+    const fakeProof = new Uint8Array(32 * 10); // 10 levels of fake siblings
+    crypto.getRandomValues(fakeLeaf);
+    crypto.getRandomValues(fakeProof);
+
+    const data = new Uint8Array(32 + 4 + fakeProof.length);
+    data.set(fakeLeaf, 0);
+    const view = new DataView(data.buffer);
+    view.setUint32(32, 42, true); // proof index
+    data.set(fakeProof, 36);
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: verifierPda, isSigner: false, isWritable: false },
+        { pubkey: callerPubkey, isSigner: true, isWritable: false },
+      ],
+      data,
+    };
+
+    const result = await env.executeAsTransaction([exploitIx]);
+
+    // ── Assertion: computed root must match stored root ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("InvalidProof");
+  });`;
+}
+
+function exploitMerkleNonAuthorityFreeze(c: Concept): string {
+  return `  it("should reject Freeze from non-authority (verifier DoS)", async () => {
+    // ── Exploit: attacker freezes the verifier to block all votes ──
+    // If program doesn't verify authority is signer on Freeze,
+    // anyone can freeze the verifier and halt governance.
+
+    const web3 = await import("@solana/web3.js");
+    const attacker = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attacker.publicKey, web3.LAMPORTS_PER_SOL);
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: verifierPda, isSigner: false, isWritable: true },
+        { pubkey: attacker.publicKey.toString(), isSigner: true, isWritable: false }, // NOT authority!
+      ],
+      data: encodeFreezeInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [attacker]);
+
+    // ── Assertion: only authority can freeze ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("Unauthorized");
+  });`;
+}
+
+// ── PaymentChallenge (x402) exploits ────────────────────────────────────────
+
+function exploitPaymentReplayAttack(c: Concept): string {
+  return `  it("should reject replayed payment proof (nonce reuse)", async () => {
+    // ── Exploit: reuse a verified payment proof for a second request ──
+    // If server doesn't track nonce usage, attacker can pay once
+    // and access the paywalled resource unlimited times.
+
+    // First request: pay and get verified (legitimate)
+    const firstResult = await env.executeAsTransaction([{
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: challengePda, isSigner: false, isWritable: true },
+        { pubkey: payerPubkey, isSigner: true, isWritable: false },
+      ],
+      data: encodeVerifyPaymentInstruction(txSignature, nonce),
+    }]);
+
+    // Second request: replay the same proof with same nonce
+    const secondResult = await env.executeAsTransaction([{
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: challengePda, isSigner: false, isWritable: true },
+        { pubkey: payerPubkey, isSigner: true, isWritable: false },
+      ],
+      data: encodeVerifyPaymentInstruction(txSignature, nonce), // SAME nonce!
+    }]);
+
+    // ── Assertion: second verification must fail (nonce already used) ──
+    expect(secondResult.success).toBe(false);
+    expect(secondResult.error ?? "").toContain("NonceAlreadyUsed");
+  });`;
+}
+
+function exploitPaymentWrongAmount(c: Concept): string {
+  return `  it("should reject payment with wrong amount (underpayment)", async () => {
+    // ── Exploit: pay less than the challenge amount ──
+    // If server doesn't verify on-chain transfer amount matches challenge,
+    // attacker can pay 1 lamport instead of the required USDC amount.
+
+    const web3 = await import("@solana/web3.js");
+    const spl = await import("@solana/spl-token");
+
+    // Create a transfer of 1 base unit instead of required amount
+    const transferIx = spl.createTransferInstruction(
+      payerTokenAccount,
+      recipientTokenAccount,
+      payerPubkey,
+      1, // WRONG — should be challenge.amount
+      [],
+    );
+
+    // Submit the underpayment as proof
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: challengePda, isSigner: false, isWritable: true },
+        { pubkey: payerPubkey, isSigner: true, isWritable: false },
+      ],
+      data: encodeVerifyPaymentInstruction(txSigOfUnderpayment, nonce),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx]);
+
+    // ── Assertion: amount must match challenge exactly ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("AmountMismatch");
+  });`;
+}
+
+function exploitPaymentExpiredChallenge(c: Concept): string {
+  return `  it("should reject payment proof for expired challenge", async () => {
+    // ── Exploit: pay after the challenge deadline has passed ──
+    // If server doesn't check deadline, attacker can use old challenges
+    // with stale prices (e.g., pay old cheap price for premium content).
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: expiredChallengePda, isSigner: false, isWritable: true },
+        { pubkey: payerPubkey, isSigner: true, isWritable: false },
+      ],
+      data: encodeVerifyPaymentInstruction(txSignature, expiredNonce),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx]);
+
+    // ── Assertion: challenge must not be expired ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("Expired");
+  });`;
+}
+
+// ── MultiPartyPayment (MPP) exploits ────────────────────────────────────────
+
+function exploitMppSplitMismatch(c: Concept): string {
+  return `  it("should reject settlement where splits don't sum to total", async () => {
+    // ── Exploit: submit splits that don't add up to totalAmount ──
+    // If program doesn't verify sum(splits) + fee == totalAmount,
+    // attacker can pocket the difference or underpay recipients.
+
+    const data = new Uint8Array(32 + 8);
+    // Encode fake intent: totalAmount = 1000 but splits sum to 800
+    const view = new DataView(data.buffer);
+    view.setBigUint64(0, BigInt(1000), true); // totalAmount
+    view.setBigUint64(8, BigInt(800), true);  // actual splits sum (WRONG)
+    data.set(new Uint8Array(32).fill(1), 16); // fake recipient list
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: mppPda, isSigner: false, isWritable: true },
+        { pubkey: feePayerPubkey, isSigner: true, isWritable: false },
+      ],
+      data,
+    };
+
+    const result = await env.executeAsTransaction([exploitIx]);
+
+    // ── Assertion: splits must sum to totalAmount minus fee ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("SplitMismatch");
+  });`;
+}
+
+function exploitMppNonFeePayerSettle(c: Concept): string {
+  return `  it("should reject SettleSplits from non-fee-payer (fund theft)", async () => {
+    // ── Exploit: attacker settles splits to redirect funds ──
+    // If program doesn't verify feePayer is signer on settle,
+    // attacker can settle with modified recipient list.
+
+    const web3 = await import("@solana/web3.js");
+    const attacker = web3.Keypair.generate();
+
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attacker.publicKey, web3.LAMPORTS_PER_SOL);
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: mppPda, isSigner: false, isWritable: true },
+        { pubkey: attacker.publicKey.toString(), isSigner: true, isWritable: false }, // NOT feePayer!
+      ],
+      data: encodeSettleInstruction(),
+    };
+
+    const result = await env.executeAsTransaction([exploitIx], [attacker]);
+
+    // ── Assertion: only feePayer can settle ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("Unauthorized");
+  });`;
+}
+
+// ── PaymentSettlement exploits ──────────────────────────────────────────────
+
+function exploitSettlementFakeTxSignature(c: Concept): string {
+  return `  it("should reject fake transaction signature (no on-chain tx)", async () => {
+    // ── Exploit: submit a fabricated signature that doesn't exist on-chain ──
+    // If program doesn't actually verify the tx exists on-chain,
+    // attacker can fabricate a signature and get free access.
+
+    const fakeSignature = new Uint8Array(64);
+    crypto.getRandomValues(fakeSignature);
+
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: settlementPda, isSigner: false, isWritable: true },
+        { pubkey: challengePda, isSigner: false, isWritable: false },
+        { pubkey: authorityPubkey, isSigner: true, isWritable: false },
+      ],
+      data: fakeSignature,
+    };
+
+    const result = await env.executeAsTransaction([exploitIx]);
+
+    // ── Assertion: tx must exist and be confirmed on-chain ──
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("TxNotFound");
+  });`;
+}
+
+function exploitSettlementDoubleReceipt(c: Concept): string {
+  return `  it("should reject double receipt issuance (same tx twice)", async () => {
+    // ── Exploit: issue two receipts for the same payment ──
+    // If program doesn't track that a receipt was already issued,
+    // attacker can get multiple receipts from one payment.
+
+    const verifyIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: settlementPda, isSigner: false, isWritable: true },
+        { pubkey: challengePda, isSigner: false, isWritable: false },
+        { pubkey: authorityPubkey, isSigner: true, isWritable: false },
+      ],
+      data: encodeIssueReceiptInstruction(txSignature),
+    };
+
+    // First receipt (should succeed)
+    const result1 = await env.executeAsTransaction([verifyIx]);
+
+    // Second receipt for same tx (should fail)
+    const result2 = await env.executeAsTransaction([verifyIx]);
+
+    // ── Assertion: each tx can only produce one receipt ──
+    expect(result2.success).toBe(false);
+    expect(result2.error ?? "").toContain("ReceiptAlreadyIssued");
+  });`;
+}

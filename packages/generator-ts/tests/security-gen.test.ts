@@ -3,6 +3,8 @@ import { loadConcepts } from "@solana-ontology/core";
 import {
   generatePoCTestScaffold,
   generateAllPoCTestScaffolds,
+  generateRealWorldPoCTest,
+  generateAllRealWorldPoCTests,
   generateGuardCode,
   generateAdversarialTest,
 } from "../src/index.js";
@@ -120,5 +122,159 @@ describe("security-gen: PoC test scaffold generation", () => {
     const concept = securityConcepts.find((c) => c.canonicalName === "MissingSignerCheck")!;
     const test = generateAdversarialTest(concept);
     expect(test).toContain("Adversarial tests");
+  });
+});
+
+describe("security-gen: real-world PoC tests from program-examples", () => {
+  const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
+
+  it("should generate PoC tests for all 11 real-world programs", () => {
+    const scaffolds = generateAllRealWorldPoCTests(concepts);
+    expect(scaffolds.length).toBe(11);
+
+    const filenames = scaffolds.map((s) => s.filename);
+    expect(filenames).toContain("escrow.test.ts");
+    expect(filenames).toContain("automated_market_maker.test.ts");
+    expect(filenames).toContain("fundraiser.test.ts");
+    expect(filenames).toContain("transfer_hook.test.ts");
+    expect(filenames).toContain("counter.test.ts");
+    expect(filenames).toContain("validator_governance.test.ts");
+    expect(filenames).toContain("ncn_ballot.test.ts");
+    expect(filenames).toContain("merkle_proof_verifier.test.ts");
+    expect(filenames).toContain("payment_challenge.test.ts");
+    expect(filenames).toContain("multi_party_payment.test.ts");
+    expect(filenames).toContain("payment_settlement.test.ts");
+  });
+
+  it("should generate Escrow exploit tests with 3 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "Escrow")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("Escrow");
+    expect(scaffold).toContain("non-maker");
+    expect(scaffold).toContain("wrong taker mint");
+    expect(scaffold).toContain("double Take");
+    expect(scaffold).toContain("PoCEnvironment");
+  });
+
+  it("should generate AMM exploit tests with 3 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "AutomatedMarketMaker")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("AMM");
+    expect(scaffold).toContain("constant product");
+    expect(scaffold).toContain("token confusion");
+    expect(scaffold).toContain("overflow");
+  });
+
+  it("should generate Fundraiser exploit tests with 3 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "Fundraiser")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("Fundraiser");
+    expect(scaffold).toContain("non-creator");
+    expect(scaffold).toContain("deadline");
+    expect(scaffold).toContain("overflow");
+  });
+
+  it("should generate TransferHook exploit tests with 2 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "TransferHook")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("TransferHook");
+    expect(scaffold).toContain("blocklisted");
+    expect(scaffold).toContain("non-authority");
+  });
+
+  it("should generate Counter exploit tests with 3 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "Counter")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("Counter");
+    expect(scaffold).toContain("non-authority");
+    expect(scaffold).toContain("overflow");
+    expect(scaffold).toContain("fake PDA");
+  });
+
+  it("should include real-world source reference in all real-world tests", () => {
+    const scaffolds = generateAllRealWorldPoCTests(concepts);
+    for (const s of scaffolds) {
+      // Each test should reference a solana-foundation repo
+      expect(
+        s.content.includes("solana-foundation/program-examples") ||
+        s.content.includes("solana-foundation/solana-governance") ||
+        s.content.includes("solana-foundation/pay-kit")
+      ).toBe(true);
+    }
+  });
+
+  it("should use concept links.docs for source attribution", () => {
+    const escrowConcept = concepts.find((c) => c.canonicalName === "Escrow")!;
+    const scaffold = generateRealWorldPoCTest(escrowConcept);
+    expect(scaffold).toContain("https://github.com/solana-foundation/program-examples/tree/main/tokens/escrow");
+
+    const govConcept = concepts.find((c) => c.canonicalName === "ValidatorGovernance")!;
+    const govScaffold = generateRealWorldPoCTest(govConcept);
+    expect(govScaffold).toContain("https://github.com/solana-foundation/solana-governance");
+
+    const payConcept = concepts.find((c) => c.canonicalName === "PaymentChallenge")!;
+    const payScaffold = generateRealWorldPoCTest(payConcept);
+    expect(payScaffold).toContain("https://github.com/solana-foundation/pay-kit");
+  });
+
+  it("should generate ValidatorGovernance exploit tests with 3 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "ValidatorGovernance")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("ValidatorGovernance");
+    expect(scaffold).toContain("non-proposer");
+    expect(scaffold).toContain("merkle proof");
+    expect(scaffold).toContain("overflow");
+  });
+
+  it("should generate NcnBallot exploit tests with 2 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "NcnBallot")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("NcnBallot");
+    expect(scaffold).toContain("non-operator");
+    expect(scaffold).toContain("deadline");
+  });
+
+  it("should generate MerkleProofVerifier exploit tests with 2 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "MerkleProofVerifier")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("MerkleProofVerifier");
+    expect(scaffold).toContain("invalid merkle proof");
+    expect(scaffold).toContain("non-authority");
+  });
+
+  it("should generate PaymentChallenge exploit tests with 3 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "PaymentChallenge")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("PaymentChallenge");
+    expect(scaffold).toContain("nonce reuse");
+    expect(scaffold).toContain("wrong amount");
+    expect(scaffold).toContain("expired");
+  });
+
+  it("should generate MultiPartyPayment exploit tests with 2 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "MultiPartyPayment")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("MultiPartyPayment");
+    expect(scaffold).toContain("splits");
+    expect(scaffold).toContain("non-fee-payer");
+  });
+
+  it("should generate PaymentSettlement exploit tests with 2 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "PaymentSettlement")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("PaymentSettlement");
+    expect(scaffold).toContain("fake transaction signature");
+    expect(scaffold).toContain("double receipt");
   });
 });

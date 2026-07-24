@@ -1,0 +1,89 @@
+canonicalName: MerkleProofVerifier
+aliases:
+  - merkle-verification
+  - vote-eligibility-proof
+purpose: "On-chain merkle proof verification system for validating voter eligibility in governance programs, proving that a validator is part of the eligible validator set"
+category: governance
+version: 1.0.0
+owner: governance-team
+programId: "MerkVeCi1E2HTkT3q8jXwK7mR1NfP9Ys2vKj4hLU"
+properties:
+  - name: merkleRoot
+    type: bytes
+    required: true
+    description: "Root hash of the merkle tree containing eligible voters"
+  - name: leafHash
+    type: bytes
+    required: true
+    description: "Hash of the leaf being proven (voter public key + stake)"
+  - name: proof
+    type: bytes
+    required: true
+    description: "Array of sibling hashes forming the merkle proof path"
+  - name: proofIndex
+    type: u32
+    required: true
+    description: "Index of the leaf in the merkle tree"
+  - name: verifierProgram
+    type: publicKey
+    required: true
+    description: "Program that performs the verification"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: ValidatorGovernance
+    cardinality: "many:1"
+  - type: references
+    target: NcnBallot
+    cardinality: "many:1"
+  - type: references
+    target: PDA
+    cardinality: "1:1"
+accountLayout:
+  discriminator: "6d65726b00000000"
+  fields:
+    - name: merkleRoot
+      type: bytes
+      offset: 0
+    - name: verifierProgram
+      type: publicKey
+      offset: 32
+pdaSeeds:
+  - name: merkleRoot
+    type: bytes
+stateMachine:
+  states: [Uninitialized, Active, Frozen]
+  transitions:
+    - from: Uninitialized
+      to: Active
+      via: Initialize
+      requiresAuth: authority
+    - from: Active
+      to: Active
+      via: VerifyProof
+      requires: "computed_root == stored merkleRoot"
+    - from: Active
+      to: Frozen
+      via: Freeze
+      requiresAuth: authority
+requiredAuth: authority
+requireOwnerCheck: true
+constraints:
+  - name: non-empty-proof
+    expression: "proof.length > 0"
+    description: "Merkle proof must contain at least one sibling hash"
+  - name: valid-root
+    expression: "merkleRoot is not zero"
+    description: "Merkle root must be set before verification"
+  - name: root-matches
+    expression: "hash(leaf, proof) == merkleRoot"
+    description: "Computed root from proof must match stored root"
+  - name: only-authority-freezes
+    expression: "freeze requires authority signature"
+    description: "Only authority can freeze the verifier"
+links:
+  docs:
+    - "https://github.com/solana-foundation/solana-governance/tree/main/svmgov/program"
+    - "https://github.com/solana-foundation/solana-governance/blob/main/docs"

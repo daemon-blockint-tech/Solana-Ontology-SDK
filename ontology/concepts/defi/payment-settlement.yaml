@@ -1,0 +1,111 @@
+canonicalName: PaymentSettlement
+aliases:
+  - payment-verification
+  - on-chain-settlement
+  - payment-proof
+purpose: "On-chain settlement verification for x402 and MPP payments — verifies that a Solana transaction has been confirmed, amount and recipient match the challenge, and produces a receipt for the server to grant access"
+category: defi
+version: 1.0.0
+owner: payments-team
+programId: "StVeCi1E2HTkT3q8jXwK7mR1NfP9Ys2vKj4hLUqx"
+properties:
+  - name: txSignature
+    type: bytes
+    required: true
+    description: "Solana transaction signature to verify"
+  - name: challengePda
+    type: publicKey
+    required: true
+    description: "PDA of the associated payment challenge"
+  - name: confirmedSlot
+    type: u64
+    required: true
+    description: "Slot at which the transaction was confirmed"
+  - name: blockhash
+    type: bytes
+    required: true
+    description: "Recent blockhash used in the transaction"
+  - name: payer
+    type: publicKey
+    required: true
+    description: "Wallet that signed and submitted the payment"
+  - name: receiptId
+    type: u64
+    required: true
+    description: "Unique receipt identifier for the settled payment"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: PaymentChallenge
+    cardinality: "1:1"
+  - type: references
+    target: MultiPartyPayment
+    cardinality: "0:1"
+  - type: references
+    target: PDA
+    cardinality: "1:1"
+accountLayout:
+  discriminator: "73746c7400000000"
+  fields:
+    - name: txSignature
+      type: bytes
+      offset: 0
+    - name: challengePda
+      type: publicKey
+      offset: 64
+    - name: confirmedSlot
+      type: u64
+      offset: 96
+    - name: payer
+      type: publicKey
+      offset: 104
+    - name: receiptId
+      type: u64
+      offset: 136
+pdaSeeds:
+  - name: txSignature
+    type: bytes
+stateMachine:
+  states: [Pending, Confirmed, Rejected, ReceiptIssued]
+  transitions:
+    - from: Pending
+      to: Confirmed
+      via: ConfirmTransaction
+      requires: "tx exists on-chain with required confirmations"
+    - from: Pending
+      to: Rejected
+      via: RejectTransaction
+      requires: "tx not found || amount mismatch || recipient mismatch"
+    - from: Confirmed
+      to: ReceiptIssued
+      via: IssueReceipt
+      requiresAuth: authority
+      requires: "challenge nonce matches && deadline not expired"
+requiredAuth: authority
+requireOwnerCheck: true
+constraints:
+  - name: tx-confirmed
+    expression: "transaction has >= required confirmations"
+    description: "Transaction must be confirmed on-chain"
+  - name: amount-match
+    expression: "on-chain transfer amount == challenge.amount"
+    description: "Transfer amount must match challenge exactly"
+  - name: recipient-match
+    expression: "on-chain transfer destination == challenge.recipient"
+    description: "Transfer destination must match challenge recipient"
+  - name: nonce-match
+    expression: "challenge nonce in tx memo matches challenge.nonce"
+    description: "Nonce must match to prevent cross-challenge replay"
+  - name: not-expired
+    expression: "confirmation_time < challenge.deadline"
+    description: "Payment must be confirmed before challenge expiry"
+  - name: single-receipt
+    expression: "receiptId is unique per txSignature"
+    description: "Each transaction can only produce one receipt"
+links:
+  docs:
+    - "https://github.com/solana-foundation/pay-kit"
+    - "https://x402.org"
+    - "https://paymentauth.org"

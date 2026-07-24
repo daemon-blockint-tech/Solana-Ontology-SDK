@@ -1,0 +1,107 @@
+canonicalName: Escrow
+aliases:
+  - escrow-swap
+  - atomic-swap
+purpose: "Atomic swap of digital assets between two parties using an escrow PDA that holds tokens until both parties agree to terms"
+category: defi
+version: 1.0.0
+owner: defi-team
+programId: "EscrwVeCi1E2HTkT3q8jXwK7mR1NfP9Ys2vKj4hLU"
+properties:
+  - name: maker
+    type: publicKey
+    required: true
+    description: "The party initiating the swap (creates the escrow)"
+  - name: taker
+    type: publicKey
+    required: false
+    description: "The party completing the swap (accepts the escrow)"
+  - name: makerMint
+    type: publicKey
+    required: true
+    description: "Token mint offered by the maker"
+  - name: takerMint
+    type: publicKey
+    required: true
+    description: "Token mint requested by the maker from the taker"
+  - name: makerAmount
+    type: u64
+    required: true
+    description: "Amount of makerMint tokens offered"
+  - name: takerAmount
+    type: u64
+    required: true
+    description: "Amount of takerMint tokens expected in return"
+  - name: escrowTokenAccount
+    type: publicKey
+    required: true
+    description: "Token account (PDA) holding the maker's deposited tokens"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: TokenMint
+    cardinality: "2:1"
+  - type: references
+    target: TokenAccount
+    cardinality: "1:1"
+  - type: references
+    target: PDA
+    cardinality: "1:1"
+accountLayout:
+  discriminator: "6573637200000000"
+  fields:
+    - name: maker
+      type: publicKey
+      offset: 0
+    - name: takerMint
+      type: publicKey
+      offset: 32
+    - name: makerAmount
+      type: u64
+      offset: 64
+    - name: takerAmount
+      type: u64
+      offset: 72
+pdaSeeds:
+  - name: maker
+    type: publicKey
+  - name: makerMint
+    type: publicKey
+stateMachine:
+  states: [Uninitialized, Initialized, Funded, Completed, Cancelled]
+  transitions:
+    - from: Uninitialized
+      to: Initialized
+      via: Initialize
+      requiresAuth: maker
+    - from: Initialized
+      to: Funded
+      via: Deposit
+      requiresAuth: maker
+      requires: "maker_token_account has sufficient balance"
+    - from: Funded
+      to: Completed
+      via: Take
+      requires: "taker has deposited takerAmount of takerMint"
+    - from: Funded
+      to: Cancelled
+      via: Refund
+      requiresAuth: maker
+requiredAuth: maker
+requireOwnerCheck: true
+constraints:
+  - name: positive-amounts
+    expression: "makerAmount > 0 && takerAmount > 0"
+    description: "Both swap amounts must be positive"
+  - name: distinct-mints
+    expression: "makerMint != takerMint"
+    description: "Cannot swap a mint for itself"
+  - name: only-maker-can-refund
+    expression: "refund requires maker signature"
+    description: "Only the maker can cancel and refund"
+links:
+  docs:
+    - "https://github.com/solana-foundation/program-examples/tree/main/tokens/escrow"
+    - "https://github.com/solana-foundation/program-examples/blob/main/tokens/escrow/native"

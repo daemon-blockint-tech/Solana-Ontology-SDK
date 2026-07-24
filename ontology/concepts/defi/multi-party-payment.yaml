@@ -1,0 +1,128 @@
+canonicalName: MultiPartyPayment
+aliases:
+  - mpp
+  - multi-recipient-payment
+  - payment-splits
+purpose: "Multi-Party Payment protocol extending x402 with multi-recipient splits, server-side fee accounting, and a separate fee-payer signer for marketplaces and platform fees"
+category: defi
+version: 1.0.0
+owner: payments-team
+programId: "MppVeCi1E2HTkT3q8jXwK7mR1NfP9Ys2vKj4hLU"
+properties:
+  - name: recipients
+    type: bytes
+    required: true
+    description: "Serialized list of recipient addresses and split amounts"
+  - name: feeAccount
+    type: publicKey
+    required: true
+    description: "Server-side fee account that receives platform fees"
+  - name: feeBps
+    type: u16
+    required: true
+    description: "Platform fee in basis points"
+  - name: feePayer
+    type: publicKey
+    required: true
+    description: "Separate signer that pays network gas fees"
+  - name: totalAmount
+    type: u64
+    required: true
+    description: "Total payment amount before splits"
+  - name: intent
+    type: bytes
+    required: true
+    description: "Serialized payment intent with split instructions"
+  - name: nonce
+    type: bytes
+    required: true
+    description: "Unique nonce for replay prevention"
+  - name: deadline
+    type: i64
+    required: true
+    description: "Payment intent expiry timestamp"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: TokenMint
+    cardinality: "1:1"
+  - type: references
+    target: TokenAccount
+    cardinality: "many:1"
+  - type: references
+    target: PaymentChallenge
+    cardinality: "1:1"
+  - type: references
+    target: PDA
+    cardinality: "1:1"
+accountLayout:
+  discriminator: "6d70702000000000"
+  fields:
+    - name: feeAccount
+      type: publicKey
+      offset: 0
+    - name: feeBps
+      type: u16
+      offset: 32
+    - name: feePayer
+      type: publicKey
+      offset: 34
+    - name: totalAmount
+      type: u64
+      offset: 66
+    - name: deadline
+      type: i64
+      offset: 74
+pdaSeeds:
+  - name: nonce
+    type: bytes
+  - name: feePayer
+    type: publicKey
+stateMachine:
+  states: [Proposed, Funded, Settled, Disputed, Expired]
+  transitions:
+    - from: Proposed
+      to: Funded
+      via: SubmitPayment
+      requires: "client submits tx with all recipient transfers"
+    - from: Funded
+      to: Settled
+      via: SettleSplits
+      requiresAuth: feePayer
+      requires: "all recipient transfers verified && fee deducted correctly"
+    - from: Funded
+      to: Disputed
+      via: RaiseDispute
+      requires: "recipient count or amounts mismatch intent"
+    - from: Proposed
+      to: Expired
+      via: ExpireIntent
+      requires: "current_time >= deadline"
+requiredAuth: feePayer
+requireOwnerCheck: true
+constraints:
+  - name: splits-sum-to-total
+    expression: "sum(recipient_amounts) + fee_amount == totalAmount"
+    description: "Split amounts plus fee must equal total payment"
+  - name: fee-bounds
+    expression: "feeBps < 10000"
+    description: "Fee must be less than 100% (10000 bps)"
+  - name: non-empty-recipients
+    expression: "recipients.length > 0"
+    description: "At least one recipient required"
+  - name: distinct-recipients
+    expression: "no duplicate recipient addresses"
+    description: "Recipients must be unique"
+  - name: checked-split-arithmetic
+    expression: "all split calculations use checked_mul and checked_div"
+    description: "Split math must use checked arithmetic"
+  - name: only-fee-payer-settles
+    expression: "settle requires feePayer signature"
+    description: "Only the designated fee payer can settle splits"
+links:
+  docs:
+    - "https://github.com/solana-foundation/pay-kit"
+    - "https://paymentauth.org"
+    - "https://pay.sh/docs/sdk"

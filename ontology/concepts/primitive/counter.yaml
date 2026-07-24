@@ -1,0 +1,65 @@
+canonicalName: Counter
+aliases:
+  - global-counter
+  - increment-counter
+purpose: "Minimal stateful program that stores a counter in a PDA and increments it when called, demonstrating global state storage on Solana"
+category: primitive
+version: 1.0.0
+owner: examples-team
+programId: "CntrVeCi1E2HTkT3q8jXwK7mR1NfP9Ys2vKj4hLU"
+properties:
+  - name: authority
+    type: publicKey
+    required: true
+    description: "Authority permitted to increment the counter"
+  - name: count
+    type: u64
+    required: true
+    description: "Current counter value"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: PDA
+    cardinality: "1:1"
+accountLayout:
+  discriminator: "636e747200000000"
+  fields:
+    - name: authority
+      type: publicKey
+      offset: 0
+    - name: count
+      type: u64
+      offset: 32
+pdaSeeds:
+  - name: authority
+    type: publicKey
+stateMachine:
+  states: [Uninitialized, Active]
+  transitions:
+    - from: Uninitialized
+      to: Active
+      via: Initialize
+      requiresAuth: authority
+    - from: Active
+      to: Active
+      via: Increment
+      requiresAuth: authority
+      requires: "count + 1 does not overflow u64"
+requiredAuth: authority
+requireOwnerCheck: true
+constraints:
+  - name: only-authority-increments
+    expression: "increment requires authority signature"
+    description: "Only the designated authority can increment the counter"
+  - name: checked-increment
+    expression: "count uses checked_add(1)"
+    description: "Counter increment must use checked math to prevent overflow"
+  - name: pda-verification
+    expression: "counter PDA must be re-derived and verified"
+    description: "Program must verify the provided counter account matches the derived PDA"
+links:
+  docs:
+    - "https://github.com/solana-foundation/program-examples/tree/main/basics/counter"
+    - "https://github.com/solana-foundation/program-examples/blob/main/basics/counter/native"
