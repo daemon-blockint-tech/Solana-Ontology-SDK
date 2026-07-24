@@ -1,0 +1,94 @@
+canonicalName: CrucibleFuzz
+aliases:
+  - crucible
+  - coverage-guided-fuzz
+  - fuzz-harness
+purpose: "Coverage-guided fuzzing engine for Solana programs using Crucible — drives deployed .so binaries with mutated typed-action sequences to discover crashes from real execution"
+category: verification
+version: 1.0.0
+owner: verification-team
+properties:
+  - name: binaryPath
+    type: string
+    required: true
+    description: "Path to compiled Solana program .so binary"
+  - name: actionSequences
+    type: string
+    required: true
+    description: "Typed-action sequences that the fuzzer mutates (e.g., deposit, withdraw, swap)"
+  - name: durationSeconds
+    type: u32
+    required: true
+    description: "Fuzz campaign duration in seconds (e.g., 300 for 5 min)"
+  - name: coverageMetric
+    type: string
+    required: false
+    description: "Coverage metric tracked (e.g., instruction coverage, branch coverage)"
+  - name: findings
+    type: string
+    required: false
+    description: "JSON list of crash findings from fuzz campaign"
+  - name: idlPath
+    type: string
+    required: false
+    description: "Path to Anchor IDL for account construction (auto-discovered from target/idl/)"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: QedspecContract
+    cardinality: "1:1"
+  - type: dependsOn
+    target: FuzzStrategy
+    cardinality: "1:1"
+  - type: references
+    target: KaniHarness
+    cardinality: "0:1"
+stateMachine:
+  states: [HarnessGenerated, AccountsFilled, Building, Fuzzing, CrashesFound, Clean]
+  transitions:
+    - from: HarnessGenerated
+      to: AccountsFilled
+      via: FillAccounts
+      requires: "agent fills todo!() account construction from spec accounts block"
+    - from: AccountsFilled
+      to: Building
+      via: BuildHarness
+      requires: "cargo build --features invariant_test"
+    - from: Building
+      to: Fuzzing
+      via: StartCampaign
+      requires: "crucible binary on PATH"
+    - from: Fuzzing
+      to: CrashesFound
+      via: CompleteCampaign
+      requires: "one or more crashes detected"
+    - from: Fuzzing
+      to: Clean
+      via: CompleteCampaign
+      requires: "no crashes found in durationSeconds"
+    - from: CrashesFound
+      to: Fuzzing
+      via: TightenSpec
+      requires: "spec or handler edited based on crash findings"
+constraints:
+  - name: binary-exists
+    expression: "binaryPath points to a compiled .so file"
+    description: "Fuzz target binary must exist"
+  - name: harness-compiles
+    expression: "cargo build --features invariant_test succeeds"
+    description: "Fuzz harness must compile with invariant_test feature"
+  - name: accounts-filled
+    expression: "no todo!() remaining in fuzz harness account construction"
+    description: "All account literals must be filled by agent"
+  - name: idl-discoverable
+    expression: "IDL at target/idl/<prog>.json or idls/<prog>.json"
+    description: "Anchor IDL should be discoverable for account construction"
+  - name: spec-named-findings
+    expression: "crash findings use spec-named values not var_N"
+    description: "Fuzz findings should reference spec binder names"
+links:
+  docs:
+    - "https://github.com/Ackee-Blockchain/trident"
+    - "https://github.com/qedgen/solana-skills"

@@ -1,0 +1,92 @@
+canonicalName: LeanProof
+aliases:
+  - lean
+  - formal-proof
+  - theorem-proof
+purpose: "Formal verification using Lean theorem prover — proves DeFi math requiring symbolic reasoning beyond bounded search, wide arithmetic solvency arguments, and inductive sBPF bytecode proofs"
+category: verification
+version: 1.0.0
+owner: verification-team
+properties:
+  - name: theoremName
+    type: string
+    required: true
+    description: "Name of the Lean theorem (e.g., pool_solvency_preserved_by_swap)"
+  - name: proofType
+    type: string
+    required: true
+    description: "Type of proof: preservation, solvency, conservation, induction"
+  - name: specModel
+    type: string
+    required: true
+    description: "Reference to generated Spec.lean model from qedgen codegen"
+  - name: proofFile
+    type: string
+    required: true
+    description: "Path to Proofs.lean containing the durable proof"
+  - name: tactics
+    type: string
+    required: false
+    description: "Lean tactics used (e.g., induction, omega, linarith, Leanstral, Aristotle)"
+  - name: sorryCount
+    type: u32
+    required: true
+    description: "Number of unresolved 'sorry' placeholders (must be 0 for verified)"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: QedspecContract
+    cardinality: "1:1"
+  - type: dependsOn
+    target: KaniHarness
+    cardinality: "0:1"
+  - type: dependsOn
+    target: FuzzInvariant
+    cardinality: "many:1"
+stateMachine:
+  states: [Generated, Building, Proven, BrokenProof, SorriesRemaining]
+  transitions:
+    - from: Generated
+      to: Building
+      via: LakeBuild
+      requires: "lake build on Spec.lean and Proofs.lean"
+    - from: Building
+      to: Proven
+      via: CompleteProof
+      requires: "all theorems proven with sorryCount == 0"
+    - from: Building
+      to: SorriesRemaining
+      via: CompleteProof
+      requires: "some theorems have sorry placeholders"
+    - from: Building
+      to: BrokenProof
+      via: CompleteProof
+      requires: "proof fails to elaborate or type-check"
+    - from: SorriesRemaining
+      to: Proven
+      via: FillSorries
+      requires: "Leanstral or Aristotle fills remaining sorries"
+    - from: BrokenProof
+      to: Generated
+      via: RepairProof
+      requires: "proof tactics adjusted based on failure"
+constraints:
+  - name: lake-builds
+    expression: "lake build on formal_verification/ compiles"
+    description: "Lean proof files must elaborate without errors"
+  - name: zero-sorries
+    expression: "sorryCount == 0 for fully verified status"
+    description: "No sorry placeholders allowed in verified proofs"
+  - name: spec-sync
+    expression: "Spec.lean matches current .qedspec"
+    description: "Generated Lean model must match the spec"
+  - name: orphan-check
+    expression: "qedgen check reports no orphan proof obligations"
+    description: "Every proof obligation in the spec has a matching theorem"
+links:
+  docs:
+    - "https://lean-lang.org/"
+    - "https://github.com/qedgen/solana-skills"
+    - "https://github.com/lean-dojo/Leanstral"

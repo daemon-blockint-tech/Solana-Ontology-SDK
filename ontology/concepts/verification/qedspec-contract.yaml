@@ -1,0 +1,100 @@
+canonicalName: QedspecContract
+aliases:
+  - qedspec
+  - qed-spec
+  - formal-spec
+purpose: "Declarative specification format for Solana programs — defines state types, handlers, effects, invariants, and properties that QEDGen uses to generate verification artifacts (Kani, proptest, Lean)"
+category: verification
+version: 1.0.0
+owner: verification-team
+properties:
+  - name: stateTypes
+    type: string
+    required: true
+    description: "Discriminated union of account state variants (e.g., Active, Frozen, Closed)"
+  - name: handlers
+    type: string
+    required: true
+    description: "Named handler blocks with pre/post states, auth, requires, and effects"
+  - name: invariants
+    type: string
+    required: false
+    description: "Named predicates over state that handlers must preserve or establish"
+  - name: properties
+    type: string
+    required: false
+    description: "Preservation properties linking a predicate to a set of handlers"
+  - name: effects
+    type: string
+    required: true
+    description: "Field-level state mutations expressed as assignments (e.g., root := <derived_pda>)"
+  - name: abortsIf
+    type: string
+    required: false
+    description: "Conditions under which a handler aborts (error path specification)"
+  - name: requires
+    type: string
+    required: false
+    description: "Preconditions that must hold before handler execution"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: KaniHarness
+    cardinality: "1:1"
+  - type: references
+    target: ProptestStrategy
+    cardinality: "1:1"
+  - type: references
+    target: LeanProof
+    cardinality: "0:1"
+  - type: references
+    target: CrucibleFuzz
+    cardinality: "0:1"
+  - type: dependsOn
+    target: FuzzInvariant
+    cardinality: "many:1"
+stateMachine:
+  states: [Draft, Validated, CodegenReady, Verified, DriftDetected]
+  transitions:
+    - from: Draft
+      to: Validated
+      via: CheckSpec
+      requires: "qedgen check passes with no lint errors"
+    - from: Validated
+      to: CodegenReady
+      via: Codegen
+      requires: "qedgen codegen produces compilable Rust scaffold"
+    - from: CodegenReady
+      to: Verified
+      via: VerifyAll
+      requires: "Kani + proptest + Lean backends all pass"
+    - from: Verified
+      to: DriftDetected
+      via: DetectDrift
+      requires: "handler body or spec changed without re-verification"
+    - from: DriftDetected
+      to: Validated
+      via: Reconcile
+      requires: "qedgen reconcile updates spec or code to match"
+constraints:
+  - name: state-types-required
+    expression: "stateTypes defines at least one variant"
+    description: "Spec must define at least one state variant"
+  - name: handlers-non-empty
+    expression: "handlers.length > 0"
+    description: "Spec must define at least one handler"
+  - name: effects-match-state
+    expression: "every effect field exists in stateTypes"
+    description: "Effects can only mutate declared state fields"
+  - name: auth-on-every-handler
+    expression: "every handler has auth or requires signer check"
+    description: "Every handler must specify access control"
+  - name: invariants-have-rust-expr
+    expression: "invariants with rust_expr generate harnesses"
+    description: "Only invariants with rust_expr produce verification artifacts"
+links:
+  docs:
+    - "https://github.com/qedgen/solana-skills"
+    - "https://github.com/Ackee-Blockchain/trident"

@@ -1,0 +1,83 @@
+canonicalName: ProptestStrategy
+aliases:
+  - proptest
+  - property-test
+  - randomized-testing
+purpose: "Property-based testing strategy for Solana program handlers using proptest — generates randomized state transitions to find counterexamples during spec iteration and regression checks"
+category: verification
+version: 1.0.0
+owner: verification-team
+properties:
+  - name: strategy
+    type: string
+    required: true
+    description: "Proptest strategy generating random inputs (e.g., any::<u64>() for amounts)"
+  - name: propertyName
+    type: string
+    required: true
+    description: "Name of the property being tested (e.g., conservation, access_control)"
+  - name: preState
+    type: string
+    required: true
+    description: "Strategy for generating pre-handler state"
+  - name: postCondition
+    type: string
+    required: true
+    description: "Predicate that must hold after handler execution"
+  - name: maxIterations
+    type: u32
+    required: false
+    description: "Maximum proptest iterations (default: 256)"
+  - name: shrinkDepth
+    type: u8
+    required: false
+    description: "Shrinking depth for counterexample minimization"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: QedspecContract
+    cardinality: "1:1"
+  - type: dependsOn
+    target: FuzzInvariant
+    cardinality: "many:1"
+  - type: references
+    target: KaniHarness
+    cardinality: "0:1"
+stateMachine:
+  states: [Generated, Running, Passing, Failing]
+  transitions:
+    - from: Generated
+      to: Running
+      via: RunProptest
+      requires: "cargo test --release compiles"
+    - from: Running
+      to: Passing
+      via: CompleteRun
+      requires: "all iterations satisfy postCondition"
+    - from: Running
+      to: Failing
+      via: CompleteRun
+      requires: "counterexample found and shrunk"
+    - from: Failing
+      to: Generated
+      via: TightenSpec
+      requires: "spec edited based on counterexample"
+constraints:
+  - name: compiles-clean
+    expression: "cargo test --release on proptest harness compiles"
+    description: "Proptest harness must compile without errors"
+  - name: no-panic-outside-property
+    expression: "proptest panics only inside property body"
+    description: "Harness infrastructure must not panic"
+  - name: shrinks-counterexamples
+    expression: "failing cases are shrunk to minimal repro"
+    description: "Proptest must shrink counterexamples for actionable feedback"
+  - name: fast-iteration
+    expression: "single run completes in < 30 seconds"
+    description: "Proptest should be fast enough for spec iteration loops"
+links:
+  docs:
+    - "https://github.com/proptest-rs/proptest"
+    - "https://github.com/qedgen/solana-skills"

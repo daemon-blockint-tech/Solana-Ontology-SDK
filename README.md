@@ -44,7 +44,7 @@ packages/
 | `@solana-ontology/cli`              | CLI: validate, generate, list, graph, idl                                | ✅    |
 | `@solana-ontology/deploy`           | Helm chart + K8s configs (devnet/testnet/mainnet)                        | —     |
 
-**Total: 159 tests passing across 13 test suites.**
+**Total: 160 tests passing across 13 test suites.**
 
 ## Concept Categories
 
@@ -58,6 +58,7 @@ packages/
 | **delivery**       | ProgramRelease, ReleaseChannel, Environment, UpgradeAuthority, DeploymentConstraint |
 | **security**       | MissingSignerCheck, AccountSubstitution, MissingOwnerCheck, SplTokenConfusion, PdaSeedMismatch, IntegerOverflow, ArbitraryCpiInvocation |
 | **fuzzing**        | FuzzStrategy, FuzzFlow, FuzzInvariant                                                                       |
+| **verification**   | QedspecContract, KaniHarness, ProptestStrategy, LeanProof, CrucibleFuzz                                   |
 
 ## Quick Start
 

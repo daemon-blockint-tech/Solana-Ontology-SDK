@@ -1,0 +1,87 @@
+canonicalName: KaniHarness
+aliases:
+  - kani
+  - bounded-model-checking
+  - kani-verification
+purpose: "Bounded model checking harness for Solana program handlers using Kani — verifies access control, arithmetic safety, conservation invariants, and state-machine properties via symbolic execution"
+category: verification
+version: 1.0.0
+owner: verification-team
+properties:
+  - name: harnessType
+    type: string
+    required: true
+    description: "Either 'spec' (runs against spec-translated transition fn) or 'impl' (runs against real Anchor handler)"
+  - name: symbolicAccounts
+    type: string
+    required: true
+    description: "Symbolic Accounts context with unconstrained fields for exhaustive exploration"
+  - name: assertions
+    type: string
+    required: true
+    description: "List of Kani assertions (e.g., post == pre.checked_add(amount).unwrap_or(0))"
+  - name: counterexamples
+    type: string
+    required: false
+    description: "Named counterexample values when verification fails (spec-named, not var_N)"
+  - name: timeoutMs
+    type: u64
+    required: false
+    description: "Kani solver timeout in milliseconds"
+  - name: coverageDepth
+    type: u8
+    required: false
+    description: "Symbolic execution depth limit (default: unlimited)"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: QedspecContract
+    cardinality: "1:1"
+  - type: dependsOn
+    target: FuzzInvariant
+    cardinality: "many:1"
+  - type: references
+    target: ProptestStrategy
+    cardinality: "0:1"
+stateMachine:
+  states: [Generated, Compiling, Passing, Failing, ElaborationError]
+  transitions:
+    - from: Generated
+      to: Compiling
+      via: BuildHarness
+      requires: "cargo kani setup complete"
+    - from: Compiling
+      to: Passing
+      via: RunKani
+      requires: "all assertions hold for all symbolic paths"
+    - from: Compiling
+      to: Failing
+      via: RunKani
+      requires: "counterexample found violating an assertion"
+    - from: Compiling
+      to: ElaborationError
+      via: RunKani
+      requires: "harness fails to elaborate (missing import, type mismatch)"
+    - from: Failing
+      to: Generated
+      via: TightenSpec
+      requires: "spec edited to add requires or aborts_if"
+constraints:
+  - name: harness-compiles
+    expression: "cargo kani --harness <name> compiles without errors"
+    description: "Kani harness must elaborate before verification"
+  - name: spec-named-values
+    expression: "counterexamples use spec binder names not var_N"
+    description: "Counterexample values should be spec-named for actionable feedback"
+  - name: impl-harness-opt-in
+    expression: "harnessType == 'impl' requires --kani-impl flag"
+    description: "Impl-targeted harness is opt-in to avoid surprising users"
+  - name: auto-trigger-impl
+    expression: "impl harness auto-triggers when handler modifies superset of effect.lhs"
+    description: "LP-shape signal: handler does more than spec declares"
+links:
+  docs:
+    - "https://github.com/model-checking/kani"
+    - "https://github.com/qedgen/solana-skills"
