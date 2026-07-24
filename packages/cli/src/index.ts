@@ -81,7 +81,9 @@ program
 program
   .command("oms")
   .description("Start the Ontology Metadata Service REST API server")
-  .option("--port <port>", "Port to listen on", "3000")
+  // No Commander default on --port: a default would mask the OMS_PORT env
+  // fallback below (opts.port would never be undefined). Default is in the ??.
+  .option("--port <port>", "Port to listen on (default 3000, or $OMS_PORT)")
   .option("--auth-token <token>", "Authentication token for write access")
   .option("--storage <type>", "Storage backend: memory or sqlite")
   .option("--db-path <path>", "SQLite database path (when --storage sqlite)")
@@ -103,8 +105,10 @@ program
 program
   .command("mcp")
   .description("Start the MCP server for LLM agent interaction")
-  .option("--transport <type>", "Transport type: stdio or http", "stdio")
-  .option("--port <port>", "Port for HTTP transport", "3001")
+  // No Commander defaults on --transport/--port: they would mask the MCP_*
+  // env fallbacks below. Defaults live in the ?? chains.
+  .option("--transport <type>", "Transport: stdio or http (default stdio, or $MCP_TRANSPORT)")
+  .option("--port <port>", "Port for HTTP transport (default 3001, or $MCP_PORT)")
   .option("--auth-required", "Require OAuth token for access")
   .option("--path <path>", "Custom ontology root path")
   .action(async (opts) => {
