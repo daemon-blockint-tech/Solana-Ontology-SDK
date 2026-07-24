@@ -16,7 +16,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"require('fs').copyFileSync('src/schema.json','dist/schema.json')\"",
     "test": "vitest run",
     "lint": "tsc --noEmit",
     "clean": "rm -rf dist .turbo"

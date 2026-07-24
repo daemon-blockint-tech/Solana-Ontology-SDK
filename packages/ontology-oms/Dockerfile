@@ -15,7 +15,7 @@ COPY packages ./packages
 COPY ontology ./ontology
 RUN pnpm install --frozen-lockfile
 RUN pnpm build
-RUN pnpm --filter @solana-ontology/cli --prod deploy /prod/cli
+RUN pnpm --filter @solana-ontology/cli --prod --legacy deploy /prod/cli
 
 FROM node:22-slim
 WORKDIR /app

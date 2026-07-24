@@ -1,12 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, writeFileSync, rmSync, mkdirSync } from "node:fs";
+import { mkdtempSync, writeFileSync, rmSync, mkdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadConcepts, loadConcept } from "../src/loader.js";
 import { validateConcept, validateAll } from "../src/validator.js";
 import { buildGraph, getDependencies, getDependents } from "../src/graph.js";
 import { SOLANA_PROGRAM_IDS, getProgramId, findProgramIdByAddress } from "../src/program-ids.js";
+import { schema } from "../src/schema.js";
 import type { Concept } from "../src/types.js";
+
+const CORE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /** Minimal schema-valid concept builder — override fields per test. */
 function makeConcept(overrides: Partial<Concept> = {}): Concept {
@@ -137,6 +141,24 @@ describe("graph", () => {
   it("getDependents finds reverse ownedBy edges", () => {
     const graph = buildGraph(concepts);
     expect(getDependents(graph, "C")).toContain("B");
+  });
+});
+
+describe("schema (vendored, self-contained)", () => {
+  it("exports a schema object usable without repo-root files", () => {
+    // Regression: dist/schema.js must not import ../../../ontology/schema.json —
+    // that breaks every external install. The vendored ./schema.json makes the
+    // package self-contained.
+    expect(schema).toBeTypeOf("object");
+    expect((schema as { required?: string[] }).required).toContain("canonicalName");
+  });
+
+  it("stays in sync with the canonical ontology/schema.json", () => {
+    const canonical = JSON.parse(
+      readFileSync(join(CORE_ROOT, "..", "..", "ontology", "schema.json"), "utf-8"),
+    );
+    const vendored = JSON.parse(readFileSync(join(CORE_ROOT, "src", "schema.json"), "utf-8"));
+    expect(vendored).toEqual(canonical);
   });
 });
 
