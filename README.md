@@ -44,17 +44,17 @@ packages/
 | `@solana-ontology/cli`              | CLI: validate, generate, list, graph, idl                                | ✅    |
 | `@solana-ontology/deploy`           | Helm chart + K8s configs (devnet/testnet/mainnet)                        | —     |
 
-**Total: 170 tests passing across 13 test suites.**
+**Total: 174 tests passing across 13 test suites.**
 
 ## Concept Categories
 
 | Category           | Concepts                                                                            |
 | ------------------ | ----------------------------------------------------------------------------------- |
 | **primitive**      | Account, Program, Transaction, Instruction, PDA, Signer, ComputeBudget, Rent, Counter, TicTacToeGame, TicTacToePlay  |
-| **token**          | TokenMint, TokenAccount, TokenExtension, NFT, Collection, Metadata, TransferHook      |
+| **token**          | TokenMint, TokenAccount, TokenExtension, NFT, Collection, Metadata, TransferHook, CompressedToken      |
 | **defi**           | LiquidityPool, Position, Vault, OracleFeed, LendingMarket, SwapRoute, Escrow, AutomatedMarketMaker, Fundraiser, PaymentChallenge, MultiPartyPayment, PaymentSettlement |
 | **governance**     | Proposal, Vote, Multisig, DAO, StakeAccount, ValidatorGovernance, NcnBallot, MerkleProofVerifier, CoralMultisig, MultisigTransaction |
-| **infrastructure** | Cluster, Slot, Epoch, Validator                                                     |
+| **infrastructure** | Cluster, Slot, Epoch, Validator, LightProtocolRegistry, AccountCompressionTree, LightSystemInvoke                     |
 | **delivery**       | ProgramRelease, ReleaseChannel, Environment, UpgradeAuthority, DeploymentConstraint |
 | **security**       | MissingSignerCheck, AccountSubstitution, MissingOwnerCheck, SplTokenConfusion, PdaSeedMismatch, IntegerOverflow, ArbitraryCpiInvocation, SignerAuthorization, AccountDataMatching, TypeCosplay, PdaSharing, BumpSeedCanonicalization, ClosingAccounts |
 | **fuzzing**        | FuzzStrategy, FuzzFlow, FuzzInvariant                                                                       |
@@ -348,6 +348,10 @@ Integration with [Solana Foundation program-examples](https://github.com/solana-
 | **MultisigTransaction** | governance | [coral-xyz/multisig](https://github.com/coral-xyz/multisig) | Non-owner approval, approve after execution |
 | **TicTacToeGame** | primitive | [coral-xyz/anchor-book](https://github.com/coral-xyz/anchor-book) | Out-of-turn move, tile already set, move after game over |
 | **TicTacToePlay** | primitive | [coral-xyz/anchor-book](https://github.com/coral-xyz/anchor-book) | Tile out of bounds, non-participant move |
+| **LightProtocolRegistry** | infrastructure | [Lightprotocol/light-protocol](https://github.com/Lightprotocol/light-protocol) | Unauthorized config update, double forester registration, insufficient funds |
+| **AccountCompressionTree** | infrastructure | [Lightprotocol/light-protocol](https://github.com/Lightprotocol/light-protocol) | Invalid Merkle proof, write to rolled-over tree, batch limit exceeded |
+| **CompressedToken** | token | [Lightprotocol/light-protocol](https://github.com/Lightprotocol/light-protocol) | Sum check bypass, frozen account transfer |
+| **LightSystemInvoke** | infrastructure | [Lightprotocol/light-protocol](https://github.com/Lightprotocol/light-protocol) | Signer check bypass, CPI context hijack |
 
 ### Generate Real-World Exploit Tests
 
@@ -357,7 +361,7 @@ import { loadConcepts } from "@solana-ontology/core";
 
 const concepts = loadConcepts("./ontology/concepts", "./ontology");
 const tests = generateAllRealWorldPoCTests(concepts);
-// → 21 .test.ts files with 52 total exploit scenarios using PoCEnvironment
+// → 25 .test.ts files with 61 total exploit scenarios using PoCEnvironment
 ```
 
 Each concept includes:

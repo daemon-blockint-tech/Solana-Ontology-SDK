@@ -1,0 +1,175 @@
+canonicalName: CompressedToken
+aliases:
+  - ctoken
+  - compressed-token-account
+  - light-token
+purpose: "Compressed Token program from Light Protocol — SPL Token-compatible compressed token operations including transfer, mint, burn, freeze, compress/decompress, and ctoken account management with ZK compression"
+category: token
+version: 1.0.0
+owner: token-team
+programId: "cTokenmWW8bLPjZEBAUgYy3zKxQZW6VKi7bqNFEVv3m"
+properties:
+  - name: mint
+    type: publicKey
+    required: true
+    description: "Compressed mint or ctoken mint associated with the token"
+  - name: owner
+    type: publicKey
+    required: true
+    description: "Token owner authority"
+  - name: amount
+    type: u64
+    required: true
+    description: "Token balance (compressed or decompressed)"
+  - name: delegate
+    type: publicKey
+    required: false
+    description: "Optional delegated authority for transfers"
+  - name: state
+    type: string
+    required: true
+    description: "AccountState: Uninitialized, Initialized, Frozen"
+  - name: isNative
+    type: u64
+    required: false
+    description: "Native token (wrapped SOL) amount if applicable"
+  - name: delegatedAmount
+    type: u64
+    required: false
+    description: "Amount delegated to delegate"
+  - name: closeAuthority
+    type: publicKey
+    required: false
+    description: "Optional authority to close the account"
+  - name: compressibleConfig
+    type: bytes
+    required: false
+    description: "CompressibleConfig extension for rent management"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: AccountCompressionTree
+    cardinality: "many:1"
+  - type: references
+    target: LightProtocolRegistry
+    cardinality: "many:1"
+  - type: references
+    target: Signer
+    cardinality: "1:1"
+  - type: references
+    target: TokenMint
+    cardinality: "1:1"
+  - type: references
+    target: TokenAccount
+    cardinality: "1:1"
+accountLayout:
+  discriminator: "63546f6b656e0000"
+  fields:
+    - name: mint
+      type: publicKey
+      offset: 0
+    - name: owner
+      type: publicKey
+      offset: 32
+    - name: amount
+      type: u64
+      offset: 64
+    - name: delegate
+      type: publicKey
+      offset: 72
+    - name: state
+      type: u8
+      offset: 104
+    - name: isNative
+      type: u64
+      offset: 105
+    - name: delegatedAmount
+      type: u64
+      offset: 113
+    - name: closeAuthority
+      type: publicKey
+      offset: 121
+pdaSeeds:
+  - name: mint
+    type: publicKey
+  - name: owner
+    type: publicKey
+stateMachine:
+  states: [Uninitialized, Compressed, Decompressed, Frozen, Closed]
+  transitions:
+    - from: Uninitialized
+      to: Compressed
+      via: CreateCompressedMint
+      requires: "mint authority is signer && config active"
+    - from: Uninitialized
+      to: Decompressed
+      via: CreateTokenAccount
+      requires: "payer is signer && mint valid && config active"
+    - from: Compressed
+      to: Compressed
+      via: Transfer2
+      requires: "owner or delegate is signer && sum check passes && valid ZK proof"
+    - from: Compressed
+      to: Decompressed
+      via: Transfer2
+      requires: "owner is signer && decompress recipient provided && sum check passes"
+    - from: Decompressed
+      to: Compressed
+      via: Transfer2
+      requires: "owner is signer && compressed sol PDA provided && sum check passes"
+    - from: Decompressed
+      to: Decompressed
+      via: CTokenTransfer
+      requires: "owner or delegate is signer && sufficient balance"
+    - from: Decompressed
+      to: Frozen
+      via: FreezeAccount
+      requires: "freeze authority is signer"
+    - from: Frozen
+      to: Decompressed
+      via: ThawAccount
+      requires: "freeze authority is signer"
+    - from: Decompressed
+      to: Closed
+      via: CloseTokenAccount
+      requires: "close authority is signer && rent recipient valid"
+    - from: Compressed
+      to: Closed
+      via: CompressAndClose
+      requires: "owner is signer && config allows close"
+constraints:
+  - name: sum-check
+    expression: "sum(inputs) == sum(outputs) + sum(rpc_changes)"
+    description: "Total input value must equal total output value plus RPC adjustments"
+  - name: owner-or-delegate-signs
+    expression: "signer == owner || (delegate != null && signer == delegate)"
+    description: "Only the owner or an active delegate can transfer tokens"
+  - name: sufficient-balance
+    expression: "account.amount >= transfer_amount"
+    description: "Account must have sufficient balance for the transfer"
+  - name: not-frozen
+    expression: "state != AccountState::Frozen"
+    description: "Cannot transfer from a frozen account"
+  - name: mint-authority-signs
+    expression: "mint_authority is signer for MintTo and CreateCompressedMint"
+    description: "Minting requires the mint authority signature"
+  - name: decimals-check
+    expression: "amount / 10^decimals fits in u64 for checked operations"
+    description: "Checked transfers validate decimals to prevent precision loss"
+  - name: config-active
+    expression: "compressible_config.state == Active"
+    description: "Create operations require an active compressible config"
+  - name: max-accounts
+    expression: "accounts.len() <= 30"
+    description: "Maximum 30 accounts per compressed token instruction"
+  - name: mint-creation-fee
+    expression: "mint_creation_fee == 50000 lamports"
+    description: "Creating a compressed mint requires paying the fixed creation fee"
+links:
+  docs:
+    - "https://github.com/Lightprotocol/light-protocol"
+    - "https://github.com/Lightprotocol/light-protocol/blob/main/programs/compressed-token/program/src/lib.rs"
+    - "https://github.com/Lightprotocol/light-protocol/blob/main/programs/compressed-token/program/CLAUDE.md"
+    - "https://docs.zkcompression.com"

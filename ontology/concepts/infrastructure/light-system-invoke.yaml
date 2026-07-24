@@ -1,0 +1,130 @@
+canonicalName: LightSystemInvoke
+aliases:
+  - light-system-program
+  - compressed-invoke
+  - invoke-cpi
+purpose: "Light System Program from Light Protocol — processes compressed state transitions via invoke and invoke_cpi instructions, verifying ZK proofs, checking signer authority, and executing CPI to target programs with compressed account inputs/outputs"
+category: infrastructure
+version: 1.0.0
+owner: infrastructure-team
+programId: "SySTEM1eSU2p4BGQfQpimFEWWSC1XDFeun3Nqzz3rT7"
+properties:
+  - name: authority
+    type: publicKey
+    required: true
+    description: "Authority that signs the invoke instruction (compressed account owner)"
+  - name: invokingProgram
+    type: publicKey
+    required: false
+    description: "Target program for invoke_cpi — the program being called via CPI"
+  - name: cpiContextAccount
+    type: publicKey
+    required: false
+    description: "CPI context account storing fee payer and associated Merkle tree info"
+  - name: inputCompressedAccounts
+    type: bytes
+    required: true
+    description: "Vec of input compressed accounts with Merkle context (tree, index, proof)"
+  - name: outputCompressedAccounts
+    type: bytes
+    required: true
+    description: "Vec of output compressed accounts with new state hashes"
+  - name: newAddresses
+    type: bytes
+    required: false
+    description: "Vec of new address queue entries for address Merkle tree updates"
+  - name: proof
+    type: bytes
+    required: true
+    description: "ZK proof bytes (compressed SP1/gnark proof) verifying state transition validity"
+  - name: mode
+    type: string
+    required: false
+    description: "AccountMode: Anchor or V2 — determines account parsing strategy"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: AccountCompressionTree
+    cardinality: "many:1"
+  - type: references
+    target: LightProtocolRegistry
+    cardinality: "1:1"
+  - type: references
+    target: Signer
+    cardinality: "1:1"
+  - type: references
+    target: Instruction
+    cardinality: "1:1"
+accountLayout:
+  discriminator: "6c696768745f7300"
+  fields:
+    - name: authority
+      type: publicKey
+      offset: 0
+    - name: invokingProgram
+      type: publicKey
+      offset: 32
+    - name: cpiContextAccount
+      type: publicKey
+      offset: 64
+    - name: mode
+      type: u8
+      offset: 96
+stateMachine:
+  states: [Pending, ProofVerified, Executed, Rejected]
+  transitions:
+    - from: Pending
+      to: ProofVerified
+      via: VerifyProof
+      requires: "valid ZK proof && signer check passes && sum check passes"
+    - from: ProofVerified
+      to: Executed
+      via: ExecuteInvoke
+      requires: "Merkle tree updates applied && CPI dispatched successfully"
+    - from: ProofVerified
+      to: Executed
+      via: ExecuteInvokeCpi
+      requires: "CPI context valid && target program invoked && state updated"
+    - from: Pending
+      to: Rejected
+      via: VerifyProof
+      requires: "proof invalid || signer mismatch || sum check failed || empty inputs"
+constraints:
+  - name: signer-check
+    expression: "input_compressed_accounts_signer_check(inputs, authority)"
+    description: "All input compressed accounts that require a signer must match the authority"
+  - name: sum-check
+    expression: "sum(input_compressed_accounts) == sum(output_compressed_accounts) + sum(rpc_changes)"
+    description: "Conservation of value — inputs must equal outputs plus RPC adjustments"
+  - name: merkle-tree-indices-ordered
+    expression: "input_merkle_tree_indices in ascending order && output_merkle_tree_indices in ascending order"
+    description: "Merkle tree indices must be in ascending order for deterministic processing"
+  - name: output-trees-unique
+    expression: "no duplicate output merkle tree indices"
+    description: "Output Merkle tree indices must be unique within a single invoke"
+  - name: cpi-context-valid
+    expression: "cpi_context.owner == light_system_program && cpi_context.discriminator matches"
+    description: "CPI context account must be owned by light system program with valid discriminator"
+  - name: cpi-context-not-already-set
+    expression: "cpi_context.is_set == false for set_context operations"
+    description: "CPI context must not already be initialized when using set_context"
+  - name: proof-not-none
+    expression: "proof != null when inputs or outputs provided"
+    description: "A ZK proof is required when compressed state is modified"
+  - name: non-empty-inputs
+    expression: "inputs.len() > 0 || outputs.len() > 0"
+    description: "Invoke must have at least one input or output compressed account"
+  - name: write-access-check
+    expression: "all writable accounts have is_writable=true in merkle context"
+    description: "Accounts marked as writable must have write access to the Merkle tree"
+  - name: cpi-data-limit
+    expression: "account_compression_cpi_data.len() <= 10240"
+    description: "CPI data to account compression program must not exceed 10KB"
+links:
+  docs:
+    - "https://github.com/Lightprotocol/light-protocol"
+    - "https://github.com/Lightprotocol/light-protocol/blob/main/programs/system/src/lib.rs"
+    - "https://github.com/Lightprotocol/light-protocol/blob/main/programs/system/src/errors.rs"
+    - "https://docs.zkcompression.com"

@@ -899,6 +899,36 @@ const REAL_WORLD_EXPLOITS: Record<string, {
       exploitTicTacToeWrongPlayer(c),
     ],
   },
+  LightProtocolRegistry: {
+    describe: "LightProtocolRegistry — ZK compression registry exploits",
+    exploits: (c) => [
+      exploitLightRegistryUnauthorizedConfigUpdate(c),
+      exploitLightRegistryDoubleForesterRegistration(c),
+      exploitLightRegistryInsufficientFunds(c),
+    ],
+  },
+  AccountCompressionTree: {
+    describe: "AccountCompressionTree — Merkle tree state exploits",
+    exploits: (c) => [
+      exploitCompressionInvalidMerkleProof(c),
+      exploitCompressionWriteToRolledOverTree(c),
+      exploitCompressionExceedBatchLimit(c),
+    ],
+  },
+  CompressedToken: {
+    describe: "CompressedToken — compressed token transfer exploits",
+    exploits: (c) => [
+      exploitCompressedTokenSumCheckBypass(c),
+      exploitCompressedTokenFrozenAccountTransfer(c),
+    ],
+  },
+  LightSystemInvoke: {
+    describe: "LightSystemInvoke — compressed invoke CPI exploits",
+    exploits: (c) => [
+      exploitLightInvokeSignerCheckBypass(c),
+      exploitLightInvokeCpiContextHijack(c),
+    ],
+  },
 };
 
 /**
@@ -2643,5 +2673,182 @@ function exploitTicTacToeWrongPlayer(c: Concept): string {
     // ── Assertion: must reject — wrong player ──
     expect(result.success).toBe(false);
     expect(result.error ?? "").toContain("NotPlayersTurn");
+  });`;
+}
+
+// ── Light Protocol exploit generators ─────────────────────────────────────────
+
+function exploitLightRegistryUnauthorizedConfigUpdate(c: Concept): string {
+  return `  it("should reject protocol config update from non-authority", async () => {
+    const web3 = await import("@solana/web3.js");
+    const attacker = web3.Keypair.generate();
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attacker.publicKey, web3.LAMPORTS_PER_SOL);
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [{ pubkey: attacker.publicKey, isSigner: true, isWritable: false }],
+      data: encodeUpdateProtocolConfigIx({ networkFee: 0 }),
+    };
+    const result = await env.executeAsTransaction([exploitIx], [attacker]);
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("InvalidSigner");
+  });`;
+}
+
+function exploitLightRegistryDoubleForesterRegistration(c: Concept): string {
+  return `  it("should reject duplicate forester registration for same epoch", async () => {
+    const web3 = await import("@solana/web3.js");
+    const forester = web3.Keypair.generate();
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(forester.publicKey, web3.LAMPORTS_PER_SOL);
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [{ pubkey: forester.publicKey, isSigner: true, isWritable: true }],
+      data: encodeRegisterForesterIx({ epoch: 1 }),
+    };
+    const result = await env.executeAsTransaction([exploitIx], [forester]);
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("ForesterAlreadyRegistered");
+  });`;
+}
+
+function exploitLightRegistryInsufficientFunds(c: Concept): string {
+  return `  it("should reject withdrawal when funding pool has insufficient balance", async () => {
+    const web3 = await import("@solana/web3.js");
+    const attacker = web3.Keypair.generate();
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attacker.publicKey, web3.LAMPORTS_PER_SOL);
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [{ pubkey: attacker.publicKey, isSigner: true, isWritable: true }],
+      data: encodeWithdrawFundingPoolIx({ amount: 999_999_999_999 }),
+    };
+    const result = await env.executeAsTransaction([exploitIx], [attacker]);
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("InsufficientFunds");
+  });`;
+}
+
+function exploitCompressionInvalidMerkleProof(c: Concept): string {
+  return `  it("should reject nullify with invalid Merkle proof", async () => {
+    const web3 = await import("@solana/web3.js");
+    const attacker = web3.Keypair.generate();
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attacker.publicKey, web3.LAMPORTS_PER_SOL);
+    const fakeProof = Array(16).fill(new Uint8Array(32));
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [{ pubkey: attacker.publicKey, isSigner: true, isWritable: false }],
+      data: encodeNullifyLeavesIx({ changelogIndices: [0], leavesQueueIndices: [0], leafIndices: [0], proofs: [fakeProof] }),
+    };
+    const result = await env.executeAsTransaction([exploitIx], [attacker]);
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("InvalidMerkleProof");
+  });`;
+}
+
+function exploitCompressionWriteToRolledOverTree(c: Concept): string {
+  return `  it("should reject writes to an already rolled-over Merkle tree", async () => {
+    const web3 = await import("@solana/web3.js");
+    const attacker = web3.Keypair.generate();
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attacker.publicKey, web3.LAMPORTS_PER_SOL);
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [{ pubkey: attacker.publicKey, isSigner: true, isWritable: false }],
+      data: encodeInsertIntoQueuesIx({ bytes: new Uint8Array(64) }),
+    };
+    const result = await env.executeAsTransaction([exploitIx], [attacker]);
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("MerkleTreeAlreadyRolledOver");
+  });`;
+}
+
+function exploitCompressionExceedBatchLimit(c: Concept): string {
+  return `  it("should reject batch append exceeding maximum leaves", async () => {
+    const web3 = await import("@solana/web3.js");
+    const attacker = web3.Keypair.generate();
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attacker.publicKey, web3.LAMPORTS_PER_SOL);
+    const oversizedBatch = new Uint8Array(31 * 32);
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [{ pubkey: attacker.publicKey, isSigner: true, isWritable: false }],
+      data: encodeBatchAppendIx({ data: oversizedBatch }),
+    };
+    const result = await env.executeAsTransaction([exploitIx], [attacker]);
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("TooManyLeaves");
+  });`;
+}
+
+function exploitCompressedTokenSumCheckBypass(c: Concept): string {
+  return `  it("should reject transfer where input sum != output sum", async () => {
+    const web3 = await import("@solana/web3.js");
+    const attacker = web3.Keypair.generate();
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attacker.publicKey, web3.LAMPORTS_PER_SOL);
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [{ pubkey: attacker.publicKey, isSigner: true, isWritable: false }],
+      data: encodeTransfer2Ix({ inputs: [{ amount: 100 }], outputs: [{ amount: 200 }] }),
+    };
+    const result = await env.executeAsTransaction([exploitIx], [attacker]);
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("SumCheckFailed");
+  });`;
+}
+
+function exploitCompressedTokenFrozenAccountTransfer(c: Concept): string {
+  return `  it("should reject transfer from a frozen compressed token account", async () => {
+    const web3 = await import("@solana/web3.js");
+    const attacker = web3.Keypair.generate();
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attacker.publicKey, web3.LAMPORTS_PER_SOL);
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [{ pubkey: attacker.publicKey, isSigner: true, isWritable: false }],
+      data: encodeTransfer2Ix({ frozenAccount: true }),
+    };
+    const result = await env.executeAsTransaction([exploitIx], [attacker]);
+    expect(result.success).toBe(false);
+  });`;
+}
+
+function exploitLightInvokeSignerCheckBypass(c: Concept): string {
+  return `  it("should reject invoke with mismatched input compressed account signers", async () => {
+    const web3 = await import("@solana/web3.js");
+    const attacker = web3.Keypair.generate();
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attacker.publicKey, web3.LAMPORTS_PER_SOL);
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [{ pubkey: attacker.publicKey, isSigner: true, isWritable: false }],
+      data: encodeInvokeIx({ fakeSigner: true }),
+    };
+    const result = await env.executeAsTransaction([exploitIx], [attacker]);
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("SignerCheckFailed");
+  });`;
+}
+
+function exploitLightInvokeCpiContextHijack(c: Concept): string {
+  return `  it("should reject invoke_cpi with invalid CPI context account owner", async () => {
+    const web3 = await import("@solana/web3.js");
+    const attacker = web3.Keypair.generate();
+    const conn = new web3.Connection("http://localhost:8899", "confirmed");
+    await conn.requestAirdrop(attacker.publicKey, web3.LAMPORTS_PER_SOL);
+    const fakeCtx = web3.Keypair.generate();
+    const exploitIx = {
+      programId: "${c.programId ?? "TARGET_PROGRAM_ID"}",
+      accounts: [
+        { pubkey: attacker.publicKey, isSigner: true, isWritable: false },
+        { pubkey: fakeCtx.publicKey, isSigner: false, isWritable: true },
+      ],
+      data: encodeInvokeCpiIx({ cpiContext: fakeCtx.publicKey }),
+    };
+    const result = await env.executeAsTransaction([exploitIx], [attacker]);
+    expect(result.success).toBe(false);
+    expect(result.error ?? "").toContain("InvalidCpiContextOwner");
   });`;
 }

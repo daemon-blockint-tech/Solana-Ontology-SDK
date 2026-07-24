@@ -127,9 +127,9 @@ describe("security-gen: PoC test scaffold generation", () => {
 describe("security-gen: real-world PoC tests from program-examples", () => {
   const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
 
-  it("should generate PoC tests for all 21 real-world programs", () => {
+  it("should generate PoC tests for all 25 real-world programs", () => {
     const scaffolds = generateAllRealWorldPoCTests(concepts);
-    expect(scaffolds.length).toBe(21);
+    expect(scaffolds.length).toBe(25);
 
     const filenames = scaffolds.map((s) => s.filename);
     expect(filenames).toContain("escrow.test.ts");
@@ -153,6 +153,10 @@ describe("security-gen: real-world PoC tests from program-examples", () => {
     expect(filenames).toContain("multisig_transaction.test.ts");
     expect(filenames).toContain("tic_tac_toe_game.test.ts");
     expect(filenames).toContain("tic_tac_toe_play.test.ts");
+    expect(filenames).toContain("light_protocol_registry.test.ts");
+    expect(filenames).toContain("account_compression_tree.test.ts");
+    expect(filenames).toContain("compressed_token.test.ts");
+    expect(filenames).toContain("light_system_invoke.test.ts");
   });
 
   it("should generate Escrow exploit tests with 3 scenarios", () => {
@@ -215,7 +219,8 @@ describe("security-gen: real-world PoC tests from program-examples", () => {
         s.content.includes("solana-foundation/pay-kit") ||
         s.content.includes("coral-xyz/sealevel-attacks") ||
         s.content.includes("coral-xyz/multisig") ||
-        s.content.includes("coral-xyz/anchor-book")
+        s.content.includes("coral-xyz/anchor-book") ||
+        s.content.includes("Lightprotocol/light-protocol")
       ).toBe(true);
     }
   });
@@ -244,6 +249,10 @@ describe("security-gen: real-world PoC tests from program-examples", () => {
     const tttConcept = concepts.find((c) => c.canonicalName === "TicTacToeGame")!;
     const tttScaffold = generateRealWorldPoCTest(tttConcept);
     expect(tttScaffold).toContain("coral-xyz/anchor-book");
+
+    const lightConcept = concepts.find((c) => c.canonicalName === "LightProtocolRegistry")!;
+    const lightScaffold = generateRealWorldPoCTest(lightConcept);
+    expect(lightScaffold).toContain("Lightprotocol/light-protocol");
   });
 
   it("should generate ValidatorGovernance exploit tests with 3 scenarios", () => {
@@ -392,5 +401,43 @@ describe("security-gen: real-world PoC tests from program-examples", () => {
     expect(scaffold).toContain("TicTacToePlay");
     expect(scaffold).toContain("out of bounds");
     expect(scaffold).toContain("non-participant");
+  });
+
+  it("should generate LightProtocolRegistry exploit tests with 3 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "LightProtocolRegistry")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("LightProtocolRegistry");
+    expect(scaffold).toContain("non-authority");
+    expect(scaffold).toContain("duplicate forester");
+    expect(scaffold).toContain("insufficient");
+  });
+
+  it("should generate AccountCompressionTree exploit tests with 3 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "AccountCompressionTree")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("AccountCompressionTree");
+    expect(scaffold).toContain("invalid Merkle proof");
+    expect(scaffold).toContain("rolled-over");
+    expect(scaffold).toContain("exceeding maximum");
+  });
+
+  it("should generate CompressedToken exploit tests with 2 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "CompressedToken")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("CompressedToken");
+    expect(scaffold).toContain("input sum");
+    expect(scaffold).toContain("frozen");
+  });
+
+  it("should generate LightSystemInvoke exploit tests with 2 scenarios", () => {
+    const concept = concepts.find((c) => c.canonicalName === "LightSystemInvoke")!;
+    const scaffold = generateRealWorldPoCTest(concept);
+
+    expect(scaffold).toContain("LightSystemInvoke");
+    expect(scaffold).toContain("mismatched");
+    expect(scaffold).toContain("invalid CPI context");
   });
 });

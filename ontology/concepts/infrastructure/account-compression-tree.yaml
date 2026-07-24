@@ -1,0 +1,170 @@
+canonicalName: AccountCompressionTree
+aliases:
+  - merkle-tree
+  - state-merkle-tree
+  - address-merkle-tree
+  - compressed-state
+purpose: "Account Compression program from Light Protocol — manages concurrent state Merkle trees (Poseidon hasher), indexed address Merkle trees, nullifier queues, and group authority for ZK compressed state on Solana"
+category: infrastructure
+version: 1.0.0
+owner: infrastructure-team
+programId: "compr6CUsB5m2jS4Y3831ztGSTnDpnKJTKS95d64XVq"
+properties:
+  - name: owner
+    type: publicKey
+    required: true
+    description: "Authority that can write to the Merkle tree (forester or program owner)"
+  - name: programOwner
+    type: publicKey
+    required: false
+    description: "Optional program owner that controls the tree via group authority"
+  - name: associatedQueue
+    type: publicKey
+    required: true
+    description: "Linked nullifier queue or address queue for this tree"
+  - name: treeType
+    type: string
+    required: true
+    description: "TreeType enum: StateV1, AddressV1, BatchedStateV2, BatchedAddressV2"
+  - name: height
+    type: u8
+    required: true
+    description: "Merkle tree height (max 26 for state, 26 for address)"
+  - name: canopyDepth
+    type: u8
+    required: true
+    description: "Depth of cached canopy nodes for proof verification"
+  - name: changelogSize
+    type: u16
+    required: true
+    description: "Number of changelog entries for concurrent updates"
+  - name: rootsSize
+    type: u16
+    required: true
+    description: "Number of root entries for rollback support"
+  - name: rolloverFee
+    type: u64
+    required: false
+    description: "Fee required to roll over the tree to a new account"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: LightProtocolRegistry
+    cardinality: "many:1"
+  - type: references
+    target: PDA
+    cardinality: "1:1"
+  - type: references
+    target: Signer
+    cardinality: "1:1"
+  - type: references
+    target: Account
+    cardinality: "1:1"
+accountLayout:
+  discriminator: "636f6d7072657300"
+  fields:
+    - name: owner
+      type: publicKey
+      offset: 0
+    - name: programOwner
+      type: publicKey
+      offset: 32
+    - name: associatedQueue
+      type: publicKey
+      offset: 64
+    - name: treeType
+      type: u8
+      offset: 96
+    - name: height
+      type: u8
+      offset: 97
+    - name: canopyDepth
+      type: u8
+      offset: 98
+    - name: changelogSize
+      type: u16
+      offset: 99
+    - name: rootsSize
+      type: u16
+      offset: 101
+pdaSeeds:
+  - name: groupAuthority
+    type: publicKey
+  - name: seed
+    type: publicKey
+stateMachine:
+  states: [Uninitialized, Active, RolloverReady, RolledOver]
+  transitions:
+    - from: Uninitialized
+      to: Active
+      via: InitializeStateMerkleTree
+      requires: "payer is signer && valid config && associated queue initialized"
+    - from: Uninitialized
+      to: Active
+      via: InitializeAddressMerkleTree
+      requires: "payer is signer && valid config && address queue initialized"
+    - from: Active
+      to: Active
+      via: InsertIntoQueues
+      requires: "signer is registered program or authority && queue not full"
+    - from: Active
+      to: Active
+      via: NullifyLeaves
+      requires: "valid Merkle proof && leaf exists in tree && signer authorized"
+    - from: Active
+      to: Active
+      via: BatchAppend
+      requires: "valid ZK proof && output queue has pending leaves"
+    - from: Active
+      to: Active
+      via: BatchNullify
+      requires: "valid ZK proof && nullifier queue has pending nullifiers"
+    - from: Active
+      to: RolloverReady
+      via: CloseThreshold
+      requires: "tree sequence threshold reached && rollover configured"
+    - from: RolloverReady
+      to: RolledOver
+      via: RolloverStateMerkleTree
+      requires: "forester is signer && sufficient rollover fee paid"
+    - from: RolledOver
+      to: RolledOver
+      via: InsertIntoQueues
+      requires: "rejected — tree already rolled over"
+constraints:
+  - name: signer-is-registered-or-authority
+    expression: "signer == tree.owner || signer is registered in group_authority"
+    description: "Only the tree owner or a program registered via group authority can write"
+  - name: merkle-proof-valid
+    expression: "verify_poseidon_proof(leaf, proof, root, index)"
+    description: "All nullify and update operations require a valid Poseidon Merkle proof"
+  - name: queue-not-full
+    expression: "queue.sequence < queue.capacity"
+    description: "Cannot insert into a full queue — must roll over first"
+  - name: tree-not-rolled-over
+    expression: "tree.roots[0] != EMPTY_ROOT || tree not in RolledOver state"
+    description: "Cannot write to a tree that has been rolled over"
+  - name: batch-size-limit
+    expression: "leaves.len() <= 30 for v1, <= 10 for v2"
+    description: "Maximum batch sizes enforced per tree version"
+  - name: address-limit
+    expression: "addresses.len() <= 8"
+    description: "Maximum 8 addresses per update instruction"
+  - name: nullifier-limit
+    expression: "nullifiers.len() <= 10"
+    description: "Maximum 10 nullifiers per nullify instruction"
+  - name: canopy-depth-supported
+    expression: "canopy_depth in [0, 1, 2, 3, ..., max_supported_depth]"
+    description: "Canopy depth must be a supported value for the tree height"
+  - name: rollover-fee-sufficient
+    expression: "paid_fee >= tree.rollover_fee"
+    description: "Rollover requires sufficient fee payment"
+links:
+  docs:
+    - "https://github.com/Lightprotocol/light-protocol"
+    - "https://github.com/Lightprotocol/light-protocol/blob/main/programs/account-compression/src/lib.rs"
+    - "https://github.com/Lightprotocol/light-protocol/blob/main/programs/account-compression/src/errors.rs"
+    - "https://github.com/Lightprotocol/light-protocol/blob/main/programs/account-compression/src/state/public_state_merkle_tree.rs"
+    - "https://docs.zkcompression.com"

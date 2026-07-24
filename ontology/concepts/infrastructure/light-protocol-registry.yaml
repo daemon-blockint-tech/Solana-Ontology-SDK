@@ -1,0 +1,111 @@
+canonicalName: LightProtocolRegistry
+aliases:
+  - light-registry
+  - zk-compression-registry
+  - forester-registry
+purpose: "Light Protocol registry program — manages protocol configuration, forester registration, epoch lifecycle, and compressible token configs for the ZK Compression protocol on Solana"
+category: infrastructure
+version: 1.0.0
+owner: infrastructure-team
+programId: "Lighton6oQpVkeewmo2mcPTQQp7kYHr4fWpAgJyEmDX"
+properties:
+  - name: authority
+    type: publicKey
+    required: true
+    description: "Protocol config authority — only key that can initialize and update protocol config"
+  - name: bump
+    type: u8
+    required: true
+    description: "Bump seed for the protocol config PDA"
+  - name: protocolConfig
+    type: bytes
+    required: true
+    description: "ProtocolConfig struct with network fees, tree limits, forester parameters"
+  - name: forester
+    type: publicKey
+    required: false
+    description: "Registered forester pubkey eligible for rollover and nullify work"
+  - name: epoch
+    type: u64
+    required: false
+    description: "Current epoch number for forester work scheduling"
+relationships:
+  - type: ownedBy
+    target: Program
+    cardinality: "1:1"
+  - type: references
+    target: AccountCompressionTree
+    cardinality: "1:many"
+  - type: references
+    target: Signer
+    cardinality: "1:1"
+  - type: references
+    target: PDA
+    cardinality: "1:1"
+accountLayout:
+  discriminator: "6c696768745f7200"
+  fields:
+    - name: authority
+      type: publicKey
+      offset: 0
+    - name: bump
+      type: u8
+      offset: 32
+    - name: config
+      type: bytes
+      offset: 33
+pdaSeeds:
+  - name: protocolConfig
+    type: string
+stateMachine:
+  states: [Uninitialized, Initialized, Active, Deprecated]
+  transitions:
+    - from: Uninitialized
+      to: Initialized
+      via: InitializeProtocolConfig
+      requires: "authority is signer && protocol config valid && called once"
+    - from: Initialized
+      to: Active
+      via: UpdateProtocolConfig
+      requires: "authority is signer && new config valid"
+    - from: Active
+      to: Active
+      via: RegisterForester
+      requires: "forester not already registered && in registration period"
+    - from: Active
+      to: Active
+      via: ReportWork
+      requires: "forester eligible && epoch active && not already reported"
+    - from: Active
+      to: Active
+      via: FinalizeRegistration
+      requires: "registration period ended && finalize counter not exceeded"
+    - from: Active
+      to: Deprecated
+      via: UpdateProtocolConfig
+      requires: "authority deprecates config"
+constraints:
+  - name: authority-must-sign
+    expression: "protocol_config_pda.authority == signer.key()"
+    description: "Only the protocol config authority can initialize or update config"
+  - name: forester-unique
+    expression: "forester not in registered_foresters set"
+    description: "A forester cannot register twice for the same epoch"
+  - name: epoch-phase-check
+    expression: "epoch.phase == Registration || epoch.phase == Active || epoch.phase == ReportWork"
+    description: "Forester operations only allowed during specific epoch phases"
+  - name: finalize-counter-limit
+    expression: "finalize_counter <= max_finalize_counter"
+    description: "Finalize registration counter must not exceed configured maximum"
+  - name: network-fee-non-negative
+    expression: "network_fee >= 0"
+    description: "Network fee must be non-negative"
+  - name: insufficient-funds-check
+    expression: "pool_balance >= withdrawal_amount"
+    description: "Funding pool must have sufficient balance for withdrawals"
+links:
+  docs:
+    - "https://github.com/Lightprotocol/light-protocol"
+    - "https://github.com/Lightprotocol/light-protocol/blob/main/programs/registry/src/lib.rs"
+    - "https://github.com/Lightprotocol/light-protocol/blob/main/programs/registry/src/errors.rs"
+    - "https://docs.zkcompression.com"
