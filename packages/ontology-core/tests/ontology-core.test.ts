@@ -14,7 +14,8 @@ const CONCEPTS_DIR = join(ONTOLOGY_ROOT, "concepts");
 describe("loader", () => {
   it("should load all concept YAML files", () => {
     const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
-    expect(concepts.length).toBe(78);
+    // Floor rather than exact count so adding ontology concepts doesn't break CI.
+    expect(concepts.length).toBeGreaterThanOrEqual(78);
   });
 
   it("should set _sourceFile on each concept", () => {
@@ -104,7 +105,9 @@ describe("graph", () => {
   it("should build a graph with all concepts as nodes", () => {
     const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
     const graph = buildGraph(concepts);
-    expect(graph.nodes.size).toBe(78);
+    // Every loaded concept must become a node; floor keeps this robust to growth.
+    expect(graph.nodes.size).toBe(concepts.length);
+    expect(graph.nodes.size).toBeGreaterThanOrEqual(78);
   });
 
   it("should detect orphans (concepts not referenced by others)", () => {
@@ -118,7 +121,8 @@ describe("graph", () => {
     const graph = buildGraph(concepts);
     expect(graph.components.length).toBeGreaterThan(0);
     const totalNodes = graph.components.reduce((sum, c) => sum + c.length, 0);
-    expect(totalNodes).toBe(78);
+    // Components partition the node set — invariant, independent of concept count.
+    expect(totalNodes).toBe(graph.nodes.size);
   });
 
   it("should find dependencies for Account", () => {
@@ -248,10 +252,11 @@ describe("program-ids", () => {
 });
 
 describe("security validation", () => {
-  it("should load 13 security vulnerability pattern concepts", () => {
+  it("should load the security vulnerability pattern concepts", () => {
     const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
     const securityConcepts = concepts.filter((c) => c.category === "security");
-    expect(securityConcepts.length).toBe(13);
+    // Floor rather than exact count so adding patterns doesn't break CI.
+    expect(securityConcepts.length).toBeGreaterThanOrEqual(13);
     expect(securityConcepts.map((c) => c.canonicalName)).toContain("MissingSignerCheck");
     expect(securityConcepts.map((c) => c.canonicalName)).toContain("AccountSubstitution");
     expect(securityConcepts.map((c) => c.canonicalName)).toContain("MissingOwnerCheck");

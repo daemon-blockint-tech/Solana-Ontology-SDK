@@ -30,21 +30,23 @@ packages/
 
 ## Packages
 
-| Package                             | Description                                                              | Tests |
-| ----------------------------------- | ------------------------------------------------------------------------ | ----- |
-| `@solana-ontology/core`             | Core types, validator, loader, graph builder                             | ✅    |
-| `@solana-ontology/idl-parser`       | Anchor IDL v0/v1 parser + codemod + concept generator                    | 10    |
-| `@solana-ontology/sdk`              | Runtime SDK: ActionBuilder, TransactionLifecycle, signers, Borsh encoder | 17    |
-| `@solana-ontology/ingestion`        | Yellowstone gRPC client, state manager with reorg handling               | 14    |
-| `@solana-ontology/oms`              | Independent OMS — REST API, registries, pluggable storage                | 10    |
-| `@solana-ontology/mcp-server`       | MCP server exposing ontology as LLM-callable resources and tools         | 14    |
-| `@solana-ontology/generator-client` | Typed React/TypeScript client library generator                          | 6     |
-| `@solana-ontology/generator-ts`     | TypeScript code generator                                                | ✅    |
-| `@solana-ontology/generator-rust`   | Rust code generator                                                      | ✅    |
-| `@solana-ontology/cli`              | CLI: validate, generate, list, graph, idl                                | ✅    |
-| `@solana-ontology/deploy`           | Helm chart + K8s configs (devnet/testnet/mainnet)                        | —     |
+All ten library packages are published on npm (public, Apache-2.0):
 
-**All packages ship unit tests, plus a cross-package integration suite; run `pnpm test` and `pnpm test:integration`.**
+| Package                             | Description                                                              |
+| ----------------------------------- | ------------------------------------------------------------------------ |
+| `@solana-ontology/core`             | Core types, validator, loader, graph builder                             |
+| `@solana-ontology/idl-parser`       | Anchor IDL v0/v1 parser + codemod + concept generator                    |
+| `@solana-ontology/sdk`              | Runtime SDK: ActionBuilder, TransactionLifecycle, signers, Borsh encoder |
+| `@solana-ontology/ingestion`        | Yellowstone gRPC client, state manager with reorg handling               |
+| `@solana-ontology/oms`              | Independent OMS — REST API, registries, pluggable storage                |
+| `@solana-ontology/mcp-server`       | MCP server exposing ontology as LLM-callable resources and tools         |
+| `@solana-ontology/generator-client` | Typed React/TypeScript client library generator                          |
+| `@solana-ontology/generator-ts`     | TypeScript code generator                                                |
+| `@solana-ontology/generator-rust`   | Rust code generator                                                      |
+| `@solana-ontology/cli`              | CLI: validate, generate, list, graph, idl                                |
+| `@solana-ontology/deploy`           | Helm chart + K8s configs (devnet/testnet/mainnet) — not published        |
+
+**Every package ships unit tests, plus a cross-package integration suite; run `pnpm test` and `pnpm test:integration` from a checkout.**
 
 ## Concept Categories
 
@@ -62,51 +64,62 @@ packages/
 
 ## Quick Start
 
-### Install dependencies
+### Install from npm
 
 ```bash
-pnpm install
-pnpm --filter @solana-ontology/core build
+# The CLI (validate / generate / explore the ontology)
+npm install -g @solana-ontology/cli
+
+# Or add the libraries to your app
+npm install @solana-ontology/sdk @solana-ontology/core @solana/web3.js
 ```
 
-### Parse an Anchor IDL
+`@solana/kit` is an **optional** peer dependency of the SDK — install it only if
+you want the Kit-based client path; `@solana/web3.js` alone is sufficient otherwise.
+
+### CLI usage
+
+Once installed globally, the `solana-ontology` binary exposes eight subcommands:
 
 ```bash
-# Codemod only (v0 → v1)
-pnpm --filter @solana-ontology/cli start -- idl ./idl.json --codemod-only
+# Parse an Anchor IDL → ontology concepts
+solana-ontology idl ./idl.json --codemod-only            # v0 → v1 only
+solana-ontology idl ./idl.json --out ./ontology/concepts  # full concept generation
 
-# Full concept generation
-pnpm --filter @solana-ontology/cli start -- idl ./idl.json --out ./ontology/concepts
+solana-ontology validate                  # validate all concept YAML against the schema
+solana-ontology list --category token     # browse concepts (optionally filter by category)
+solana-ontology graph                      # emit the concept graph as a Mermaid diagram
+solana-ontology generate ts --out ./gen    # codegen typed TypeScript (or `rust`)
+solana-ontology generate-client --react --out ./client  # full typed client library
+solana-ontology oms --port 3000            # start the REST metadata service
+solana-ontology mcp --transport stdio      # start the MCP server for LLM agents
 ```
 
-### Validate the ontology
+> Working from a checkout of this repo instead of the published packages? See
+> [Contributing / monorepo dev](#contributing--monorepo-dev) for the `pnpm --filter` equivalents.
 
-```bash
-pnpm --filter @solana-ontology/cli start -- validate
-```
+### Fetch and decode with the runtime SDK
 
-### List all concepts
+```typescript
+import { OntologyClient, fetchAccount, derivePdaFromConcept } from "@solana-ontology/sdk";
+import { loadConcepts } from "@solana-ontology/core";
 
-```bash
-pnpm --filter @solana-ontology/cli start -- list
-```
+const client = new OntologyClient({
+  rpcUrl: "https://api.mainnet-beta.solana.com",
+  commitment: "confirmed",
+});
 
-### Generate TypeScript SDK code
+// Register the concepts you care about (from ontology YAML, OMS, or generated code)
+client.registerConcepts(loadConcepts("./ontology/concepts", "./ontology"));
 
-```bash
-pnpm --filter @solana-ontology/cli start -- generate ts
-```
+// Derive a PDA straight from a concept's declared seeds
+const { address, bump } = derivePdaFromConcept(client.getConcept("TokenMint")!, {
+  /* seed values */
+});
 
-### Generate Rust stubs
-
-```bash
-pnpm --filter @solana-ontology/cli start -- generate rust
-```
-
-### Output relationship graph (Mermaid)
-
-```bash
-pnpm --filter @solana-ontology/cli start -- graph
+// getWeb3Connection() is now typed as web3.js `Connection` — no casting needed
+await client.initWeb3();
+const connection = client.getWeb3Connection();
 ```
 
 ### Start the OMS Server
@@ -250,7 +263,7 @@ expect(result.success).toBe(false); // should reject
 
 ### Auto-Generated PoC Test Scaffolds
 
-Generate exploit test files for all 7 security vulnerability patterns:
+Generate exploit test files for the security vulnerability patterns:
 
 ```typescript
 import { generateAllPoCTestScaffolds } from "@solana-ontology/generator-ts";
@@ -419,6 +432,39 @@ This ontology SDK is **fully independent** and does not depend on:
 - Any external database (in-memory storage by default)
 
 The OMS is a standalone REST API built with Node.js's built-in HTTP module. External adapters (webhook, Kafka) are optional plugins.
+
+## Contributing / monorepo dev
+
+Working from a checkout rather than the published packages? This is a pnpm 11 + Turborepo
+monorepo (Node ≥ 22.13 required — pnpm 11 uses `node:sqlite` internally).
+
+```bash
+pnpm install
+pnpm build                 # build all packages (turbo, respects the dependency graph)
+pnpm lint                  # tsc --noEmit per package
+pnpm test                  # unit tests
+pnpm test:integration      # cross-package integration suite
+pnpm validate              # validate the 78 ontology YAMLs against the schema
+pnpm format:check          # prettier
+```
+
+Run the in-repo CLI without a global install via the workspace filter, e.g.:
+
+```bash
+pnpm --filter @solana-ontology/cli start -- validate
+pnpm --filter @solana-ontology/cli start -- idl ./idl.json --out ./ontology/concepts
+```
+
+### Cutting a release
+
+Releases are published by **pushing a `vX.Y.Z` tag** — the `release.yml` workflow builds,
+tests, and runs `pnpm publish -r` with npm provenance using the `NPM_TOKEN` automation token
+stored in GitHub Secrets. No tokens are ever pasted or stored locally.
+
+```bash
+# after bumping versions and merging to main
+git tag v0.2.0 && git push origin v0.2.0
+```
 
 ## License
 

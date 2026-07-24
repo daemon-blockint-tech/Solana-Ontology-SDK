@@ -1,4 +1,4 @@
-export { OntologyClient, type OntologyClientConfig } from "./kit/client.js";
+export { OntologyClient, type OntologyClientConfig, type KitClient } from "./kit/client.js";
 export {
   fetchAccount,
   fetchMultipleAccounts,
