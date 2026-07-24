@@ -63,7 +63,7 @@ import { derivePdaFromConcept } from "@solana-ontology/sdk";
 const pda = await derivePdaFromConcept(
   tokenMintConcept,
   "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-  { mint: "SomeMintAddress", authority: walletPublicKey }
+  { mint: "SomeMintAddress", authority: walletPublicKey },
 );
 console.log("PDA:", pda.address, "bump:", pda.bump);
 ```

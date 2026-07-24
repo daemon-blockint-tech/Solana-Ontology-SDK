@@ -248,76 +248,76 @@ export class OntologyMcpServer {
   async startHttp(): Promise<void> {
     const port = this.config.port ?? 3001;
 
-    this.httpServer = createServer(
-      async (req: IncomingMessage, res: ServerResponse) => {
-        // CORS headers
-        res.setHeader("Access-Control-Allow-Origin", "*");
-        res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    this.httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+      // CORS headers
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-        if (req.method === "OPTIONS") {
-          res.writeHead(204);
-          res.end();
-          return;
-        }
+      if (req.method === "OPTIONS") {
+        res.writeHead(204);
+        res.end();
+        return;
+      }
 
-        if (req.method === "GET") {
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({
+      if (req.method === "GET") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify({
             name: "solana-ontology-mcp",
             version: "0.1.0",
             transport: "http",
             resources: this.listResources().length,
             tools: this.listTools().length,
-          }));
+          }),
+        );
+        return;
+      }
+
+      if (req.method !== "POST") {
+        res.writeHead(405, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Method not allowed" }));
+        return;
+      }
+
+      // Auth check
+      if (this.config.auth?.required) {
+        const authHeader = req.headers["authorization"];
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+          res.writeHead(401, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Unauthorized: Bearer token required" }));
           return;
         }
-
-        if (req.method !== "POST") {
-          res.writeHead(405, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "Method not allowed" }));
+        const token = authHeader.slice(7);
+        const authResult = this.authProvider.validateToken(token);
+        if (!authResult.authorized) {
+          res.writeHead(403, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Forbidden: invalid token" }));
           return;
         }
+      }
 
-        // Auth check
-        if (this.config.auth?.required) {
-          const authHeader = req.headers["authorization"];
-          if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            res.writeHead(401, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ error: "Unauthorized: Bearer token required" }));
-            return;
-          }
-          const token = authHeader.slice(7);
-          const authResult = this.authProvider.validateToken(token);
-          if (!authResult.authorized) {
-            res.writeHead(403, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ error: "Forbidden: invalid token" }));
-            return;
-          }
-        }
+      // Read body
+      let body = "";
+      for await (const chunk of req) {
+        body += chunk.toString();
+      }
 
-        // Read body
-        let body = "";
-        for await (const chunk of req) {
-          body += chunk.toString();
-        }
-
-        try {
-          const request = JSON.parse(body) as McpRequest;
-          const response = this.handleRequest(request);
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify(response));
-        } catch {
-          const errorResponse: McpResponse = {
-            jsonrpc: "2.0",
-            id: null,
-            error: { code: -32700, message: "Parse error: invalid JSON" },
-          };
-          res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(JSON.stringify(errorResponse));
-        }
-      },
-    );
+      try {
+        const request = JSON.parse(body) as McpRequest;
+        const response = this.handleRequest(request);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify(response));
+      } catch {
+        const errorResponse: McpResponse = {
+          jsonrpc: "2.0",
+          id: null,
+          error: { code: -32700, message: "Parse error: invalid JSON" },
+        };
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify(errorResponse));
+      }
+    });
 
     return new Promise<void>((resolve) => {
       this.httpServer!.listen(port, () => {

@@ -5,6 +5,7 @@ All notable changes to the Solana Ontology SDK will be documented in this file.
 ## [0.1.0] - Unreleased
 
 ### Added
+
 - Initial release of the Solana Ontology SDK
 - 34 seed concept YAML definitions across 6 categories: primitives, tokens, defi, governance, infrastructure, delivery
 - Core ontology library: types, loader, validator, graph builder (`@solana-ontology/core`)

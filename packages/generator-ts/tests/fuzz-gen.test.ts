@@ -55,9 +55,7 @@ describe("fuzz-gen: Trident fuzz test generation", () => {
   });
 
   it("should generate #[flow] functions for each transition", () => {
-    const concept = concepts.find(
-      (c) => c.stateMachine && c.stateMachine.transitions.length > 0,
-    );
+    const concept = concepts.find((c) => c.stateMachine && c.stateMachine.transitions.length > 0);
     if (!concept) return;
 
     const fuzzTest = generateTridentFuzzTest(concept);
@@ -79,9 +77,7 @@ describe("fuzz-gen: Trident fuzz test generation", () => {
   });
 
   it("should generate transaction builder structs", () => {
-    const concept = concepts.find(
-      (c) => c.stateMachine && c.stateMachine.transitions.length > 0,
-    );
+    const concept = concepts.find((c) => c.stateMachine && c.stateMachine.transitions.length > 0);
     if (!concept) return;
 
     const fuzzTest = generateTridentFuzzTest(concept);
@@ -91,10 +87,7 @@ describe("fuzz-gen: Trident fuzz test generation", () => {
   });
 
   it("should include auth randomization comments for secured transitions", () => {
-    const concept = concepts.find(
-      (c) =>
-        c.stateMachine?.transitions.some((t) => t.requiresAuth),
-    );
+    const concept = concepts.find((c) => c.stateMachine?.transitions.some((t) => t.requiresAuth));
     if (!concept) return;
 
     const fuzzTest = generateTridentFuzzTest(concept);
@@ -103,9 +96,7 @@ describe("fuzz-gen: Trident fuzz test generation", () => {
   });
 
   it("should generate Trident.toml config with flow weights", () => {
-    const concept = concepts.find(
-      (c) => c.stateMachine && c.stateMachine.transitions.length > 0,
-    );
+    const concept = concepts.find((c) => c.stateMachine && c.stateMachine.transitions.length > 0);
     if (!concept) return;
 
     const config = generateTridentConfig(concept);

@@ -152,9 +152,16 @@ export function generateStateTransitions(
  * Generate ontology concepts from a parsed IDL v1.
  * Each account struct becomes a concept with properties, relationships, and state machine.
  */
+/** Base58 program-id pattern mirrored from ontology/schema.json. */
+const BASE58_PROGRAM_ID = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+
 export function generateConceptsFromIdl(idl: IdlV1): Concept[] {
   const concepts: Concept[] = [];
   const accountNames = new Set(idl.accounts.map((a) => a.name));
+  // An IDL may lack a program address (e.g. migrated from IDL v0 without
+  // metadata.address). Only emit programId fields when it is a valid base58
+  // address so generated concepts pass schema validation.
+  const programId = BASE58_PROGRAM_ID.test(idl.address) ? idl.address : undefined;
 
   for (const account of idl.accounts) {
     const pascalName = toPascalCase(account.name);
@@ -183,14 +190,18 @@ export function generateConceptsFromIdl(idl: IdlV1): Concept[] {
 
     // Find instructions that target this account for idlInstruction ref
     const targetInstruction = idl.instructions.find((ix) =>
-      ix.accounts.some((acc) => acc.name === account.name || acc.name === convertCamelToSnakeMatch(account.name)),
+      ix.accounts.some(
+        (acc) => acc.name === account.name || acc.name === convertCamelToSnakeMatch(account.name),
+      ),
     );
     const idlInstruction: IdlInstructionRef | undefined = targetInstruction
       ? {
-          programId: idl.address,
+          ...(programId ? { programId } : {}),
           instructionName: targetInstruction.name,
           discriminator: targetInstruction.discriminator
-            ? targetInstruction.discriminator.map((b: number) => b.toString(16).padStart(2, "0")).join("")
+            ? targetInstruction.discriminator
+                .map((b: number) => b.toString(16).padStart(2, "0"))
+                .join("")
             : undefined,
         }
       : undefined;
@@ -205,7 +216,7 @@ export function generateConceptsFromIdl(idl: IdlV1): Concept[] {
       relationships: relationships.length > 0 ? relationships : undefined,
       stateMachine,
       accountLayout,
-      programId: idl.address,
+      ...(programId ? { programId } : {}),
       idlInstruction,
       constraints: [
         {

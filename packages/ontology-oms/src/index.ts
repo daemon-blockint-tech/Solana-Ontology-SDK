@@ -22,4 +22,5 @@ export { LinkTypeRegistry, relationshipToLinkType, autoDetectLinks } from "./lin
 export { ActionTypeRegistry, transitionToActionType } from "./action-type-registry.js";
 export { NullAdapter, WebhookAdapter } from "./adapter-plugin.js";
 export { MemoryStorage } from "./storage/memory.js";
+export { SqliteStorage } from "./storage/sqlite.js";
 export type { OmsStorage } from "./storage/interface.js";

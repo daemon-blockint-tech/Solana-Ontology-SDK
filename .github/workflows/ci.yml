@@ -17,8 +17,9 @@ jobs:
     timeout-minutes: 15
 
     strategy:
+      fail-fast: false
       matrix:
-        node-version: [20, 22, 24]
+        node-version: [22, 24]
 
     steps:
       - uses: actions/checkout@v4
@@ -32,11 +33,15 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm lint
-
       - run: pnpm build
 
+      - run: pnpm lint
+
       - run: pnpm test
+
+      - run: pnpm test:integration
+
+      - run: pnpm validate
 
   format-check:
     name: Format Check
