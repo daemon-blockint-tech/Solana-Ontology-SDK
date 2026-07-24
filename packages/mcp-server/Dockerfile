@@ -1,19 +1,28 @@
-FROM node:20-slim AS builder
+# MCP service image.
+#
+# The MCP server is started via the CLI (`solana-ontology mcp`), which loads +
+# validates the ontology and serves JSON-RPC over stdio or HTTP. We bundle the
+# CLI with its production dependencies (core, sdk, mcp-server, and injected
+# workspace packages) using `pnpm deploy`, then run it on a slim Node 22 runtime.
+#
+# Build context is the repo root:  docker build -f packages/mcp-server/Dockerfile .
+FROM node:22-slim AS builder
 WORKDIR /app
-RUN npm install -g pnpm
-COPY pnpm-workspace.yaml package.json ./
-COPY packages/ontology-core packages/ontology-core
-COPY packages/mcp-server packages/mcp-server
-RUN pnpm install --frozen-lockfile
-RUN pnpm --filter @solana-ontology/core build
-RUN pnpm --filter @solana-ontology/mcp-server build
-
-FROM node:20-alpine
-WORKDIR /app
-COPY --from=builder /app/packages/ontology-core/dist ./packages/ontology-core/dist
-COPY --from=builder /app/packages/mcp-server/dist ./packages/mcp-server/dist
-COPY --from=builder /app/packages/ontology-core/package.json ./packages/ontology-core/package.json
-COPY --from=builder /app/packages/mcp-server/package.json ./packages/mcp-server/package.json
+RUN corepack enable && corepack prepare pnpm@11.16.0 --activate
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY packages ./packages
 COPY ontology ./ontology
+RUN pnpm install --frozen-lockfile
+RUN pnpm build
+RUN pnpm --filter @solana-ontology/cli --prod deploy /prod/cli
+
+FROM node:22-slim
+WORKDIR /app
+COPY --from=builder /prod/cli ./
+COPY --from=builder /app/ontology ./ontology
+ENV ONTOLOGY_PATH=/app/ontology
+ENV MCP_TRANSPORT=http
+ENV MCP_PORT=3001
 EXPOSE 3001
-CMD ["node", "packages/mcp-server/dist/index.js"]
+# transport/port/auth are read from MCP_* env (set by the Helm chart).
+CMD ["node", "dist/index.js", "mcp"]

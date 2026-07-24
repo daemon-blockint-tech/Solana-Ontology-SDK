@@ -83,14 +83,20 @@ program
   .description("Start the Ontology Metadata Service REST API server")
   .option("--port <port>", "Port to listen on", "3000")
   .option("--auth-token <token>", "Authentication token for write access")
+  .option("--storage <type>", "Storage backend: memory or sqlite")
+  .option("--db-path <path>", "SQLite database path (when --storage sqlite)")
   .option("--path <path>", "Custom ontology root path")
   .action(async (opts) => {
+    const path = opts.path ?? process.env.ONTOLOGY_PATH;
     const config = resolveConfig(
-      opts.path ? { ontologyRoot: opts.path, conceptsDir: `${opts.path}/concepts` } : {},
+      path ? { ontologyRoot: path, conceptsDir: `${path}/concepts` } : {},
     );
+    // Env fallbacks let the Helm chart configure the container without CLI args.
     await omsCommand(config, {
-      port: parseInt(opts.port, 10),
-      authToken: opts.authToken,
+      port: parseInt(opts.port ?? process.env.OMS_PORT ?? "3000", 10),
+      authToken: opts.authToken ?? process.env.OMS_AUTH_TOKEN,
+      storage: opts.storage ?? process.env.OMS_STORAGE,
+      dbPath: opts.dbPath ?? process.env.OMS_DB_PATH,
     });
   });
 
@@ -102,13 +108,15 @@ program
   .option("--auth-required", "Require OAuth token for access")
   .option("--path <path>", "Custom ontology root path")
   .action(async (opts) => {
+    const path = opts.path ?? process.env.ONTOLOGY_PATH;
     const config = resolveConfig(
-      opts.path ? { ontologyRoot: opts.path, conceptsDir: `${opts.path}/concepts` } : {},
+      path ? { ontologyRoot: path, conceptsDir: `${path}/concepts` } : {},
     );
+    // Env fallbacks let the Helm chart configure the container without CLI args.
     await mcpCommand(config, {
-      transport: opts.transport as "stdio" | "http",
-      port: parseInt(opts.port, 10),
-      authRequired: !!opts.authRequired,
+      transport: (opts.transport ?? process.env.MCP_TRANSPORT ?? "stdio") as "stdio" | "http",
+      port: parseInt(opts.port ?? process.env.MCP_PORT ?? "3001", 10),
+      authRequired: opts.authRequired || process.env.MCP_AUTH_REQUIRED === "true",
     });
   });
 

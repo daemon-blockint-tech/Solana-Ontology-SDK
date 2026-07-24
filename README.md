@@ -399,15 +399,21 @@ pnpm test
 
 ## Deployment
 
+Self-host the **OMS** (REST) and **MCP** (JSON-RPC) services on Kubernetes. Both
+run the CLI as their entrypoint from images built by `.github/workflows/docker.yml`
+and pushed to GHCR. The OMS uses SQLite on a PVC and runs as a single replica
+(there is no shared backend); ingestion is a library of injectable stubs with no
+standalone image. See [`packages/deploy/README.md`](packages/deploy/README.md) for
+the full footprint, storage/replica constraints, secrets handling, and ingestion.
+
 ```bash
-# Devnet
+# Devnet / Testnet / Mainnet
 helm install solana-ontology ./packages/deploy -f ./packages/deploy/values-devnet.yaml
-
-# Testnet
-helm install solana-ontology ./packages/deploy -f ./packages/deploy/values-testnet.yaml
-
-# Mainnet
 helm install solana-ontology ./packages/deploy -f ./packages/deploy/values-mainnet.yaml
+
+# Render/validate without a cluster
+helm lint ./packages/deploy
+helm template solana-ontology ./packages/deploy -f ./packages/deploy/values-mainnet.yaml
 ```
 
 ## Tech Stack

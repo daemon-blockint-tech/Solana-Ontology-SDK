@@ -40,6 +40,35 @@ spec:
                   key: omsAuthToken
           resources:
             {{- toYaml .Values.oms.resources | nindent 12 }}
+          {{- if and .Values.oms.persistence.enabled (eq .Values.oms.storage "sqlite") }}
+          volumeMounts:
+            - name: oms-data
+              mountPath: /data
+          {{- end }}
+      {{- if and .Values.oms.persistence.enabled (eq .Values.oms.storage "sqlite") }}
+      volumes:
+        - name: oms-data
+          persistentVolumeClaim:
+            claimName: {{ include "solana-ontology.fullname" . }}-oms-data
+      {{- end }}
+{{- if and .Values.oms.persistence.enabled (eq .Values.oms.storage "sqlite") }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "solana-ontology.fullname" . }}-oms-data
+  labels:
+    app: solana-ontology-oms
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- with .Values.oms.persistence.storageClassName }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.oms.persistence.size | quote }}
+{{- end }}
 ---
 apiVersion: v1
 kind: Service

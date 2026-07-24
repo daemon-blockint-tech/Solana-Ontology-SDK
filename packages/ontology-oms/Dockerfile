@@ -1,19 +1,29 @@
-FROM node:20-slim AS builder
+# OMS service image.
+#
+# The long-running OMS server is started via the CLI (`solana-ontology oms`),
+# which loads + validates the ontology and calls server.start(). We bundle the
+# CLI together with its production dependencies (core, oms, and the injected
+# workspace packages) using `pnpm deploy`, then run it on a slim Node 22 runtime.
+# Node 22 is required — pnpm 11 and the SQLite backend both use node:sqlite.
+#
+# Build context is the repo root:  docker build -f packages/ontology-oms/Dockerfile .
+FROM node:22-slim AS builder
 WORKDIR /app
-RUN npm install -g pnpm
-COPY pnpm-workspace.yaml package.json ./
-COPY packages/ontology-core packages/ontology-core
-COPY packages/ontology-oms packages/ontology-oms
-RUN pnpm install --frozen-lockfile
-RUN pnpm --filter @solana-ontology/core build
-RUN pnpm --filter @solana-ontology/oms build
-
-FROM node:20-alpine
-WORKDIR /app
-COPY --from=builder /app/packages/ontology-core/dist ./packages/ontology-core/dist
-COPY --from=builder /app/packages/ontology-oms/dist ./packages/ontology-oms/dist
-COPY --from=builder /app/packages/ontology-core/package.json ./packages/ontology-core/package.json
-COPY --from=builder /app/packages/ontology-oms/package.json ./packages/ontology-oms/package.json
+RUN corepack enable && corepack prepare pnpm@11.16.0 --activate
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY packages ./packages
 COPY ontology ./ontology
+RUN pnpm install --frozen-lockfile
+RUN pnpm build
+RUN pnpm --filter @solana-ontology/cli --prod deploy /prod/cli
+
+FROM node:22-slim
+WORKDIR /app
+COPY --from=builder /prod/cli ./
+COPY --from=builder /app/ontology ./ontology
+ENV ONTOLOGY_PATH=/app/ontology
+ENV OMS_PORT=3000
+ENV OMS_STORAGE=memory
 EXPOSE 3000
-CMD ["node", "packages/ontology-oms/dist/index.js"]
+# storage/port/auth/db-path are read from OMS_* env (set by the Helm chart).
+CMD ["node", "dist/index.js", "oms"]
