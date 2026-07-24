@@ -10,4 +10,11 @@ allowBuilds:
   esbuild: true
   utf-8-validate: true
 
+# Force the vulnerable transitive uuid@8 (pulled in by jayson via
+# @solana/web3.js) up to the patched line — GHSA-w5hq-g745-h8pq. jayson only
+# uses uuid.v4(), which is unchanged across 8→11, so this is API-safe. The
+# other uuid copy (14.0.1 via rpc-websockets) is already patched.
+overrides:
+  uuid@8: "^11.1.1"
+
 confirmModulesPurge: false
