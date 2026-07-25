@@ -10,7 +10,8 @@
 FROM node:22-slim AS builder
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.16.0 --activate
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml turbo.json tsconfig.base.json ./
+COPY patches ./patches
 COPY packages ./packages
 COPY ontology ./ontology
 RUN pnpm install --frozen-lockfile
