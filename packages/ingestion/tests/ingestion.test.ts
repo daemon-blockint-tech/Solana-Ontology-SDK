@@ -342,3 +342,67 @@ describe("ingestion", () => {
     });
   });
 });
+
+describe("StateManager instrumentation", () => {
+  const acct = (over: Partial<AccountUpdateEvent> = {}): AccountUpdateEvent => ({
+    pubkey: "Acc11111111111111111111111111111111111111",
+    lamports: 1000,
+    owner: "Own11111111111111111111111111111111111111",
+    data: new Uint8Array([1, 2, 3]),
+    executable: false,
+    rentEpoch: 0,
+    slot: 100,
+    commitment: "processed",
+    previousData: null,
+    ...over,
+  });
+
+  it("bumps a monotonic version and counts real updates", () => {
+    const sm = new StateManager();
+    expect(sm.getVersion()).toBe(0);
+    sm.processAccountUpdate(acct());
+    sm.processAccountUpdate(acct({ pubkey: "Acc22222222222222222222222222222222222222" }));
+    const s = sm.stats();
+    expect(s.version).toBe(2);
+    expect(s.accountUpdates).toBe(2);
+    expect(s.accounts).toBe(2);
+  });
+
+  it("treats a replayed identical event as an idempotent no-op", () => {
+    const sm = new StateManager();
+    sm.processAccountUpdate(acct());
+    const v1 = sm.getVersion();
+    sm.processAccountUpdate(acct()); // identical → no-op
+    const s = sm.stats();
+    expect(s.idempotentUpdates).toBe(1);
+    expect(s.accountUpdates).toBe(1); // second was not a real update
+    expect(sm.getVersion()).toBe(v1); // no version bump on a no-op
+  });
+
+  it("counts reorgs, bumps version, and tracks pending tx as a gauge", () => {
+    const sm = new StateManager();
+    sm.processAccountUpdate(acct({ slot: 100 }));
+    sm.processAccountUpdate(
+      acct({ pubkey: "Acc33333333333333333333333333333333333333", slot: 101 }),
+    );
+    sm.processTransaction({
+      signature: "Sig1",
+      slot: 101,
+      commitment: "processed",
+    } as TransactionEvent);
+    expect(sm.stats().pendingTx).toBe(1);
+
+    const vBefore = sm.getVersion();
+    const result = sm.handleReorg(101); // drop slot >= 101
+    const s = sm.stats();
+    expect(s.reorgs).toBe(1);
+    expect(result.affectedAccounts.length).toBeGreaterThan(0);
+    expect(sm.getVersion()).toBeGreaterThan(vBefore);
+    expect(s.pendingTx).toBe(0); // reorged tx dropped
+
+    // Metrics render as Prometheus text wired to real counters.
+    const prom = sm.renderProm();
+    expect(prom).toContain("# TYPE state_reorgs_total counter");
+    expect(prom).toContain("# TYPE state_version gauge");
+  });
+});

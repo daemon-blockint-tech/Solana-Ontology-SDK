@@ -30,3 +30,4 @@ export {
   findProgramIdByAddress,
   type ProgramIdName,
 } from "./program-ids.js";
+export { MetricsRegistry, type Labels, type MetricsSnapshot } from "./metrics.js";

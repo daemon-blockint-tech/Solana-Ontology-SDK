@@ -7,6 +7,7 @@ export type {
   SubmissionCriteria,
   ActionTypeDefinition,
   OmsApiConfig,
+  OmsStats,
   ExternalAdapter,
   ApiResponse,
   OntologyDump,

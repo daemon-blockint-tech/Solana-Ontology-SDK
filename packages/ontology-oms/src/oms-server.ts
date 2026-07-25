@@ -7,9 +7,10 @@
  */
 
 import { createServer, type Server, type IncomingMessage, type ServerResponse } from "node:http";
+import { performance } from "node:perf_hooks";
 import type { Concept } from "@solana-ontology/core";
-import { buildGraph } from "@solana-ontology/core";
-import type { OmsApiConfig, ApiResponse, OntologyDump } from "./types.js";
+import { buildGraph, MetricsRegistry } from "@solana-ontology/core";
+import type { OmsApiConfig, ApiResponse, OntologyDump, OmsStats } from "./types.js";
 import { MemoryStorage } from "./storage/memory.js";
 import { SqliteStorage } from "./storage/sqlite.js";
 import type { OmsStorage } from "./storage/interface.js";
@@ -29,6 +30,11 @@ export class OntologyOmsServer {
   private config: OmsApiConfig;
   /** Per-endpoint response cache keyed by storage version (see serveCached). */
   private cache = new Map<string, { body: string; etag: string; gen: number }>();
+  /** Instrumentation — owned by this server instance (no global state). */
+  private metrics = new MetricsRegistry();
+  /** Live count of in-flight requests (contention signal). */
+  private inflight = 0;
+  private readonly startedAt = Date.now();
 
   /** Creates an OMS server with in-memory storage. Use OntologyOmsServer.create() for SQLite. */
   constructor(config?: Partial<OmsApiConfig>) {
@@ -43,6 +49,10 @@ export class OntologyOmsServer {
     this.linkRegistry = new LinkTypeRegistry(this.storage);
     this.actionRegistry = new ActionTypeRegistry(this.storage);
     this.adapter = new NullAdapter();
+    // Live gauges (read at snapshot time from the real owning fields).
+    this.metrics.registerGauge("oms_inflight_requests", () => this.inflight);
+    this.metrics.registerGauge("oms_storage_version", () => this.storage.version?.() ?? -1);
+    this.metrics.registerGauge("oms_cache_entries", () => this.cache.size);
   }
 
   static async create(config?: Partial<OmsApiConfig>): Promise<OntologyOmsServer> {
@@ -80,6 +90,11 @@ export class OntologyOmsServer {
     let linkTypes: Awaited<ReturnType<LinkTypeRegistry["registerMany"]>> = [];
     let actionTypes: Awaited<ReturnType<ActionTypeRegistry["registerMany"]>> = [];
 
+    const t0 = performance.now();
+    // Counts before register let us classify each write as a real insert vs an
+    // idempotent replace (registerMany is INSERT OR REPLACE, never deletes).
+    const before = await this.typeCounts();
+
     // Register all three type sets in one storage transaction when supported, so
     // a bulk load is a single commit instead of ~3×N fsync'd INSERTs.
     const run = async () => {
@@ -89,14 +104,46 @@ export class OntologyOmsServer {
     };
     if (this.storage.runInTransaction) {
       await this.storage.runInTransaction(run);
+      this.metrics.inc("oms_transactions_total");
     } else {
       await run();
     }
+
+    const after = await this.typeCounts();
+    this.recordRegister("object", objectTypes.length, after.objectTypes - before.objectTypes);
+    this.recordRegister("link", linkTypes.length, after.linkTypes - before.linkTypes);
+    this.recordRegister("action", actionTypes.length, after.actionTypes - before.actionTypes);
+    this.metrics.inc("oms_registrations_total");
+    this.metrics.observe("oms_register_duration_ms", performance.now() - t0);
 
     // Sync to external adapter (external I/O — kept outside the transaction)
     await this.adapter.syncObjectTypes(objectTypes);
     await this.adapter.syncLinkTypes(linkTypes);
     await this.adapter.syncActionTypes(actionTypes);
+  }
+
+  /** Emit inserted vs (idempotently) replaced counts for a type kind. */
+  private recordRegister(kind: string, registered: number, inserted: number): void {
+    const newlyInserted = Math.max(0, Math.min(registered, inserted));
+    this.metrics.inc("oms_register_types_total", { kind, result: "inserted" }, newlyInserted);
+    this.metrics.inc(
+      "oms_register_types_total",
+      { kind, result: "replaced" },
+      registered - newlyInserted,
+    );
+  }
+
+  private async typeCounts(): Promise<{
+    objectTypes: number;
+    linkTypes: number;
+    actionTypes: number;
+  }> {
+    const [o, l, a] = await Promise.all([
+      this.storage.listObjectTypes(),
+      this.storage.listLinkTypes(),
+      this.storage.listActionTypes(),
+    ]);
+    return { objectTypes: o.length, linkTypes: l.length, actionTypes: a.length };
   }
 
   /**
@@ -183,8 +230,14 @@ export class OntologyOmsServer {
       return;
     }
 
+    const url = req.url ?? "";
+    const method = req.method ?? "GET";
+    // Observability endpoints are read-only (no secrets) and must be reachable by
+    // scrapers/health probes, so they bypass the write-auth token.
+    const isObservability = method === "GET" && (url === "/metrics" || url === "/api/v1/stats");
+
     // Auth check
-    if (this.config.authToken) {
+    if (this.config.authToken && !isObservability) {
       const auth = req.headers.authorization;
       if (auth !== `Bearer ${this.config.authToken}`) {
         this.json(res, 401, { success: false, error: "Unauthorized" });
@@ -192,12 +245,26 @@ export class OntologyOmsServer {
       }
     }
 
-    const url = req.url ?? "";
-    const method = req.method ?? "GET";
-
+    const start = performance.now();
+    this.inflight++;
     try {
-      // Read endpoints are served through the version-keyed response cache.
       if (method === "GET") {
+        // Prometheus scrape endpoint (live — not cached).
+        if (url === "/metrics") {
+          if (this.config.metrics === false) {
+            this.json(res, 404, { success: false, error: "Metrics disabled" });
+            return;
+          }
+          res.writeHead(200, { "Content-Type": "text/plain; version=0.0.4" });
+          res.end(this.metrics.renderProm());
+          return;
+        }
+        // State/versioning/idempotency/contention snapshot (live — not cached).
+        if (url === "/api/v1/stats") {
+          this.json(res, 200, { success: true, data: await this.buildStats() });
+          return;
+        }
+        // Read endpoints are served through the version-keyed response cache.
         if (url === "/api/v1/ontology") {
           return await this.serveCached(req, res, "ontology", () => this.dump());
         }
@@ -224,7 +291,61 @@ export class OntologyOmsServer {
         success: false,
         error: err instanceof Error ? err.message : "Internal server error",
       });
+    } finally {
+      this.inflight--;
+      const endpoint = this.endpointLabel(url);
+      this.metrics.inc("oms_requests_total", {
+        endpoint,
+        method,
+        status: String(res.statusCode),
+      });
+      this.metrics.observe("oms_request_duration_ms", performance.now() - start, { endpoint });
     }
+  }
+
+  /** Low-cardinality endpoint label for request metrics. */
+  private endpointLabel(url: string): string {
+    const known = [
+      "/api/v1/ontology",
+      "/api/v1/object-types",
+      "/api/v1/link-types",
+      "/api/v1/action-types",
+      "/api/v1/stats",
+      "/metrics",
+    ];
+    return known.includes(url) ? url : "other";
+  }
+
+  /** Live state/versioning/idempotency/contention snapshot. */
+  private async buildStats(): Promise<OmsStats> {
+    const counts = await this.typeCounts();
+    return {
+      version: this.storage.version?.() ?? -1,
+      storage: this.config.storage,
+      uptimeMs: Date.now() - this.startedAt,
+      counts,
+      cache: {
+        hits: this.metrics.getCounterTotal("oms_cache_hits_total"),
+        misses: this.metrics.getCounterTotal("oms_cache_misses_total"),
+        entries: this.cache.size,
+      },
+      requests: {
+        total: this.metrics.getCounterTotal("oms_requests_total"),
+        inflight: this.inflight,
+      },
+      register: {
+        runs: this.metrics.getCounterTotal("oms_registrations_total"),
+        inserted: this.metrics.getCounter("oms_register_types_total", {
+          kind: "object",
+          result: "inserted",
+        }),
+        replaced: this.metrics.getCounter("oms_register_types_total", {
+          kind: "object",
+          result: "replaced",
+        }),
+      },
+      transactions: this.metrics.getCounterTotal("oms_transactions_total"),
+    };
   }
 
   private json(res: ServerResponse, status: number, body: unknown): void {
@@ -248,6 +369,8 @@ export class OntologyOmsServer {
   ): Promise<void> {
     const gen = this.storage.version?.() ?? -1;
     let entry = this.cache.get(key);
+    const hit = entry !== undefined && entry.gen === gen && gen !== -1;
+    this.metrics.inc(hit ? "oms_cache_hits_total" : "oms_cache_misses_total", { key });
     if (!entry || entry.gen !== gen) {
       const data = await build();
       entry = { body: JSON.stringify({ success: true, data }), etag: `"${key}-${gen}"`, gen };
@@ -279,5 +402,13 @@ export class OntologyOmsServer {
   }
   getStorage(): OmsStorage {
     return this.storage;
+  }
+  /** The server's metrics registry (state/versioning/idempotency/contention). */
+  getMetrics(): MetricsRegistry {
+    return this.metrics;
+  }
+  /** Live state/versioning/idempotency/contention snapshot (same as GET /api/v1/stats). */
+  stats(): Promise<OmsStats> {
+    return this.buildStats();
   }
 }
