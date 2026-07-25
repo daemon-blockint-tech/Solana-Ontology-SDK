@@ -18,3 +18,12 @@ overrides:
   uuid@8: "^11.1.1"
 
 confirmModulesPurge: false
+
+# Patch the transitive bigint-buffer (via @solana/spl-token →
+# @solana/buffer-layout-utils) for GHSA-3gc7-fjrx-p6mg / CVE-2025-3194: a buffer
+# overflow in its native C toBigInt/fromBigInt. There is no upstream fix — 1.1.5
+# is the latest and the package is unmaintained. The patch stops the native addon
+# from loading so only the safe pure-JS fallback runs, making the vulnerable path
+# unreachable (allowBuilds already denies the native build; this hardens it in code).
+patchedDependencies:
+  bigint-buffer@1.1.5: patches/bigint-buffer@1.1.5.patch
