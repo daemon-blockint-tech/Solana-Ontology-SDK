@@ -1,16 +1,24 @@
 # Default values for solana-ontology Helm chart
 # This is a YAML-formatted file.
 
-# Global image settings
+# Global image settings.
+# The full image ref rendered by the templates is:
+#   {registry}/{repository}-<service>:{tag}   e.g. ghcr.io/<org>/solana-ontology-oms:0.1.0
+# so `repository` MUST include the GHCR owner segment to be a valid pullable ref.
 image:
   registry: ghcr.io
-  repository: solana-ontology
+  repository: daemon-blockint-tech/solana-ontology
   tag: "0.1.0"
   pullPolicy: IfNotPresent
 
-# Ingestion service
+# Ingestion service.
+# DISABLED by default: @solana-ontology/ingestion is a library of injectable
+# gRPC/Kafka stubs with no standalone server entrypoint — there is no image to
+# run. To host ingestion you must supply your own entrypoint + image that wires
+# a real Yellowstone gRPC transport (and optionally a Kafka client). See the
+# chart README.
 ingestion:
-  enabled: true
+  enabled: false
   replicas: 2
   grpcEndpoint: "http://yellowstone-grpc:10000"
   resources:
@@ -24,12 +32,24 @@ ingestion:
     COMMITMENT_LEVEL: "confirmed"
     RECONNECT_INTERVAL_MS: "5000"
 
-# OMS (Ontology Metadata Service)
+# OMS (Ontology Metadata Service).
+#
+# Storage backends: "memory" (per-process, lost on restart) or "sqlite"
+# (persistent, single writer). There is NO shared backend, so the OMS must run
+# as a SINGLE replica — multiple replicas would diverge. Horizontal scale-out
+# requires implementing a shared store (e.g. Postgres) behind the OmsStorage
+# interface; until then keep replicas: 1.
 oms:
   enabled: true
-  replicas: 2
+  replicas: 1
   port: 3000
-  storage: "memory"
+  storage: "sqlite"
+  dbPath: "/data/ontology-oms.db"
+  # Persist the SQLite DB across restarts via a PVC mounted at dirname(dbPath).
+  persistence:
+    enabled: true
+    size: 1Gi
+    # storageClassName: ""   # use the cluster default unless set
   resources:
     requests:
       cpu: 250m
@@ -44,6 +64,8 @@ mcp:
   replicas: 1
   transport: "http"
   port: 3001
+  # Networked (http) transport is unauthenticated by default; enable auth for
+  # any non-trivial/public deployment (mainnet values set this to true).
   authRequired: false
   resources:
     requests:
@@ -77,7 +99,11 @@ ingress:
   hosts: []
   tls: []
 
-# Secrets (templated — fill in via --set or external secrets manager)
+# Secrets.
+# These are placeholders. For real deployments do NOT commit values here —
+# source them from an external secret manager (External Secrets Operator,
+# sealed-secrets, cloud secret store) and inject at deploy time via --set or a
+# separate, git-ignored values file. See the chart README.
 secrets:
   rpcApiKey: ""
   kmsKeyId: ""

@@ -1,0 +1,45 @@
+name: Release
+
+# Publishes all public @solana-ontology/* packages to npm when a version tag is
+# pushed. Requires an npm automation token stored as the NPM_TOKEN repo secret —
+# no tokens are ever pasted or stored locally.
+#
+#   Cut a release:  bump versions on main, then  `git tag vX.Y.Z && git push origin vX.Y.Z`
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  id-token: write # required for npm provenance
+
+jobs:
+  publish:
+    name: Build, Test & Publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org"
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      - run: pnpm test
+
+      # pnpm rewrites workspace:* to the concrete version and skips packages
+      # (like @solana-ontology/deploy) marked private. --provenance attaches a
+      # signed build attestation via the id-token permission above.
+      - run: pnpm publish -r --access public --no-git-checks --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -16,10 +16,16 @@ ingestion:
       cpu: 4000m
       memory: 4Gi
 
+# OMS must stay single-replica: there is no shared storage backend, so scaling
+# out would diverge state. "postgres" is NOT implemented — use sqlite on a PVC.
+# Horizontal scale-out requires a shared store behind the OmsStorage interface.
 oms:
-  replicas: 3
-  storage: "postgres"
-  dbPath: "postgresql://oms:5432/ontology"
+  replicas: 1
+  storage: "sqlite"
+  dbPath: "/data/ontology-oms.db"
+  persistence:
+    enabled: true
+    size: 10Gi
 
 mcp:
   replicas: 2

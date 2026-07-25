@@ -14,6 +14,7 @@ import {
   generateConceptsFromIdl,
 } from "../src/index.js";
 import type { IdlV0, IdlV1 } from "../src/index.js";
+import { validateAll } from "@solana-ontology/core";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixturesDir = join(__dirname, "fixtures");
@@ -139,6 +140,34 @@ describe("idl-parser", () => {
       expect(concepts.length).toBe(2);
       expect(concepts.some((c) => c.canonicalName === "Mint")).toBe(true);
       expect(concepts.some((c) => c.canonicalName === "TokenAccount")).toBe(true);
+    });
+
+    it("omits programId when the IDL address is empty/invalid (v0 without metadata.address)", () => {
+      // A v0 IDL with no metadata.address migrates to v1 with address "".
+      const v0: IdlV0 = {
+        version: "0.1.0",
+        name: "no_addr_program",
+        instructions: [
+          { name: "Init", accounts: [{ name: "state", isMut: true, isSigner: false }], args: [] },
+        ],
+        accounts: [
+          {
+            name: "StateAccount",
+            type: { kind: "struct", fields: [{ name: "value", type: "u64" }] },
+          },
+        ],
+      };
+      const v1 = migrateIdlV0ToV1(v0);
+      expect(v1.address).toBe("");
+
+      const concepts = generateConceptsFromIdl(v1);
+      expect(concepts.length).toBeGreaterThan(0);
+      // No concept should carry an (invalid) empty programId...
+      for (const c of concepts) {
+        expect(c.programId).toBeUndefined();
+      }
+      // ...and every generated concept must still pass schema validation.
+      expect(validateAll(concepts).valid).toBe(true);
     });
   });
 });

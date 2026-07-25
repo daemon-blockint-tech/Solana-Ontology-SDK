@@ -1,4 +1,7 @@
 import type { Concept } from "@solana-ontology/core";
+// Type-only import — erased at compile time, so it adds no runtime/bundle cost
+// and does not require web3.js to be resolvable at call sites that never touch it.
+import type { Connection } from "@solana/web3.js";
 
 export interface OntologyClientConfig {
   /** RPC endpoint URL */
@@ -12,6 +15,16 @@ export interface OntologyClientConfig {
 }
 
 /**
+ * Handle to the lazily-initialized @solana/kit client. `kit` is left as
+ * `unknown` because Kit's surface is resolved dynamically and it is only an
+ * optional peer dependency — callers narrow it themselves.
+ */
+export interface KitClient {
+  kit: unknown;
+  rpcUrl: string;
+}
+
+/**
  * OntologyClient — central runtime client wrapping @solana/kit or web3.js
  * with ontology-typed methods for account fetching, PDA derivation,
  * action building, and queries.
@@ -22,8 +35,8 @@ export interface OntologyClientConfig {
 export class OntologyClient {
   readonly config: OntologyClientConfig;
   private _concepts: Map<string, Concept> = new Map();
-  private _kitClient: unknown = null;
-  private _web3Connection: unknown = null;
+  private _kitClient: KitClient | null = null;
+  private _web3Connection: Connection | null = null;
 
   constructor(config: OntologyClientConfig) {
     this.config = config;
@@ -57,7 +70,7 @@ export class OntologyClient {
    * Get the underlying Kit client if available.
    * Throws if @solana/kit is not installed.
    */
-  getKitClient(): unknown {
+  getKitClient(): KitClient {
     if (!this._kitClient) {
       throw new Error(
         "@solana/kit client not initialized. Install @solana/kit and call initKit().",
@@ -96,7 +109,7 @@ export class OntologyClient {
   /**
    * Get the underlying web3.js Connection if available.
    */
-  getWeb3Connection(): unknown {
+  getWeb3Connection(): Connection {
     if (!this._web3Connection) {
       throw new Error("web3.js Connection not initialized. Call initWeb3() first.");
     }
