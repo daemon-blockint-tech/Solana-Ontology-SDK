@@ -92,4 +92,44 @@ describe("SqliteStorage", () => {
     expect(await second.getObjectType("TokenMint")).toEqual(objectType);
     second.close();
   });
+
+  it("version() increments on writes only", async () => {
+    const storage = newStorage();
+    expect(storage.version()).toBe(0);
+    await storage.insertObjectType(objectType);
+    const v = storage.version();
+    expect(v).toBe(1);
+    await storage.listObjectTypes(); // read must not bump
+    expect(storage.version()).toBe(v);
+    await storage.deleteObjectType("TokenMint");
+    expect(storage.version()).toBe(2);
+    storage.close();
+  });
+
+  it("runInTransaction commits on success", async () => {
+    const storage = newStorage();
+    await storage.runInTransaction(async () => {
+      await storage.insertObjectType(objectType);
+      await storage.insertLinkType(linkType);
+    });
+    expect(await storage.listObjectTypes()).toHaveLength(1);
+    expect(await storage.listLinkTypes()).toHaveLength(1);
+    storage.close();
+  });
+
+  it("runInTransaction rolls back on throw (no partial writes)", async () => {
+    const storage = newStorage();
+    await storage.insertObjectType(objectType); // pre-existing row, must survive
+    await expect(
+      storage.runInTransaction(async () => {
+        await storage.insertLinkType(linkType);
+        throw new Error("boom");
+      }),
+    ).rejects.toThrow("boom");
+    // Link insert inside the aborted txn must be rolled back...
+    expect(await storage.listLinkTypes()).toHaveLength(0);
+    // ...and the pre-existing row must remain.
+    expect(await storage.listObjectTypes()).toHaveLength(1);
+    storage.close();
+  });
 });

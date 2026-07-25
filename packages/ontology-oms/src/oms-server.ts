@@ -27,6 +27,8 @@ export class OntologyOmsServer {
   private actionRegistry: ActionTypeRegistry;
   private adapter: ExternalAdapter;
   private config: OmsApiConfig;
+  /** Per-endpoint response cache keyed by storage version (see serveCached). */
+  private cache = new Map<string, { body: string; etag: string; gen: number }>();
 
   /** Creates an OMS server with in-memory storage. Use OntologyOmsServer.create() for SQLite. */
   constructor(config?: Partial<OmsApiConfig>) {
@@ -74,11 +76,24 @@ export class OntologyOmsServer {
    * This auto-generates Object Types, Link Types, and Action Types.
    */
   async registerConcepts(concepts: Concept[]): Promise<void> {
-    const objectTypes = await this.objectRegistry.registerMany(concepts);
-    const linkTypes = await this.linkRegistry.registerMany(concepts);
-    const actionTypes = await this.actionRegistry.registerMany(concepts);
+    let objectTypes: Awaited<ReturnType<ObjectTypeRegistry["registerMany"]>> = [];
+    let linkTypes: Awaited<ReturnType<LinkTypeRegistry["registerMany"]>> = [];
+    let actionTypes: Awaited<ReturnType<ActionTypeRegistry["registerMany"]>> = [];
 
-    // Sync to external adapter
+    // Register all three type sets in one storage transaction when supported, so
+    // a bulk load is a single commit instead of ~3×N fsync'd INSERTs.
+    const run = async () => {
+      objectTypes = await this.objectRegistry.registerMany(concepts);
+      linkTypes = await this.linkRegistry.registerMany(concepts);
+      actionTypes = await this.actionRegistry.registerMany(concepts);
+    };
+    if (this.storage.runInTransaction) {
+      await this.storage.runInTransaction(run);
+    } else {
+      await run();
+    }
+
+    // Sync to external adapter (external I/O — kept outside the transaction)
     await this.adapter.syncObjectTypes(objectTypes);
     await this.adapter.syncLinkTypes(linkTypes);
     await this.adapter.syncActionTypes(actionTypes);
@@ -181,32 +196,24 @@ export class OntologyOmsServer {
     const method = req.method ?? "GET";
 
     try {
-      // GET /api/v1/ontology — full dump
-      if (url === "/api/v1/ontology" && method === "GET") {
-        const dump = await this.dump();
-        this.json(res, 200, { success: true, data: dump });
-        return;
-      }
-
-      // GET /api/v1/object-types
-      if (url === "/api/v1/object-types" && method === "GET") {
-        const types = await this.storage.listObjectTypes();
-        this.json(res, 200, { success: true, data: types });
-        return;
-      }
-
-      // GET /api/v1/link-types
-      if (url === "/api/v1/link-types" && method === "GET") {
-        const types = await this.storage.listLinkTypes();
-        this.json(res, 200, { success: true, data: types });
-        return;
-      }
-
-      // GET /api/v1/action-types
-      if (url === "/api/v1/action-types" && method === "GET") {
-        const types = await this.storage.listActionTypes();
-        this.json(res, 200, { success: true, data: types });
-        return;
+      // Read endpoints are served through the version-keyed response cache.
+      if (method === "GET") {
+        if (url === "/api/v1/ontology") {
+          return await this.serveCached(req, res, "ontology", () => this.dump());
+        }
+        if (url === "/api/v1/object-types") {
+          return await this.serveCached(req, res, "object-types", () =>
+            this.storage.listObjectTypes(),
+          );
+        }
+        if (url === "/api/v1/link-types") {
+          return await this.serveCached(req, res, "link-types", () => this.storage.listLinkTypes());
+        }
+        if (url === "/api/v1/action-types") {
+          return await this.serveCached(req, res, "action-types", () =>
+            this.storage.listActionTypes(),
+          );
+        }
       }
 
       // 404
@@ -223,6 +230,40 @@ export class OntologyOmsServer {
   private json(res: ServerResponse, status: number, body: unknown): void {
     res.writeHead(status, { "Content-Type": "application/json" });
     res.end(JSON.stringify(body));
+  }
+
+  /**
+   * Serve a read endpoint from a cache keyed by the storage version. The ontology
+   * is static between writes, so on a cache hit we skip the storage read, per-row
+   * JSON.parse, and response JSON.stringify entirely — just an integer compare and
+   * a write of the cached string. Any storage mutation bumps `version()` and
+   * invalidates every entry. If the backend has no `version()`, we never cache
+   * (always rebuild) so correctness is preserved. Also honours `If-None-Match`.
+   */
+  private async serveCached(
+    req: IncomingMessage,
+    res: ServerResponse,
+    key: string,
+    build: () => Promise<unknown>,
+  ): Promise<void> {
+    const gen = this.storage.version?.() ?? -1;
+    let entry = this.cache.get(key);
+    if (!entry || entry.gen !== gen) {
+      const data = await build();
+      entry = { body: JSON.stringify({ success: true, data }), etag: `"${key}-${gen}"`, gen };
+      if (gen !== -1) this.cache.set(key, entry); // uncached when versioning is absent
+    }
+
+    if (gen !== -1 && req.headers["if-none-match"] === entry.etag) {
+      res.writeHead(304, { ETag: entry.etag });
+      res.end();
+      return;
+    }
+
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (gen !== -1) headers["ETag"] = entry.etag;
+    res.writeHead(200, headers);
+    res.end(entry.body);
   }
 
   // ── Direct API access (for programmatic use without HTTP) ────────────────

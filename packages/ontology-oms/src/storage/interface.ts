@@ -26,4 +26,19 @@ export interface OmsStorage {
 
   // Bulk
   clear(): Promise<void>;
+
+  /**
+   * Monotonic version that increments on every mutation (insert/update/delete/
+   * clear). Optional: callers use it for cache invalidation and MUST treat its
+   * absence as "always stale" (no caching). Backends that don't implement it
+   * stay correct, just uncached.
+   */
+  version?(): number;
+
+  /**
+   * Run `fn` inside a single storage transaction when the backend supports it
+   * (e.g. one SQLite commit instead of one per write). Optional: when absent the
+   * caller runs `fn` directly. `fn` must be rolled back if it throws.
+   */
+  runInTransaction?<T>(fn: () => Promise<T>): Promise<T>;
 }
