@@ -9,15 +9,22 @@ export class MemoryStorage implements OmsStorage {
   private objectTypes = new Map<string, ObjectTypeDefinition>();
   private linkTypes = new Map<string, LinkTypeDefinition>();
   private actionTypes = new Map<string, ActionTypeDefinition>();
+  private _version = 0;
+
+  version(): number {
+    return this._version;
+  }
 
   async insertObjectType(type: ObjectTypeDefinition): Promise<void> {
     this.objectTypes.set(type.name, type);
+    this._version++;
   }
 
   async updateObjectType(name: string, updates: Partial<ObjectTypeDefinition>): Promise<void> {
     const existing = this.objectTypes.get(name);
     if (!existing) throw new Error(`Object type "${name}" not found`);
     this.objectTypes.set(name, { ...existing, ...updates });
+    this._version++;
   }
 
   async getObjectType(name: string): Promise<ObjectTypeDefinition | null> {
@@ -30,10 +37,12 @@ export class MemoryStorage implements OmsStorage {
 
   async deleteObjectType(name: string): Promise<void> {
     this.objectTypes.delete(name);
+    this._version++;
   }
 
   async insertLinkType(type: LinkTypeDefinition): Promise<void> {
     this.linkTypes.set(type.name, type);
+    this._version++;
   }
 
   async getLinkType(name: string): Promise<LinkTypeDefinition | null> {
@@ -46,10 +55,12 @@ export class MemoryStorage implements OmsStorage {
 
   async deleteLinkType(name: string): Promise<void> {
     this.linkTypes.delete(name);
+    this._version++;
   }
 
   async insertActionType(type: ActionTypeDefinition): Promise<void> {
     this.actionTypes.set(type.name, type);
+    this._version++;
   }
 
   async getActionType(name: string): Promise<ActionTypeDefinition | null> {
@@ -62,11 +73,18 @@ export class MemoryStorage implements OmsStorage {
 
   async deleteActionType(name: string): Promise<void> {
     this.actionTypes.delete(name);
+    this._version++;
   }
 
   async clear(): Promise<void> {
     this.objectTypes.clear();
     this.linkTypes.clear();
     this.actionTypes.clear();
+    this._version++;
+  }
+
+  /** Memory has no real transaction; run inline (atomic within the event loop). */
+  async runInTransaction<T>(fn: () => Promise<T>): Promise<T> {
+    return fn();
   }
 }

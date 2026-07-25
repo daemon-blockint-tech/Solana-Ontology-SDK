@@ -6,12 +6,14 @@ import {
   OntologyOmsServer,
   conceptToObjectType,
   mapSolanaTypeToOms,
+  autoDetectLinks,
   MemoryStorage,
   NullAdapter,
   type ObjectTypeDefinition,
   type LinkTypeDefinition,
   type ActionTypeDefinition,
 } from "../src/index.js";
+import type { Concept } from "@solana-ontology/core";
 
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const conceptsDir = join(projectRoot, "ontology", "concepts");
@@ -74,6 +76,25 @@ describe("ontology-oms", () => {
       const links = await server.linkTypes.list();
       expect(links.length).toBeGreaterThan(0);
     });
+
+    it("autoDetectLinks matches an Address property to a concept name (case-insensitive, suffix-stripped)", () => {
+      const concept = {
+        canonicalName: "TokenAccount",
+        purpose: "x",
+        category: "token",
+        version: "1.0.0",
+        properties: [
+          { name: "mint_pubkey", type: "Address", required: true },
+          { name: "amount", type: "Long", required: true },
+        ],
+      } as unknown as Concept;
+      const links = autoDetectLinks(concept, new Set(["TokenMint", "Mint"]));
+      // "mint_pubkey" → strip "_pubkey" → "mint" → matches "Mint" (first in set order).
+      expect(links).toHaveLength(1);
+      expect(links[0].name).toBe("TokenAccount_references_Mint");
+      expect(links[0].targetType).toBe("Mint");
+      expect(links[0].sourceProperty).toBe("mint_pubkey");
+    });
   });
 
   describe("action-type-registry", () => {
@@ -101,6 +122,17 @@ describe("ontology-oms", () => {
       const dump = await server.dump();
       expect(dump.conceptCount).toBe(concepts.length);
       expect(dump.objectTypes.length).toBe(concepts.length);
+    });
+
+    it("registerConcepts is idempotent (re-register does not duplicate)", async () => {
+      const server = new OntologyOmsServer({ storage: "memory" });
+      await server.registerConcepts(concepts);
+      const first = await server.dump();
+      await server.registerConcepts(concepts); // second pass — INSERT OR REPLACE / Map.set
+      const second = await server.dump();
+      expect(second.objectTypes.length).toBe(first.objectTypes.length);
+      expect(second.linkTypes.length).toBe(first.linkTypes.length);
+      expect(second.actionTypes.length).toBe(first.actionTypes.length);
     });
 
     it("should generate a Mermaid graph", () => {
