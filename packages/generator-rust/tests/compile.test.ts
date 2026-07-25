@@ -118,32 +118,38 @@ describe("generated Rust — memory correctness", () => {
     }
   });
 
-  it.skipIf(!hasRustc())("compiles with rustc --deny warnings (all concepts)", () => {
-    const dir = mkdtempSync(join(tmpdir(), "rust-compile-"));
-    try {
-      const files = concepts.map((c) => generateConceptRustFile(c));
-      const src = join(dir, "lib.rs");
-      writeFileSync(src, buildCrateSource(files));
+  // Invoking rustc over every concept takes seconds — well past vitest's 5s
+  // default — so give it explicit room rather than letting it flake on timing.
+  it.skipIf(!hasRustc())(
+    "compiles with rustc --deny warnings (all concepts)",
+    { timeout: 180_000 },
+    () => {
+      const dir = mkdtempSync(join(tmpdir(), "rust-compile-"));
+      try {
+        const files = concepts.map((c) => generateConceptRustFile(c));
+        const src = join(dir, "lib.rs");
+        writeFileSync(src, buildCrateSource(files));
 
-      // Throws (failing the test) with rustc's diagnostics if anything is wrong.
-      execFileSync(
-        "rustc",
-        [
-          "--edition",
-          "2021",
-          "--crate-type",
-          "lib",
-          "--deny",
-          "warnings",
-          "-o",
-          join(dir, "out.rlib"),
-          src,
-        ],
-        { encoding: "utf-8", stdio: "pipe" },
-      );
-      expect(files.length).toBe(concepts.length);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
+        // Throws (failing the test) with rustc's diagnostics if anything is wrong.
+        execFileSync(
+          "rustc",
+          [
+            "--edition",
+            "2021",
+            "--crate-type",
+            "lib",
+            "--deny",
+            "warnings",
+            "-o",
+            join(dir, "out.rlib"),
+            src,
+          ],
+          { encoding: "utf-8", stdio: "pipe" },
+        );
+        expect(files.length).toBe(concepts.length);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+  );
 });
