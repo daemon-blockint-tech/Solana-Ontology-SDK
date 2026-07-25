@@ -55,11 +55,13 @@ Contoh: `LiquidityPool` bagus sebagai dokumentasi, tapi generator tidak bisa men
 Masalah di `TransactionLifecycle` dan sekitarnya:
 
 1. **Masih bergantung web3.js v1** untuk `buildMessageBytes` dan `sendRawTransaction`, padahal README bilang `@solana/kit` adalah primary.
+   - **[PARTIALLY FIXED]** Dynamic `import("@solana/web3.js")` di 3 file hot path (transaction-lifecycle, action, signer) sekarang di-dedup via module-level `getWeb3()` lazy cache — 1 resolution per process instead of 5.
 2. `signTransaction` menerima `messageBytes`, tapi `KeypairSigner` mengembalikan `serialized: messageBytes` (belum di-serialize sebagai full transaction).
 3. Tidak ada handling **VersionedTransaction** / Address Lookup Tables.
 4. Tidak ada **priority fee** dinamis atau **compute unit** optimization yang cerdas.
 5. Confirmation tracker masih sangat dasar (tidak handle `processed` → `confirmed` → `finalized` dengan baik).
 6. Tidak ada support **durable nonce** atau offline signing flow yang proper.
+7. **[FIXED]** BlockhashCache sekarang memiliki in-flight promise dedup — N concurrent calls share 1 RPC call instead of N (thundering herd fix).
 
 ---
 
@@ -68,8 +70,10 @@ Masalah di `TransactionLifecycle` dan sekitarnya:
 | Generator | Yang Sudah Ada | Yang Masih Kurang |
 |-----------|----------------|-------------------|
 | **generator-ts** | Interface, decoder, action, query dasar | Borsh codec yang benar, event decoder, error mapping, PDA seed type-safe |
+| **generator-ts security-gen** | **[FIXED]** Split dari 111KB monolith ke 6 modules (20KB core + 2280 lines exploits) | Maintainability improved, tapi exploit functions masih string templates |
 | **generator-rust** | Struct + PDA helper | Instruction builders, account validation macros, CPI helpers, error enums |
 | **generator-client** | React/TS client skeleton | Full OSDK-like experience, caching, realtime subscription, pagination |
+| **ontology-core loader** | **[FIXED]** Mtime-based cache untuk `loadConcepts()` | — |
 
 Tidak ada generator untuk **Python** atau **Go**, padahal use-case enterprise sering butuh itu.
 
@@ -77,11 +81,12 @@ Tidak ada generator untuk **Python** atau **Go**, padahal use-case enterprise se
 
 ## 6. Testing & Quality
 
-- README mengklaim **71 tests**. Angka ini wajar untuk monorepo sebesar ini, tapi:
+- README mengklaim **177 tests** (updated dari 71 setelah Light Protocol + perf fixes). Angka ini wajar untuk monorepo sebesar ini, tapi:
   - Banyak test hanya unit test terhadap stub.
   - Tidak terlihat integration test terhadap devnet/mainnet nyata.
   - Tidak ada property-based testing untuk Borsh encoding/decoding.
   - Tidak ada fuzzing untuk IDL parser.
+  - **[FIXED]** Reorg test sekarang memverifikasi state restoration, bukan sekadar deletion.
 - Tidak ada CI workflow yang terlihat di root (tidumpa `.github/workflows`).
 - Tidak ada coverage report atau badge.
 - `vitest.config.ts` ada di banyak package, tapi tidak ada shared test utilities yang kuat.
@@ -103,6 +108,8 @@ Tidak ada generator untuk **Python** atau **Go**, padahal use-case enterprise se
 ## 8. Ingestion Layer
 
 - State manager ada, tapi tanpa real gRPC stream, reorg handling belum teruji di production load.
+  - **[FIXED]** Reorg handling sekarang me-restore previous state (bukan delete). `previousAccounts` Map menyimpan state sebelumnya per slot.
+  - **[FIXED]** `getAccountsByOwner()` sekarang O(1) via secondary `ownerIndex` Map (sebelumnya O(n) full scan).
 - Tidak ada support untuk **account data decoding** berdasarkan ontology concept secara otomatis.
 - Tidak ada backpressure / rate limiting yang jelas.
 - Message broker hanya interface (tidak ada implementasi Kafka/Redis Streams yang nyata).
@@ -145,4 +152,4 @@ Tidak ada generator untuk **Python** atau **Go**, padahal use-case enterprise se
 ---
 
 **Kesimpulan singkat:**  
-Proyek ini memiliki **arsitektur yang ambisius dan struktur monorepo yang rapi**, serta ide ontology-centric yang bagus. Namun saat ini masih berada di tahap **early prototype / advanced scaffolding**. Banyak klaim di README (production-ready OMS, real-time ingestion, enterprise signers, full kinetic layer) belum sepenuhnya didukung oleh implementasi. Hal terbesar yang perlu dibenahi adalah **konsistensi visi (Foundry vs Independent)** dan **mengubah stub menjadi implementasi yang benar-benar berfungsi**.
+Proyek ini memiliki **arsitektur yang ambisius dan struktur monorepo yang rapi**, serta ide ontology-centric yang bagus. Setelah performance fixes (6 items implemented), beberapa masalah correctness dan maintainability sudah diatasi: reorg data loss fixed, BlockhashCache thundering herd fixed, owner index O(1), dynamic import dedup, loader cache, dan security-gen.ts split. Namun banyak hal fundamental masih belum selesai: **konsistensi visi (Foundry vs Independent)**, **mengubah stub menjadi implementasi yang benar-benar berfungsi**, VersionedTransaction support, real gRPC client, dan CI/CD. Proyek masih di tahap **early prototype / advanced scaffolding** dengan fondasi yang mulai mengeras.
