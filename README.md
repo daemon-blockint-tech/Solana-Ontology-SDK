@@ -6,6 +6,15 @@
 
 > Independent Semantic Ontology Layer for Solana Programs
 
+<p align="center">
+  <a href="https://www.npmjs.com/package/@solana-ontology/sdk"><img alt="npm version" src="https://img.shields.io/npm/v/@solana-ontology/sdk?label=%40solana-ontology%2Fsdk&color=cb3837&logo=npm" /></a>
+  <a href="https://www.npmjs.com/package/@solana-ontology/cli"><img alt="cli version" src="https://img.shields.io/npm/v/@solana-ontology/cli?label=cli&color=cb3837&logo=npm" /></a>
+  <a href="https://www.npmjs.com/org/solana-ontology"><img alt="npm downloads" src="https://img.shields.io/npm/dm/@solana-ontology/core?label=downloads&color=blue" /></a>
+  <a href="https://github.com/daemon-blockint-tech/Solana-Ontology-SDK/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/daemon-blockint-tech/Solana-Ontology-SDK/actions/workflows/ci.yml/badge.svg" /></a>
+  <a href="#license"><img alt="license" src="https://img.shields.io/badge/license-Apache--2.0-green" /></a>
+  <a href="#contributing--monorepo-dev"><img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522.13-339933?logo=node.js&logoColor=white" /></a>
+</p>
+
 A concept-centric SDK for building Solana applications with a **fully independent** ontology system. Define your on-chain concepts as YAML, validate them against a JSON Schema, generate typed SDK code, and interact with them at runtime using `@solana/kit` or `web3.js`. Includes an independent Ontology Metadata Service (OMS), MCP server for LLM agents, Yellowstone gRPC ingestion, and Helm deployment configs.
 
 **Not dependent on Palantir Foundry or any external platform.**
@@ -30,21 +39,27 @@ packages/
 
 ## Packages
 
-All ten library packages are published on npm (public, Apache-2.0):
+All ten library packages are published on npm (public, Apache-2.0). Click a badge to open
+the package on npm:
 
-| Package                             | Description                                                              |
-| ----------------------------------- | ------------------------------------------------------------------------ |
-| `@solana-ontology/core`             | Core types, validator, loader, graph builder                             |
-| `@solana-ontology/idl-parser`       | Anchor IDL v0/v1 parser + codemod + concept generator                    |
-| `@solana-ontology/sdk`              | Runtime SDK: ActionBuilder, TransactionLifecycle, signers, Borsh encoder |
-| `@solana-ontology/ingestion`        | Yellowstone gRPC client, state manager with reorg handling               |
-| `@solana-ontology/oms`              | Independent OMS — REST API, registries, pluggable storage                |
-| `@solana-ontology/mcp-server`       | MCP server exposing ontology as LLM-callable resources and tools         |
-| `@solana-ontology/generator-client` | Typed React/TypeScript client library generator                          |
-| `@solana-ontology/generator-ts`     | TypeScript code generator                                                |
-| `@solana-ontology/generator-rust`   | Rust code generator                                                      |
-| `@solana-ontology/cli`              | CLI: validate, generate, list, graph, idl                                |
-| `@solana-ontology/deploy`           | Helm chart + K8s configs (devnet/testnet/mainnet) — not published        |
+| Package                                                                                                | Version                                                                                                                                                | Description                                                              |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| [`@solana-ontology/core`](https://www.npmjs.com/package/@solana-ontology/core)                         | [![npm](https://img.shields.io/npm/v/@solana-ontology/core?color=cb3837)](https://www.npmjs.com/package/@solana-ontology/core)                         | Core types, validator, loader, graph builder                             |
+| [`@solana-ontology/idl-parser`](https://www.npmjs.com/package/@solana-ontology/idl-parser)             | [![npm](https://img.shields.io/npm/v/@solana-ontology/idl-parser?color=cb3837)](https://www.npmjs.com/package/@solana-ontology/idl-parser)             | Anchor IDL v0/v1 parser + codemod + concept generator                    |
+| [`@solana-ontology/sdk`](https://www.npmjs.com/package/@solana-ontology/sdk)                           | [![npm](https://img.shields.io/npm/v/@solana-ontology/sdk?color=cb3837)](https://www.npmjs.com/package/@solana-ontology/sdk)                           | Runtime SDK: ActionBuilder, TransactionLifecycle, signers, Borsh encoder |
+| [`@solana-ontology/ingestion`](https://www.npmjs.com/package/@solana-ontology/ingestion)               | [![npm](https://img.shields.io/npm/v/@solana-ontology/ingestion?color=cb3837)](https://www.npmjs.com/package/@solana-ontology/ingestion)               | Yellowstone gRPC client, state manager with reorg handling               |
+| [`@solana-ontology/oms`](https://www.npmjs.com/package/@solana-ontology/oms)                           | [![npm](https://img.shields.io/npm/v/@solana-ontology/oms?color=cb3837)](https://www.npmjs.com/package/@solana-ontology/oms)                           | Independent OMS — REST API, registries, pluggable storage                |
+| [`@solana-ontology/mcp-server`](https://www.npmjs.com/package/@solana-ontology/mcp-server)             | [![npm](https://img.shields.io/npm/v/@solana-ontology/mcp-server?color=cb3837)](https://www.npmjs.com/package/@solana-ontology/mcp-server)             | MCP server exposing ontology as LLM-callable resources and tools         |
+| [`@solana-ontology/generator-client`](https://www.npmjs.com/package/@solana-ontology/generator-client) | [![npm](https://img.shields.io/npm/v/@solana-ontology/generator-client?color=cb3837)](https://www.npmjs.com/package/@solana-ontology/generator-client) | Typed React/TypeScript client library generator                          |
+| [`@solana-ontology/generator-ts`](https://www.npmjs.com/package/@solana-ontology/generator-ts)         | [![npm](https://img.shields.io/npm/v/@solana-ontology/generator-ts?color=cb3837)](https://www.npmjs.com/package/@solana-ontology/generator-ts)         | TypeScript code generator                                                |
+| [`@solana-ontology/generator-rust`](https://www.npmjs.com/package/@solana-ontology/generator-rust)     | [![npm](https://img.shields.io/npm/v/@solana-ontology/generator-rust?color=cb3837)](https://www.npmjs.com/package/@solana-ontology/generator-rust)     | Rust code generator                                                      |
+| [`@solana-ontology/cli`](https://www.npmjs.com/package/@solana-ontology/cli)                           | [![npm](https://img.shields.io/npm/v/@solana-ontology/cli?color=cb3837)](https://www.npmjs.com/package/@solana-ontology/cli)                           | CLI: validate, generate, list, graph, idl                                |
+| `@solana-ontology/deploy`                                                                              | —                                                                                                                                                      | Helm chart + K8s configs (devnet/testnet/mainnet) — not published        |
+
+> **Container images.** The OMS and MCP services are also published as containers to GHCR
+> (`ghcr.io/daemon-blockint-tech/solana-ontology-{oms,mcp}`) — those are what GitHub lists
+> under "Packages" on this repo. The ten npm packages above live on npmjs.com, a separate
+> registry that GitHub's Packages panel does not index.
 
 **Every package ships unit tests, plus a cross-package integration suite; run `pnpm test` and `pnpm test:integration` from a checkout.**
 
