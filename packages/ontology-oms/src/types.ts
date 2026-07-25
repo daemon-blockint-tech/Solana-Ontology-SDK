@@ -76,6 +76,21 @@ export interface OmsApiConfig {
   cors?: boolean;
   /** Auth token (if null, no auth required) */
   authToken?: string;
+  /** Expose GET /metrics (Prometheus). Default true. */
+  metrics?: boolean;
+}
+
+/** Live state/versioning/idempotency/contention snapshot (GET /api/v1/stats). */
+export interface OmsStats {
+  /** Monotonic storage version (bumps on every mutation); -1 if unsupported. */
+  version: number;
+  storage: OmsApiConfig["storage"];
+  uptimeMs: number;
+  counts: { objectTypes: number; linkTypes: number; actionTypes: number };
+  cache: { hits: number; misses: number; entries: number };
+  requests: { total: number; inflight: number };
+  register: { runs: number; inserted: number; replaced: number };
+  transactions: number;
 }
 
 // ── External Adapter Plugin ────────────────────────────────────────────────

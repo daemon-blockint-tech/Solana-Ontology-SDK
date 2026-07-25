@@ -16,7 +16,7 @@ export {
   type TransactionCallback,
 } from "./grpc-client.js";
 
-export { StateManager } from "./state-manager.js";
+export { StateManager, type StateManagerStats } from "./state-manager.js";
 
 export { EventProcessor, type AccountDecoderFn, type DecodedAccount } from "./event-processor.js";
 
