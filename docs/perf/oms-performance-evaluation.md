@@ -23,6 +23,7 @@
 ## 2. Konteks Beban Kerja
 
 **Profil workload:**
+
 - Jenis beban: **CPU-bound** (serialisasi/parse), sebagian I/O pada sqlite. Bukan network-bound antar service.
 - Pola traffic: read-mostly, steady; write hanya saat bootstrap (`registerConcepts`).
 - Ukuran input tipikal: 78 concepts → payload `object-types` **78 KB**, `ontology` (dump) **257 KB**.
@@ -30,6 +31,7 @@
 - Concurrency normal: 1–10. Puncak diuji: 100.
 
 **Dependency utama:**
+
 - Database: `node:sqlite` (in-process, file) atau in-memory Map. Tidak ada DB eksternal.
 - Cache: **tidak ada.**
 - Queue/broker: tidak ada.
@@ -45,38 +47,38 @@
 
 Representatif: `GET /api/v1/object-types` (single list, unit kerja utama), c50, 78 concepts. Sumber: `ab -n 5000 -c 50`, 3× (varian ±2.5%).
 
-| Metrik | memory | sqlite | Target | Status | Catatan |
-|---|---:|---:|---:|---|---|
-| Latency p50 | 26 ms | 45 ms | <200 | ✅ | |
-| Latency p95 | 27–30 ms | 50 ms | <200 | ✅ | |
-| Latency p99 | 28 ms | 53 ms | <200 | ✅ | tail rapat (tanpa GC spike) |
-| Throughput | ~1875 req/s | ~1105 req/s | >500 | ✅ | sqlite −41% |
-| Error rate | 0% | 0% | <0.5% | ✅ | |
-| Timeout rate | 0% | 0% | — | ✅ | |
-| Query count / unit | 0 (Map) | **1** (SELECT SCAN) | — | ⚠️ | `prepare` dibuat ulang tiap call |
-| JSON.parse / unit | 0 | **78** (per-row) | — | ⚠️ | decode dari TEXT sqlite |
-| JSON.stringify / unit | 1 (78 KB) | 1 (78 KB) | — | ⚠️ | re-serialize identik, tanpa cache |
-| Network calls / unit | 0 | 0 | — | ✅ | in-process |
-| CPU (hot frame) | — | **24.5% stringify, ~49% sqlite, 16% socket write** | — | ⚠️ | lihat §4 |
-| GC / pause | ringan | 3.2% CPU | — | ✅ | churn dari parse→object→stringify |
+| Metrik                |      memory |                                             sqlite | Target | Status | Catatan                           |
+| --------------------- | ----------: | -------------------------------------------------: | -----: | ------ | --------------------------------- |
+| Latency p50           |       26 ms |                                              45 ms |   <200 | ✅     |                                   |
+| Latency p95           |    27–30 ms |                                              50 ms |   <200 | ✅     |                                   |
+| Latency p99           |       28 ms |                                              53 ms |   <200 | ✅     | tail rapat (tanpa GC spike)       |
+| Throughput            | ~1875 req/s |                                        ~1105 req/s |   >500 | ✅     | sqlite −41%                       |
+| Error rate            |          0% |                                                 0% |  <0.5% | ✅     |                                   |
+| Timeout rate          |          0% |                                                 0% |      — | ✅     |                                   |
+| Query count / unit    |     0 (Map) |                                **1** (SELECT SCAN) |      — | ⚠️     | `prepare` dibuat ulang tiap call  |
+| JSON.parse / unit     |           0 |                                   **78** (per-row) |      — | ⚠️     | decode dari TEXT sqlite           |
+| JSON.stringify / unit |   1 (78 KB) |                                          1 (78 KB) |      — | ⚠️     | re-serialize identik, tanpa cache |
+| Network calls / unit  |           0 |                                                  0 |      — | ✅     | in-process                        |
+| CPU (hot frame)       |           — | **24.5% stringify, ~49% sqlite, 16% socket write** |      — | ⚠️     | lihat §4                          |
+| GC / pause            |      ringan |                                           3.2% CPU |      — | ✅     | churn dari parse→object→stringify |
 
 **Endpoint dump `GET /api/v1/ontology`** (3 list + payload 257 KB), c50:
 
-| Metrik | memory | sqlite |
-|---|---:|---:|
-| Throughput | ~834 req/s | ~374 req/s |
-| p95 | 62 ms | 139 ms |
-| p95 @ c100 | 125 ms | **281 ms** ⚠️ (>200 SLO) |
+| Metrik     |     memory |                   sqlite |
+| ---------- | ---------: | -----------------------: |
+| Throughput | ~834 req/s |               ~374 req/s |
+| p95        |      62 ms |                   139 ms |
+| p95 @ c100 |     125 ms | **281 ms** ⚠️ (>200 SLO) |
 
 **Startup (`perf_hooks`, 78 concepts, ms/op):**
 
-| Langkah | memory | sqlite | Catatan |
-|---|---:|---:|---|
-| `loadConcepts` (read+YAML) | 58.1 | 58.1 | **biaya cold-start terbesar** (sync) |
-| `validateAll` | 1.08 | 1.08 | ajv + semantic passes |
-| `buildGraph` | 0.19 | 0.19 | O(V+E) |
-| `registerConcepts` | 1.09 | **19.6** | sqlite 18× (INSERT tanpa transaksi) |
-| boot→ready (wall, via CLI) | ~0.43 s | ~0.43 s | termasuk node startup + import |
+| Langkah                    |  memory |   sqlite | Catatan                              |
+| -------------------------- | ------: | -------: | ------------------------------------ |
+| `loadConcepts` (read+YAML) |    58.1 |     58.1 | **biaya cold-start terbesar** (sync) |
+| `validateAll`              |    1.08 |     1.08 | ajv + semantic passes                |
+| `buildGraph`               |    0.19 |     0.19 | O(V+E)                               |
+| `registerConcepts`         |    1.09 | **19.6** | sqlite 18× (INSERT tanpa transaksi)  |
+| boot→ready (wall, via CLI) | ~0.43 s |  ~0.43 s | termasuk node startup + import       |
 
 **Sumber data baseline:** `ab` 2.3, `perf_hooks` microbench, `node --cpu-prof`, `EXPLAIN QUERY PLAN` (`node:sqlite`). Harness di scratchpad `bench/` (throwaway).
 
@@ -85,6 +87,7 @@ Representatif: `GET /api/v1/object-types` (single list, unit kerja utama), c50, 
 ## 4. Peta Hot Path
 
 **Hot path request** (`packages/ontology-oms/src/oms-server.ts` → `handleRequest`):
+
 1. Request diterima (Node `http`, `createServer`).
 2. Set CORS headers; cek `OPTIONS`; cek auth (string compare bila `authToken`).
 3. Route by `url`/`method` (rantai `if`).
@@ -94,15 +97,16 @@ Representatif: `GET /api/v1/object-types` (single list, unit kerja utama), c50, 
 
 **Langkah paling mahal (dari cpu-prof, sqlite `/ontology` di bawah beban):**
 
-| Frame | Self CPU | Arti |
-|---|---:|---|
-| `json` (oms-server) | **24.5%** | `JSON.stringify` respons |
-| sqlite (anonymous ×3) | **18.7 + 10.3 + 7.1 = 36%** | `prepare` + `all()` + row `JSON.parse` |
-| `writevGeneric` | 16.1% | tulis payload ke socket (payload-size bound) |
-| `listActionTypes/LinkTypes/ObjectTypes` | 5.6+4.3+3.5 = 13.4% | wrapper list (map JSON.parse) |
-| GC | 3.2% | churn alokasi parse→object→stringify |
+| Frame                                   |                    Self CPU | Arti                                         |
+| --------------------------------------- | --------------------------: | -------------------------------------------- |
+| `json` (oms-server)                     |                   **24.5%** | `JSON.stringify` respons                     |
+| sqlite (anonymous ×3)                   | **18.7 + 10.3 + 7.1 = 36%** | `prepare` + `all()` + row `JSON.parse`       |
+| `writevGeneric`                         |                       16.1% | tulis payload ke socket (payload-size bound) |
+| `listActionTypes/LinkTypes/ObjectTypes` |         5.6+4.3+3.5 = 13.4% | wrapper list (map JSON.parse)                |
+| GC                                      |                        3.2% | churn alokasi parse→object→stringify         |
 
 Bottleneck ada di:
+
 - [x] Compute (serialisasi/parse)
 - [x] Serialization / deserialization (double encode/decode di sqlite)
 - [x] Cache miss (tidak ada cache → kerja identik diulang)
@@ -116,11 +120,13 @@ Bottleneck ada di:
 ## 5. Hidden Cost Audit
 
 ### 5.1 Alokasi dan Memori
+
 - `listObjectTypes` sqlite mengalokasikan array + N objek hasil `JSON.parse` **tiap request**, lalu `JSON.stringify` seluruh payload → object churn tinggi, terlihat 3.2% GC.
 - memory backend murah: `Array.from(map.values())` (referensi), 0.002 ms/op.
 - **Temuan:** tiap read men-decode ulang seluruh dataset walau tak berubah; payload dibangun penuh tiap request meski identik antar request.
 
 ### 5.2 Data Access
+
 - N+1? Tidak. Tapi **`db.prepare()` dipanggil ulang setiap method** (tidak ada reuse prepared statement) — kompilasi SQL berulang.
 - `EXPLAIN`: `SELECT data FROM object_types` → `SCAN object_types` (full scan; wajar untuk list-all). `WHERE name=?` → `SEARCH USING INDEX sqlite_autoindex` (PK terindeks — point lookup sehat).
 - Kolom: hanya `data` diambil — tidak over-fetch.
@@ -128,22 +134,26 @@ Bottleneck ada di:
 - **Temuan:** prepared statement tidak di-cache; bulk write tidak transaksional.
 
 ### 5.3 I/O dan Network
+
 - Tidak ada API/DB/file call di dalam loop request. `loadConcepts` (I/O file) hanya saat startup, sync.
 - Payload besar (`/ontology` 257 KB @1×) dikirim penuh tiap request → 16% CPU di `writevGeneric`.
 - Tidak ada retry/reconnect.
 - **Temuan:** payload response tidak dikompresi/di-ETag; klien tak bisa `304`.
 
 ### 5.4 Concurrency dan State
+
 - Lock scope: tidak ada lock (single-thread). Shared state = Map/db, read-only di hot path.
 - **Throughput flat 1→100 concurrency** (memory ~1900, sqlite ~1100 req/s) → single-core saturate; menambah concurrency hanya menaikkan latency linear (queueing), bukan throughput.
 - Tail tidak memburuk drastis (p99≈p50×1.05) — sehat.
 - **Temuan:** tidak ada paralelisme CPU (no cluster/worker_threads) → 1 core = plafon throughput.
 
 ### 5.5 Serialization, Parsing, dan Transform
+
 - **Double transform di sqlite:** `JSON.parse` (baca kolom TEXT) → objek → `JSON.stringify` (respons). Data di-encode saat insert, di-decode tiap read, di-encode lagi tiap respons.
 - **Temuan:** ini biaya tersembunyi terbesar bersama cache-miss.
 
 ### 5.6 Observability Overhead
+
 - Hot path bersih: tidak ada logging per-request (hanya `console.error` saat error). Tidak ada tracing/metric high-cardinality.
 - **Temuan:** observability overhead ~0 — bagus.
 
@@ -151,17 +161,17 @@ Bottleneck ada di:
 
 ## 6. Klasifikasi Bottleneck Dominan
 
-| Kategori | Ya/Tidak | Bukti | Dampak |
-|---|---|---|---|
-| Compute-bound | **Ya** | 24.5% stringify + parse frames | plafon throughput single-core |
-| Memory-bound | Sebagian | 3.2% GC, churn parse/stringify | tekanan alokasi saat payload besar |
-| I/O-bound | Sebagian (sqlite/startup) | registerConcepts 18× lebih lambat | startup lambat di sqlite |
-| DB-bound | **Ya (sqlite)** | prepare per-call + SCAN, 36% CPU | request −41%, startup fsync |
-| Network-bound | Sebagian | 16% writevGeneric | payload besar mahal dikirim |
-| Contention-bound | Tidak | no locks, tail rapat | — |
-| Cache-efficiency | **Ya** | tak ada cache; kerja identik diulang | biaya per-request sia-sia |
-| Framework overhead | Tidak | Node http murni | — |
-| Observability overhead | Tidak | tak ada log/trace hot path | — |
+| Kategori               | Ya/Tidak                  | Bukti                                | Dampak                             |
+| ---------------------- | ------------------------- | ------------------------------------ | ---------------------------------- |
+| Compute-bound          | **Ya**                    | 24.5% stringify + parse frames       | plafon throughput single-core      |
+| Memory-bound           | Sebagian                  | 3.2% GC, churn parse/stringify       | tekanan alokasi saat payload besar |
+| I/O-bound              | Sebagian (sqlite/startup) | registerConcepts 18× lebih lambat    | startup lambat di sqlite           |
+| DB-bound               | **Ya (sqlite)**           | prepare per-call + SCAN, 36% CPU     | request −41%, startup fsync        |
+| Network-bound          | Sebagian                  | 16% writevGeneric                    | payload besar mahal dikirim        |
+| Contention-bound       | Tidak                     | no locks, tail rapat                 | —                                  |
+| Cache-efficiency       | **Ya**                    | tak ada cache; kerja identik diulang | biaya per-request sia-sia          |
+| Framework overhead     | Tidak                     | Node http murni                      | —                                  |
+| Observability overhead | Tidak                     | tak ada log/trace hot path           | —                                  |
 
 **Kesimpulan bottleneck dominan:** **Request path = serialization + cache-efficiency bound** (re-serialize data statis tiap request), diperberat **DB-bound double encode/decode** pada sqlite. **Startup = DB-bound** (INSERT tanpa transaksi) plus `loadConcepts` (sync YAML). Semuanya di atas plafon **single-core CPU**.
 
@@ -171,17 +181,17 @@ Bottleneck ada di:
 
 **Saat input membesar (1× → 4× → 16× concepts):** **linear** untuk request path (biaya ∝ ukuran payload, karena serialisasi ulang penuh).
 
-| Metrik (c50) | 1× (78) | 4× (312) | 16× (1248) |
-|---|---:|---:|---:|
-| object-types req/s (memory) | 1930 | — | 129 |
-| object-types req/s (sqlite) | 1105 | — | 84 |
-| object-types p95 memory | 27 ms | — | 408 ms |
-| ontology p95 memory | 62 ms | — | 1210 ms |
-| ontology p95 sqlite | 139 ms | — | **2665 ms** |
-| `listObjectTypes` sqlite (µbench) | 0.33 ms | 1.34 ms | 5.56 ms |
-| `loadConcepts` (startup) | 58 ms | 221 ms | 857 ms |
-| `registerConcepts` memory | 1.09 ms | 8.06 ms | **113.7 ms** |
-| `registerConcepts` sqlite | 19.6 ms | 82 ms | 442 ms |
+| Metrik (c50)                      | 1× (78) | 4× (312) |   16× (1248) |
+| --------------------------------- | ------: | -------: | -----------: |
+| object-types req/s (memory)       |    1930 |        — |          129 |
+| object-types req/s (sqlite)       |    1105 |        — |           84 |
+| object-types p95 memory           |   27 ms |        — |       408 ms |
+| ontology p95 memory               |   62 ms |        — |      1210 ms |
+| ontology p95 sqlite               |  139 ms |        — |  **2665 ms** |
+| `listObjectTypes` sqlite (µbench) | 0.33 ms |  1.34 ms |      5.56 ms |
+| `loadConcepts` (startup)          |   58 ms |   221 ms |       857 ms |
+| `registerConcepts` memory         | 1.09 ms |  8.06 ms | **113.7 ms** |
+| `registerConcepts` sqlite         | 19.6 ms |    82 ms |       442 ms |
 
 - `listObjectTypes` sqlite & `loadConcepts`: **linear**.
 - **`registerConcepts` [memory]: superlinear ~O(n^1.7)** (1.09→113.7 untuk 16× input = 104×) — indikasi kerja O(n²) di registry (kemungkinan deteksi link/action lintas-concept). **Scaling risk.**
@@ -214,26 +224,26 @@ Bottleneck ada di:
 
 ## 9. Temuan Utama
 
-| No | Temuan | Bukti | Dampak | Prioritas |
-|---|---|---|---|---|
-| 1 | Tidak ada response cache — data statis di-serialize ulang tiap request | 24.5% CPU `JSON.stringify`; payload identik | Throughput terbatas; SLO `/ontology` breach @c100 sqlite | **High** |
-| 2 | sqlite double encode/decode + `prepare` per-call | 36% CPU sqlite frames; sqlite −41% throughput | Request 1.5–2× lebih lambat dari memory | **High** |
-| 3 | `registerConcepts` sqlite tanpa transaksi | 19.6 ms vs 1.09 ms memory (18×); ~234 INSERT fsync | Startup lambat, memburuk saat ontology tumbuh | **Medium** |
-| 4 | `registerConcepts` [memory] superlinear O(n^1.7) | 1.09→113.7 ms untuk 16× | Startup/registrasi tak skala | **Medium** |
-| 5 | Single-core (no cluster/worker) | throughput flat 1→100 | Plafon ~1900 req/s single-list | **Low** (butuh redesign) |
-| 6 | Payload tak terkompresi/ETag | 16% CPU socket write; 257 KB `/ontology` | Bandwidth & CPU kirim | **Low** |
+| No  | Temuan                                                                 | Bukti                                              | Dampak                                                   | Prioritas                |
+| --- | ---------------------------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------- | ------------------------ |
+| 1   | Tidak ada response cache — data statis di-serialize ulang tiap request | 24.5% CPU `JSON.stringify`; payload identik        | Throughput terbatas; SLO `/ontology` breach @c100 sqlite | **High**                 |
+| 2   | sqlite double encode/decode + `prepare` per-call                       | 36% CPU sqlite frames; sqlite −41% throughput      | Request 1.5–2× lebih lambat dari memory                  | **High**                 |
+| 3   | `registerConcepts` sqlite tanpa transaksi                              | 19.6 ms vs 1.09 ms memory (18×); ~234 INSERT fsync | Startup lambat, memburuk saat ontology tumbuh            | **Medium**               |
+| 4   | `registerConcepts` [memory] superlinear O(n^1.7)                       | 1.09→113.7 ms untuk 16×                            | Startup/registrasi tak skala                             | **Medium**               |
+| 5   | Single-core (no cluster/worker)                                        | throughput flat 1→100                              | Plafon ~1900 req/s single-list                           | **Low** (butuh redesign) |
+| 6   | Payload tak terkompresi/ETag                                           | 16% CPU socket write; 257 KB `/ontology`           | Bandwidth & CPU kirim                                    | **Low**                  |
 
 ---
 
 ## 10. Rekomendasi Perbaikan
 
-| Symptom | Likely Cause | Proposed Fix | Expected Gain | Risk |
-|---|---|---|---|---|
-| Throughput rendah, 24.5% CPU stringify | Re-serialize data statis tiap request | Cache string JSON per-endpoint + ETag; invalidasi saat write | Hilangkan ~24.5% stringify + ~49% sqlite pada read hit → multi-× throughput | Rendah (data read-mostly; perlu invalidasi di insert/update/delete) |
-| sqlite −41% throughput | `prepare()` dibuat ulang tiap call | Cache prepared statements di constructor `SqliteStorage` | Kurangi porsi 36% sqlite; kurangi CPU/req | Rendah |
-| Startup sqlite 18× lebih lambat | INSERT tanpa transaksi (fsync/row) | Bungkus `registerConcepts` dalam 1 transaksi / tambah `bulkInsert` ke `OmsStorage` | ~10–18× lebih cepat startup sqlite | Rendah |
-| registerConcepts memory O(n^1.7) | Kerja O(n²) di link/action registry | Audit `registerMany`/autodetect; pakai index/Map, buat linear | Startup linear di ukuran besar | Sedang (butuh baca registry) |
-| p95 naik linear vs concurrency | Single-core event loop | worker_threads/cluster ATAU multi-pod (butuh shared backend dulu) | Skala horizontal CPU | Tinggi (redesign; OMS kini single-replica) |
+| Symptom                                | Likely Cause                          | Proposed Fix                                                                       | Expected Gain                                                               | Risk                                                                |
+| -------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Throughput rendah, 24.5% CPU stringify | Re-serialize data statis tiap request | Cache string JSON per-endpoint + ETag; invalidasi saat write                       | Hilangkan ~24.5% stringify + ~49% sqlite pada read hit → multi-× throughput | Rendah (data read-mostly; perlu invalidasi di insert/update/delete) |
+| sqlite −41% throughput                 | `prepare()` dibuat ulang tiap call    | Cache prepared statements di constructor `SqliteStorage`                           | Kurangi porsi 36% sqlite; kurangi CPU/req                                   | Rendah                                                              |
+| Startup sqlite 18× lebih lambat        | INSERT tanpa transaksi (fsync/row)    | Bungkus `registerConcepts` dalam 1 transaksi / tambah `bulkInsert` ke `OmsStorage` | ~10–18× lebih cepat startup sqlite                                          | Rendah                                                              |
+| registerConcepts memory O(n^1.7)       | Kerja O(n²) di link/action registry   | Audit `registerMany`/autodetect; pakai index/Map, buat linear                      | Startup linear di ukuran besar                                              | Sedang (butuh baca registry)                                        |
+| p95 naik linear vs concurrency         | Single-core event loop                | worker_threads/cluster ATAU multi-pod (butuh shared backend dulu)                  | Skala horizontal CPU                                                        | Tinggi (redesign; OMS kini single-replica)                          |
 
 **Quick wins:** (1) response cache + ETag, (2) cached prepared statements, (3) transaksi pada bulk register. Ketiganya lokal, ROI tinggi.
 
@@ -256,28 +266,28 @@ Bottleneck ada di:
 
 ## 12. Action Plan
 
-| Aksi | Owner | Prioritas | Estimasi usaha | Deadline | Status |
-|---|---|---|---|---|---|
-| Response cache + ETag (invalidate on write) | TBD | High | S (½–1 hari) | TBD | Not started |
-| Cache prepared statements di `SqliteStorage` | TBD | High | S (jam) | TBD | Not started |
-| Transaksi / `bulkInsert` untuk `registerConcepts` | TBD | Medium | S–M | TBD | Not started |
-| Audit & linearize registry O(n^1.7) | TBD | Medium | M | TBD | Not started |
-| Paralelisme CPU (cluster/worker) — evaluasi | TBD | Low | L (redesign) | TBD | Not started |
+| Aksi                                              | Owner | Prioritas | Estimasi usaha | Deadline | Status      |
+| ------------------------------------------------- | ----- | --------- | -------------- | -------- | ----------- |
+| Response cache + ETag (invalidate on write)       | TBD   | High      | S (½–1 hari)   | TBD      | Not started |
+| Cache prepared statements di `SqliteStorage`      | TBD   | High      | S (jam)        | TBD      | Not started |
+| Transaksi / `bulkInsert` untuk `registerConcepts` | TBD   | Medium    | S–M            | TBD      | Not started |
+| Audit & linearize registry O(n^1.7)               | TBD   | Medium    | M              | TBD      | Not started |
+| Paralelisme CPU (cluster/worker) — evaluasi       | TBD   | Low       | L (redesign)   | TBD      | Not started |
 
 ---
 
 ## 13. Re-evaluation
 
-*(Diisi setelah fix diterapkan — belum dijalankan; evaluasi ini read-only.)* Metode: ulang skenario `ab` identik (memory & sqlite, c1/10/50/100, object-types & ontology; 1× & 16×) di scratchpad clone, gate di belakang test suite tetap hijau.
+_(Diisi setelah fix diterapkan — belum dijalankan; evaluasi ini read-only.)_ Metode: ulang skenario `ab` identik (memory & sqlite, c1/10/50/100, object-types & ontology; 1× & 16×) di scratchpad clone, gate di belakang test suite tetap hijau.
 
-| Metrik | Sebelum | Sesudah | Delta | Catatan |
-|---|---:|---:|---:|---|
-| Latency p95 (sqlite object-types c50) | 50 ms |  |  | target: turun besar via cache |
-| Latency p99 (sqlite ontology c100) | ~300 ms |  |  | keluar dari breach SLO |
-| Throughput (sqlite object-types) | 1105 req/s |  |  | target: mendekati/≥ memory |
-| CPU (stringify hot frame) | 24.5% |  |  | target: hilang pada cache hit |
-| Startup registerConcepts (sqlite) | 19.6 ms |  |  | target: ~1–2 ms via transaksi |
-| Error rate | 0% |  |  | jaga 0% |
+| Metrik                                |    Sebelum | Sesudah | Delta | Catatan                       |
+| ------------------------------------- | ---------: | ------: | ----: | ----------------------------- |
+| Latency p95 (sqlite object-types c50) |      50 ms |         |       | target: turun besar via cache |
+| Latency p99 (sqlite ontology c100)    |    ~300 ms |         |       | keluar dari breach SLO        |
+| Throughput (sqlite object-types)      | 1105 req/s |         |       | target: mendekati/≥ memory    |
+| CPU (stringify hot frame)             |      24.5% |         |       | target: hilang pada cache hit |
+| Startup registerConcepts (sqlite)     |    19.6 ms |         |       | target: ~1–2 ms via transaksi |
+| Error rate                            |         0% |         |       | jaga 0%                       |
 
 **Apakah bottleneck berpindah?** Prediksi: setelah cache + prepared-statement, bottleneck read bergeser dari serialisasi/DB ke **socket write / bandwidth** (16% writevGeneric) dan **single-core**; startup bergeser dari INSERT ke `loadConcepts` (sync YAML).
 

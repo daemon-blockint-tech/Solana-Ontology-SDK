@@ -198,7 +198,9 @@ describe("ingestion", () => {
       expect(restored!.slot).toBe(10);
 
       // Acct2 should be gone (didn't exist before slot 12)
-      expect(manager.getAccountState("Acct22211111111111111111111111111111111111111")).toBeUndefined();
+      expect(
+        manager.getAccountState("Acct22211111111111111111111111111111111111111"),
+      ).toBeUndefined();
 
       expect(manager.getCurrentSlot()).toBe(10);
     });
