@@ -1,6 +1,6 @@
 {
   "name": "@solana-ontology/oms",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Independent Ontology Metadata Service — REST API for managing Object Types, Link Types, and Action Types",
   "type": "module",
   "main": "dist/index.js",

@@ -1,6 +1,6 @@
 {
   "name": "@solana-ontology/generator-client",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Typed React/TypeScript client library generator from the independent Solana Ontology",
   "type": "module",
   "main": "dist/index.js",

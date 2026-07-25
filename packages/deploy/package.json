@@ -1,6 +1,6 @@
 {
   "name": "@solana-ontology/deploy",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Helm charts and Kubernetes deployment configs for the Solana Ontology SDK",
   "private": true,
   "scripts": {
