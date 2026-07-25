@@ -24,6 +24,10 @@ export class StateManager {
   private slotModifications = new Map<number, Set<string>>();
   /** Slot → transaction signatures in that slot */
   private slotTransactions = new Map<number, Set<string>>();
+  /** Slot → (pubkey → previous AccountState) for reorg restoration */
+  private previousAccounts = new Map<number, Map<string, AccountState | undefined>>();
+  /** Secondary index: owner → Set of account pubkeys */
+  private ownerIndex = new Map<string, Set<string>>();
   /** Current highest processed slot */
   private currentSlot = 0;
 
@@ -32,6 +36,17 @@ export class StateManager {
    * Upserts the account state and records the modification for the slot.
    */
   processAccountUpdate(event: AccountUpdateEvent): AccountState {
+    const prevState = this.accounts.get(event.pubkey);
+
+    // Save previous state for reorg restoration
+    if (!this.previousAccounts.has(event.slot)) {
+      this.previousAccounts.set(event.slot, new Map());
+    }
+    const slotPrev = this.previousAccounts.get(event.slot)!;
+    if (!slotPrev.has(event.pubkey)) {
+      slotPrev.set(event.pubkey, prevState);
+    }
+
     const state: AccountState = {
       pubkey: event.pubkey,
       lamports: event.lamports,
@@ -43,6 +58,12 @@ export class StateManager {
       commitment: event.commitment,
       updatedAt: Date.now(),
     };
+
+    // Update owner index: remove from old owner, add to new owner
+    if (prevState && prevState.owner !== event.owner) {
+      this.removeFromOwnerIndex(prevState.owner, event.pubkey);
+    }
+    this.addToOwnerIndex(event.owner, event.pubkey);
 
     this.accounts.set(event.pubkey, state);
 
@@ -57,6 +78,23 @@ export class StateManager {
     }
 
     return state;
+  }
+
+  private addToOwnerIndex(owner: string, pubkey: string): void {
+    if (!this.ownerIndex.has(owner)) {
+      this.ownerIndex.set(owner, new Set());
+    }
+    this.ownerIndex.get(owner)!.add(pubkey);
+  }
+
+  private removeFromOwnerIndex(owner: string, pubkey: string): void {
+    const set = this.ownerIndex.get(owner);
+    if (set) {
+      set.delete(pubkey);
+      if (set.size === 0) {
+        this.ownerIndex.delete(owner);
+      }
+    }
   }
 
   /**
@@ -95,20 +133,33 @@ export class StateManager {
       .sort((a, b) => b - a); // Roll back in reverse order
 
     for (const slot of slotsToRollback) {
-      // Rollback account modifications
+      // Rollback account modifications — restore previous state
       const modifiedAccounts = this.slotModifications.get(slot);
+      const slotPrev = this.previousAccounts.get(slot);
       if (modifiedAccounts) {
         for (const pubkey of modifiedAccounts) {
-          const state = this.accounts.get(pubkey);
-          if (state && state.slot === slot) {
-            // Mark as reorged — in a real implementation we'd restore previous state
-            // For now, we remove the account from primary state
-            this.accounts.delete(pubkey);
+          const currentState = this.accounts.get(pubkey);
+          if (currentState && currentState.slot === slot) {
+            const prevState = slotPrev?.get(pubkey);
+            // Remove current owner from index
+            this.removeFromOwnerIndex(currentState.owner, pubkey);
+
+            if (prevState) {
+              // Restore previous state
+              this.accounts.set(pubkey, prevState);
+              this.addToOwnerIndex(prevState.owner, pubkey);
+            } else {
+              // Account didn't exist before this slot — remove it
+              this.accounts.delete(pubkey);
+            }
             affectedAccounts.push(pubkey);
           }
         }
         this.slotModifications.delete(slot);
       }
+
+      // Clean up previous state tracking for this slot
+      this.previousAccounts.delete(slot);
 
       // Rollback transactions
       const txs = this.slotTransactions.get(slot);
@@ -140,7 +191,11 @@ export class StateManager {
    * Get all account states for a given owner program.
    */
   getAccountsByOwner(owner: string): AccountState[] {
-    return Array.from(this.accounts.values()).filter((a) => a.owner === owner);
+    const pubkeys = this.ownerIndex.get(owner);
+    if (!pubkeys) return [];
+    return Array.from(pubkeys)
+      .map((pk) => this.accounts.get(pk))
+      .filter((a): a is AccountState => a !== undefined);
   }
 
   /**
@@ -198,9 +253,11 @@ export class StateManager {
     this.pendingTx.clear();
     this.slotModifications.clear();
     this.slotTransactions.clear();
+    this.previousAccounts.clear();
+    this.ownerIndex.clear();
 
     for (const acc of snapshot.accounts) {
-      this.accounts.set(acc.pubkey, {
+      const state: AccountState = {
         pubkey: acc.pubkey,
         lamports: acc.lamports,
         owner: acc.owner,
@@ -210,7 +267,9 @@ export class StateManager {
         slot: acc.slot,
         commitment: acc.commitment as CommitmentLevel,
         updatedAt: acc.updatedAt,
-      });
+      };
+      this.accounts.set(acc.pubkey, state);
+      this.addToOwnerIndex(acc.owner, acc.pubkey);
     }
 
     for (const tx of snapshot.pendingTransactions) {
@@ -232,6 +291,8 @@ export class StateManager {
     this.pendingTx.clear();
     this.slotModifications.clear();
     this.slotTransactions.clear();
+    this.previousAccounts.clear();
+    this.ownerIndex.clear();
     this.currentSlot = 0;
   }
 }

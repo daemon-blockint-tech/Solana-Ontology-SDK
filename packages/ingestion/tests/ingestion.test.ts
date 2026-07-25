@@ -140,31 +140,66 @@ describe("ingestion", () => {
       expect(manager.getPendingTransactions()).toHaveLength(0);
     });
 
-    it("should handle reorg by rolling back state", () => {
+    it("should handle reorg by restoring previous state", () => {
       const manager = new StateManager();
 
-      // Write accounts at slots 10, 11, 12
-      for (let slot = 10; slot <= 12; slot++) {
-        manager.processAccountUpdate({
-          pubkey: `Acct${slot.toString().padStart(43, "1")}`,
-          lamports: slot * 1000,
-          owner: "Prog111111111111111111111111111111111111111",
-          data: new Uint8Array([slot]),
-          executable: false,
-          rentEpoch: 0,
-          slot,
-          commitment: "confirmed",
-          previousData: null,
-        });
-      }
+      // Write account at slot 10
+      manager.processAccountUpdate({
+        pubkey: "Acct111111111111111111111111111111111111111",
+        lamports: 1000,
+        owner: "Prog111111111111111111111111111111111111111",
+        data: new Uint8Array([10]),
+        executable: false,
+        rentEpoch: 0,
+        slot: 10,
+        commitment: "confirmed",
+        previousData: null,
+      });
 
-      expect(manager.getAccountCount()).toBe(3);
+      // Update same account at slot 11 (overwrites slot 10 state)
+      manager.processAccountUpdate({
+        pubkey: "Acct111111111111111111111111111111111111111",
+        lamports: 2000,
+        owner: "Prog111111111111111111111111111111111111111",
+        data: new Uint8Array([11]),
+        executable: false,
+        rentEpoch: 0,
+        slot: 11,
+        commitment: "confirmed",
+        previousData: null,
+      });
+
+      // Write a new account at slot 12 (didn't exist before)
+      manager.processAccountUpdate({
+        pubkey: "Acct22211111111111111111111111111111111111111",
+        lamports: 3000,
+        owner: "Prog111111111111111111111111111111111111111",
+        data: new Uint8Array([12]),
+        executable: false,
+        rentEpoch: 0,
+        slot: 12,
+        commitment: "confirmed",
+        previousData: null,
+      });
+
+      expect(manager.getAccountCount()).toBe(2);
       expect(manager.getCurrentSlot()).toBe(12);
 
       // Reorg drops slot 11 and 12
       const result = manager.handleReorg(11);
       expect(result.affectedAccounts.length).toBe(2);
-      expect(manager.getAccountCount()).toBe(1); // Only slot 10 remains
+      expect(manager.getAccountCount()).toBe(1); // Only Acct1 remains
+
+      // Acct1 should be restored to its slot 10 state, not deleted
+      const restored = manager.getAccountState("Acct111111111111111111111111111111111111111");
+      expect(restored).toBeDefined();
+      expect(restored!.lamports).toBe(1000); // Restored to slot 10 value, not slot 11
+      expect(restored!.data).toEqual(new Uint8Array([10]));
+      expect(restored!.slot).toBe(10);
+
+      // Acct2 should be gone (didn't exist before slot 12)
+      expect(manager.getAccountState("Acct22211111111111111111111111111111111111111")).toBeUndefined();
+
       expect(manager.getCurrentSlot()).toBe(10);
     });
 

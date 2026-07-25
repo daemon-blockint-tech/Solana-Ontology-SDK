@@ -18,6 +18,12 @@ export interface SignerProvider {
   signTransaction(messageBytes: Uint8Array): Promise<SignedTransaction>;
 }
 
+let _web3: typeof import("@solana/web3.js") | null = null;
+async function getWeb3(): Promise<typeof import("@solana/web3.js")> {
+  if (!_web3) _web3 = await import("@solana/web3.js");
+  return _web3;
+}
+
 /**
  * Local keypair signer (development only).
  * Uses @solana/web3.js Keypair under the hood.
@@ -37,7 +43,7 @@ export class KeypairSigner implements SignerProvider {
   }
 
   async signTransaction(messageBytes: Uint8Array): Promise<SignedTransaction> {
-    const web3 = await import("@solana/web3.js");
+    const web3 = await getWeb3();
     const { Transaction, Keypair } = web3;
     const kp = this.keypair as { secretKey: Uint8Array; publicKey: Uint8Array };
 
@@ -74,7 +80,7 @@ export class KmsSigner implements SignerProvider {
   }
 
   async signTransaction(messageBytes: Uint8Array): Promise<SignedTransaction> {
-    const web3 = await import("@solana/web3.js");
+    const web3 = await getWeb3();
     const { Transaction } = web3;
 
     // KMS signing: send message bytes to KMS, get back Ed25519 signature
@@ -131,7 +137,7 @@ export class MpcSigner implements SignerProvider {
     const signature = new Uint8Array(result.signature);
 
     // Reconstruct the transaction and attach the MPC signature
-    const web3 = await import("@solana/web3.js");
+    const web3 = await getWeb3();
     const { Transaction } = web3;
     const tx = Transaction.from(Buffer.from(messageBytes));
     tx.addSignature(new web3.PublicKey(this.publicKey), Buffer.from(signature));

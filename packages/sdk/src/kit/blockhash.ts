@@ -13,6 +13,7 @@ export class BlockhashCache {
   private cache: BlockhashInfo | null = null;
   private ttlMs: number;
   private fetchFn: () => Promise<BlockhashInfo>;
+  private inflight: Promise<BlockhashInfo> | null = null;
 
   constructor(fetchFn: () => Promise<BlockhashInfo>, ttlMs = 55_000) {
     this.fetchFn = fetchFn;
@@ -23,12 +24,20 @@ export class BlockhashCache {
     if (this.cache && this.isFresh(this.cache)) {
       return this.cache;
     }
-    this.cache = await this.fetchFn();
+    // Dedup: if a fetch is already in-flight, return the same promise
+    if (this.inflight) {
+      return this.inflight;
+    }
+    this.inflight = this.fetchFn().finally(() => {
+      this.inflight = null;
+    });
+    this.cache = await this.inflight;
     return this.cache;
   }
 
   invalidate(): void {
     this.cache = null;
+    this.inflight = null;
   }
 
   private isFresh(info: BlockhashInfo): boolean {

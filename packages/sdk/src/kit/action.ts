@@ -9,6 +9,12 @@ export interface ActionInstruction {
   data: Uint8Array;
 }
 
+let _web3: typeof import("@solana/web3.js") | null = null;
+async function getWeb3(): Promise<typeof import("@solana/web3.js")> {
+  if (!_web3) _web3 = await import("@solana/web3.js");
+  return _web3;
+}
+
 export class ActionBuilder {
   private instructions: ActionInstruction[] = [];
   private _feePayer?: string;
@@ -73,7 +79,7 @@ export class ActionBuilder {
    * Per W009 safety guardrail: always simulate before sending.
    */
   async simulate(connection: unknown): Promise<unknown> {
-    const web3 = await import("@solana/web3.js");
+    const web3 = await getWeb3();
     const { Transaction, TransactionInstruction, PublicKey } = web3;
     const conn = connection as {
       simulateTransaction: (tx: unknown, opts?: unknown) => Promise<unknown>;

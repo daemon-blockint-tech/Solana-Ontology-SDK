@@ -12,6 +12,12 @@ import { BlockhashCache, fetchLatestBlockhash, type BlockhashInfo } from "./bloc
 import { ConfirmationTracker, type PendingTransaction } from "./confirmation.js";
 import { TransactionEventEmitter } from "./event-emitter.js";
 
+let _web3: typeof import("@solana/web3.js") | null = null;
+async function getWeb3(): Promise<typeof import("@solana/web3.js")> {
+  if (!_web3) _web3 = await import("@solana/web3.js");
+  return _web3;
+}
+
 export interface TransactionLifecycleOptions {
   connection: unknown;
   signer: SignerProvider;
@@ -139,7 +145,7 @@ export class TransactionLifecycle {
     instructions: ActionInstruction[],
     blockhash: BlockhashInfo,
   ): Promise<Uint8Array> {
-    const web3 = await import("@solana/web3.js");
+    const web3 = await getWeb3();
     const { Transaction, TransactionInstruction, PublicKey } = web3;
 
     const tx = new Transaction();
