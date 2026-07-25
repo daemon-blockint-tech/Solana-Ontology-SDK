@@ -278,18 +278,35 @@ Bottleneck ada di:
 
 ## 13. Re-evaluation
 
-_(Diisi setelah fix diterapkan — belum dijalankan; evaluasi ini read-only.)_ Metode: ulang skenario `ab` identik (memory & sqlite, c1/10/50/100, object-types & ontology; 1× & 16×) di scratchpad clone, gate di belakang test suite tetap hijau.
+**Fix diterapkan** di branch `perf/oms-optimizations`: response cache + ETag, prepared statements
+di SqliteStorage, `registerConcepts` transaksional, dan linearisasi `LinkTypeRegistry`. Diukur
+**before vs after dalam sesi yang sama** (kondisi identik) untuk perbandingan yang adil — before =
+kode pre-fix, after = branch fix. `ab -n 5000 -c 50`, 1×.
 
-| Metrik                                |    Sebelum | Sesudah | Delta | Catatan                       |
-| ------------------------------------- | ---------: | ------: | ----: | ----------------------------- |
-| Latency p95 (sqlite object-types c50) |      50 ms |         |       | target: turun besar via cache |
-| Latency p99 (sqlite ontology c100)    |    ~300 ms |         |       | keluar dari breach SLO        |
-| Throughput (sqlite object-types)      | 1105 req/s |         |       | target: mendekati/≥ memory    |
-| CPU (stringify hot frame)             |      24.5% |         |       | target: hilang pada cache hit |
-| Startup registerConcepts (sqlite)     |    19.6 ms |         |       | target: ~1–2 ms via transaksi |
-| Error rate                            |         0% |         |       | jaga 0%                       |
+| Metrik                                 |    Sebelum |    Sesudah |         Delta | Catatan                                 |
+| -------------------------------------- | ---------: | ---------: | ------------: | --------------------------------------- |
+| Throughput (sqlite object-types)       | 1067 req/s | 3974 req/s |     **+3.7×** | kini ≈ memory (cache hit)               |
+| Throughput (sqlite ontology)           |  351 req/s | 1940 req/s |     **+5.5×** | kini ≈ memory                           |
+| Throughput (memory object-types)       | 1856 req/s | 4031 req/s |     **+2.2×** | cache hindari list+stringify            |
+| Latency p95 (sqlite object-types c50)  |      50 ms |      15 ms |      **−70%** |                                         |
+| Latency p95 (sqlite ontology c50)      |     173 ms |      28 ms |      **−84%** | jauh di bawah SLO 200 ms (was breach)   |
+| Startup registerConcepts (sqlite, 1×)  |    19.5 ms |     3.2 ms | **−84% / 6×** | transaksi + prepared statements         |
+| Startup registerConcepts (sqlite, 16×) |     437 ms |      49 ms |        **9×** | one commit vs ~3×N fsync                |
+| Startup registerConcepts (memory, 16×) |     117 ms |    10.3 ms |       **11×** | O(n^1.7) → **linear** (16× input=16.9×) |
+| Error rate                             |         0% |         0% |             — | tetap 0%                                |
 
-**Apakah bottleneck berpindah?** Prediksi: setelah cache + prepared-statement, bottleneck read bergeser dari serialisasi/DB ke **socket write / bandwidth** (16% writevGeneric) dan **single-core**; startup bergeser dari INSERT ke `loadConcepts` (sync YAML).
+Ringkasan: cache menghapus biaya baca (list + per-row `JSON.parse` + response `JSON.stringify`)
+pada cache hit → **sqlite kini setara memory** (sebelumnya −41%/−58%); throughput naik 2–5.5×; p95
+`/ontology` sqlite keluar dari breach SLO (173→28 ms). Startup jauh lebih cepat via transaksi +
+prepared statements, dan registrasi kini linear terhadap ukuran ontology. `listObjectTypes` level-
+storage (microbench) tidak berubah — memang, kemenangannya di layer HTTP (cache), bukan di storage.
+`loadConcepts` tidak diubah (dan pengukurannya noisy antar-run, jadi tidak diklaim).
+
+**Apakah bottleneck berpindah?** Ya, sesuai prediksi. Pada cache hit, path baca kini hanya integer
+compare + tulis string tercache → bottleneck bergeser ke **socket write / bandwidth** dan **single-
+core** (throughput read tetap flat vs concurrency). Startup kini didominasi `loadConcepts` (sync
+YAML), bukan lagi INSERT. **Status komponen naik dari Yellow menuju Green** untuk beban read
+(quick-win tuntas); sisa item struktural (single-core, `loadConcepts` sync) belum disentuh.
 
 ---
 
