@@ -46,6 +46,31 @@ describe("pda-gen", () => {
     const code = generateRustPdaHelper(mockConcept);
     expect(code).not.toBeNull();
     expect(code).toContain("derive_test_token_address");
+    // Real derivation, not a stub.
+    expect(code).toContain("Pubkey::find_program_address(");
+    expect(code).not.toContain("unimplemented!");
+  });
+
+  it("should type and borrow declared pdaSeeds", () => {
+    const seeded: Concept = {
+      ...mockConcept,
+      canonicalName: "Vault",
+      pdaSeeds: [
+        { name: "owner", type: "publicKey" },
+        { name: "index", type: "u64" },
+        { name: "label", type: "string" },
+      ],
+    };
+    const code = generateRustPdaHelper(seeded)!;
+    expect(code).toContain("owner: &Pubkey");
+    expect(code).toContain("index: u64");
+    expect(code).toContain("label: &str");
+    // Integer seed materialised into a named byte array the slice borrows.
+    expect(code).toContain("let index_bytes = index.to_le_bytes();");
+    expect(code).toContain('&[b"vault", owner.as_ref(), &index_bytes, label.as_bytes()]');
+    // Borrowed, not cloned.
+    expect(code).not.toContain(".clone()");
+    expect(code).not.toContain(".to_vec()");
   });
 });
 
