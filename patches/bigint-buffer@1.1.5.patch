@@ -1,0 +1,27 @@
+diff --git a/dist/node.js b/dist/node.js
+index 513168c89e387668a79b6beb109587b3eb41a7d0..82e4ebcb79da2b4ba721aa0ef6b0ed3a0ba82554 100644
+--- a/dist/node.js
++++ b/dist/node.js
+@@ -1,15 +1,13 @@
+ 'use strict';
+ 
+ Object.defineProperty(exports, "__esModule", { value: true });
+-let converter;
+-{
+-    try {
+-        converter = require('bindings')('bigint_buffer');
+-    }
+-    catch (e) {
+-        console.warn('bigint: Failed to load bindings, pure JS will be used (try npm run rebuild?)');
+-    }
+-}
++// SECURITY PATCH (GHSA-3gc7-fjrx-p6mg / CVE-2025-3194): the native C binding's
++// toBigInt/fromBigInt do not validate the input buffer length and can overflow.
++// There is no upstream fix (1.1.5 is the latest, unmaintained). We never load
++// the native addon so the vulnerable path is unreachable by construction; the
++// pure-JS fallback below (pad/slice to `width`) is not affected. This repo also
++// disables the native build via pnpm allowBuilds, so behaviour is unchanged.
++let converter = undefined;
+ /**
+  * Convert a little-endian buffer into a BigInt.
+  * @param buf The little-endian buffer to convert
