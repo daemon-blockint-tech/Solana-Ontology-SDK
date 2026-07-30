@@ -8,7 +8,7 @@ import {
   generateEncoder,
 } from "./account-gen.js";
 import { hasAccountLayout, generateLayoutRuntime, LAYOUT_RUNTIME_IMPORT } from "./layout-gen.js";
-import { generatePdaHelper } from "./pda-gen.js";
+import { generatePdaHelper, isPDA, SDK_PDA_IMPORT } from "./pda-gen.js";
 import {
   generateActions,
   generateStateEnum,
@@ -16,7 +16,7 @@ import {
   hasInstructionData,
   SDK_COMPILER_IMPORT,
 } from "./action-gen.js";
-import { generateQuery, generateBatchQuery } from "./query-gen.js";
+import { generateQuery, generateBatchQuery, SDK_QUERY_IMPORT } from "./query-gen.js";
 
 export interface GenerateOptions {
   outputDir: string;
@@ -43,8 +43,12 @@ export function generateConceptFiles(concept: Concept): GeneratedFile[] {
   const parts: string[] = [];
 
   const imports: string[] = [];
-  if (hasAccountLayout(concept)) imports.push(LAYOUT_RUNTIME_IMPORT);
+  if (hasAccountLayout(concept)) {
+    imports.push(LAYOUT_RUNTIME_IMPORT);
+    imports.push(SDK_QUERY_IMPORT);
+  }
   if (hasInstructionData(concept)) imports.push(SDK_COMPILER_IMPORT);
+  if (isPDA(concept)) imports.push(SDK_PDA_IMPORT);
   if (imports.length > 0) {
     parts.push(imports.join("\n"));
     parts.push("");

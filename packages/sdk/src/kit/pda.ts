@@ -35,13 +35,13 @@ export async function derivePdaKit(programId: string, seeds: Uint8Array[]): Prom
   try {
     const { getProgramDerivedAddress, address } = kit;
 
-    // Kit v7: getProgramDerivedAddress(seeds, programAddress)
-    // Cast to any because @solana/kit is an optional peer dep — types may not resolve
-    const fn = getProgramDerivedAddress as unknown as (
-      seeds: Uint8Array[],
-      programAddress: string,
-    ) => Promise<readonly [string, number]>;
-    const result = await fn(seeds, address(programId));
+    // Kit v7: getProgramDerivedAddress({ programAddress, seeds }) → [Address, bump]
+    // Cast because @solana/kit is an optional peer dep — types may not resolve
+    const fn = getProgramDerivedAddress as unknown as (input: {
+      programAddress: string;
+      seeds: Uint8Array[];
+    }) => Promise<readonly [string, number]>;
+    const result = await fn({ programAddress: address(programId), seeds });
 
     // Kit returns a tuple [Address<string>, bump] — destructure it
     const [pdaAddress, bump] = result as readonly [string, number];

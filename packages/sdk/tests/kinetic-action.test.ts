@@ -286,4 +286,25 @@ describe("Kinetic Action Layer", () => {
       expect(ix.data[0]).toBe(24); // discriminator
     });
   });
+
+  describe("PDA derivation", () => {
+    it("derives a PDA via the Kit path with the correct call shape", async () => {
+      const { derivePda } = await import("../src/index.js");
+      const result = await derivePda("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", [
+        new TextEncoder().encode("seed"),
+        new Uint8Array([1, 2, 3]),
+      ]);
+      expect(typeof result.address).toBe("string");
+      expect(result.address.length).toBeGreaterThan(0);
+      expect(result.bump).toBeGreaterThanOrEqual(0);
+      expect(result.bump).toBeLessThanOrEqual(255);
+
+      // Deterministic
+      const again = await derivePda("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", [
+        new TextEncoder().encode("seed"),
+        new Uint8Array([1, 2, 3]),
+      ]);
+      expect(again.address).toBe(result.address);
+    });
+  });
 });
