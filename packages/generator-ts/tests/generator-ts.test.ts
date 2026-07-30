@@ -89,8 +89,8 @@ describe("action-gen", () => {
   it("should generate action builders for transitions", () => {
     const actions = generateActions(mockConcept);
     expect(actions.length).toBe(2);
-    expect(actions[0]).toContain("buildUninitializedToActiveTestTokenAction");
-    expect(actions[1]).toContain("buildActiveToFrozenTestTokenAction");
+    expect(actions[0]).toContain("buildUninitializedToActiveViaInitializeTestTokenAction");
+    expect(actions[1]).toContain("buildActiveToFrozenViaFreezeTestTokenAction");
   });
 });
 

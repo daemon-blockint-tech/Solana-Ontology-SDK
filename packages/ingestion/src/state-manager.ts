@@ -22,6 +22,8 @@ export interface StateManagerStats {
   owners: number;
   pendingTx: number;
   trackedSlots: number;
+  /** Highest slot known to be finalized — reorg history at or below it is pruned. */
+  finalizedSlot: number;
   reorgs: number;
   accountUpdates: number;
   idempotentUpdates: number;
@@ -45,6 +47,8 @@ export class StateManager {
   private ownerIndex = new Map<string, Set<string>>();
   /** Current highest processed slot */
   private currentSlot = 0;
+  /** Highest slot known to be finalized — slots at or below can never reorg. */
+  private finalizedSlot = 0;
   /** Monotonic state version — bumps on every mutation (slot can rewind on reorg). */
   private stateVersion = 0;
   /** Instrumentation — owned by this instance (no global state). */
@@ -69,6 +73,7 @@ export class StateManager {
     if (!cur) return false;
     return (
       cur.slot === event.slot &&
+      cur.commitment === event.commitment &&
       cur.lamports === event.lamports &&
       cur.owner === event.owner &&
       cur.executable === event.executable &&
@@ -130,9 +135,47 @@ export class StateManager {
       this.currentSlot = event.slot;
     }
 
+    if (event.commitment === "finalized") {
+      this.advanceFinalizedSlot(event.slot);
+    }
+
     this.stateVersion++;
     this.metrics.inc("state_account_updates_total");
     return state;
+  }
+
+  /**
+   * Advance the finalized watermark and prune reorg-tracking history for all
+   * slots at or below it — finalized slots can never reorg, so retaining their
+   * previous-state buffers would grow memory without bound on a long-running
+   * stream.
+   */
+  private advanceFinalizedSlot(finalizedSlot: number): void {
+    if (finalizedSlot <= this.finalizedSlot) return;
+    this.finalizedSlot = finalizedSlot;
+    for (const slot of this.slotModifications.keys()) {
+      if (slot <= finalizedSlot) this.slotModifications.delete(slot);
+    }
+    for (const slot of this.slotTransactions.keys()) {
+      if (slot <= finalizedSlot) this.slotTransactions.delete(slot);
+    }
+    for (const slot of this.previousAccounts.keys()) {
+      if (slot <= finalizedSlot) this.previousAccounts.delete(slot);
+    }
+  }
+
+  /**
+   * Mark all slots at or below `slot` as finalized, pruning their reorg
+   * history. Call this from a slot-status ("finalized") stream when account
+   * and transaction events alone don't carry finalized commitments.
+   */
+  markFinalized(slot: number): void {
+    this.advanceFinalizedSlot(slot);
+  }
+
+  /** Highest slot known to be finalized. */
+  getFinalizedSlot(): number {
+    return this.finalizedSlot;
   }
 
   private addToOwnerIndex(owner: string, pubkey: string): void {
@@ -168,9 +211,11 @@ export class StateManager {
     }
     this.slotTransactions.get(event.slot)!.add(event.signature);
 
-    // Remove from pending if finalized
+    // Remove from pending if finalized, and prune reorg history for
+    // now-finalized slots
     if (event.commitment === "finalized") {
       this.pendingTx.delete(event.signature);
+      this.advanceFinalizedSlot(event.slot);
     }
 
     this.stateVersion++;
@@ -230,9 +275,17 @@ export class StateManager {
       }
     }
 
-    // Update current slot
+    // Update current slot to the highest slot still known to be processed —
+    // droppedSlot - 1 may never have existed (slots can be skipped)
     if (droppedSlot <= this.currentSlot) {
-      this.currentSlot = Math.max(0, droppedSlot - 1);
+      let maxRemaining = this.finalizedSlot;
+      for (const slot of this.slotModifications.keys()) {
+        if (slot > maxRemaining) maxRemaining = slot;
+      }
+      for (const slot of this.slotTransactions.keys()) {
+        if (slot > maxRemaining) maxRemaining = slot;
+      }
+      this.currentSlot = Math.max(0, maxRemaining);
     }
 
     this.stateVersion++;
@@ -342,6 +395,7 @@ export class StateManager {
     }
 
     this.currentSlot = snapshot.slot;
+    this.finalizedSlot = 0;
     this.stateVersion++;
   }
 
@@ -356,6 +410,7 @@ export class StateManager {
     this.previousAccounts.clear();
     this.ownerIndex.clear();
     this.currentSlot = 0;
+    this.finalizedSlot = 0;
     this.stateVersion++;
   }
 
@@ -373,6 +428,7 @@ export class StateManager {
       owners: this.ownerIndex.size,
       pendingTx: this.pendingTx.size,
       trackedSlots: this.slotModifications.size,
+      finalizedSlot: this.finalizedSlot,
       reorgs: this.metrics.getCounterTotal("state_reorgs_total"),
       accountUpdates: this.metrics.getCounterTotal("state_account_updates_total"),
       idempotentUpdates: this.metrics.getCounterTotal("state_idempotent_updates_total"),

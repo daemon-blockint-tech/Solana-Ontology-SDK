@@ -4,7 +4,10 @@ import type { Concept, StateTransition } from "@solana-ontology/core";
  * Generate an action builder function for a state machine transition.
  */
 function generateTransitionAction(conceptName: string, transition: StateTransition): string {
-  const fnName = `build${transition.from}To${transition.to}${conceptName}Action`;
+  // Include the instruction (via) in the name — two transitions can share the
+  // same from/to but go via different instructions, and duplicate function
+  // names would make the generated module invalid
+  const fnName = `build${transition.from}To${transition.to}Via${transition.via}${conceptName}Action`;
 
   return [
     `/**`,
@@ -27,9 +30,17 @@ function generateTransitionAction(conceptName: string, transition: StateTransiti
 export function generateActions(concept: Concept): string[] {
   if (!concept.stateMachine?.transitions) return [];
 
-  return concept.stateMachine.transitions.map((t) =>
-    generateTransitionAction(concept.canonicalName, t),
-  );
+  // Dedupe fully-identical transitions so the emitted module never contains
+  // duplicate function declarations
+  const seen = new Set<string>();
+  const actions: string[] = [];
+  for (const t of concept.stateMachine.transitions) {
+    const key = `${t.from}→${t.to}→${t.via}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    actions.push(generateTransitionAction(concept.canonicalName, t));
+  }
+  return actions;
 }
 
 /**

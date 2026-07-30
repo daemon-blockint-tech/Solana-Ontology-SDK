@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { join, dirname, basename } from "node:path";
 import {
   isIdlV0,
   isIdlV1,
@@ -32,7 +32,11 @@ export function idlCommand(
   }
 
   if (codemodOnly) {
-    const outPath = outputDir ?? idlPath.replace(/\.json$/, ".v1.json");
+    // --out names a directory; write the normalized IDL inside it
+    const outPath = outputDir
+      ? join(outputDir, basename(idlPath).replace(/\.json$/, "") + ".v1.json")
+      : idlPath.replace(/\.json$/, ".v1.json");
+    mkdirSync(dirname(outPath), { recursive: true });
     writeFileSync(outPath, JSON.stringify(v1, null, 2));
     console.log(`✓ Wrote normalized IDL to: ${outPath}`);
     return;
@@ -47,6 +51,8 @@ export function idlCommand(
     for (const err of result.errors.slice(0, 5)) {
       console.error(`  ${err.conceptName}: ${err.message}`);
     }
+    // Do not write invalid concepts, and make the failure visible to CI
+    process.exit(1);
   }
 
   const outDir = outputDir ?? join(config.ontologyRoot, "concepts", "generated");

@@ -85,6 +85,71 @@ describe("ingestion", () => {
       expect(manager.getCurrentSlot()).toBe(42);
     });
 
+    it("should upgrade commitment on redelivery of identical data", () => {
+      const manager = new StateManager();
+      const base: AccountUpdateEvent = {
+        pubkey: "Acct111111111111111111111111111111111111111",
+        lamports: 5000,
+        owner: "Prog111111111111111111111111111111111111111",
+        data: new Uint8Array([1, 2, 3, 4]),
+        executable: false,
+        rentEpoch: 0,
+        slot: 42,
+        commitment: "processed",
+        previousData: null,
+      };
+      manager.processAccountUpdate(base);
+      // Same slot/data redelivered at a higher commitment must not be dropped
+      manager.processAccountUpdate({ ...base, commitment: "finalized" });
+      expect(manager.getAccountState(base.pubkey)?.commitment).toBe("finalized");
+    });
+
+    it("should prune reorg history for finalized slots", () => {
+      const manager = new StateManager();
+      const base: Omit<AccountUpdateEvent, "slot"> = {
+        pubkey: "Acct111111111111111111111111111111111111111",
+        lamports: 5000,
+        owner: "Prog111111111111111111111111111111111111111",
+        data: new Uint8Array([1]),
+        executable: false,
+        rentEpoch: 0,
+        commitment: "confirmed",
+        previousData: null,
+      };
+      for (let slot = 1; slot <= 100; slot++) {
+        manager.processAccountUpdate({ ...base, slot, data: new Uint8Array([slot]) });
+      }
+      expect(manager.stats().trackedSlots).toBe(100);
+
+      manager.markFinalized(90);
+      expect(manager.getFinalizedSlot()).toBe(90);
+      // Finalized slots can never reorg — their history must be released
+      expect(manager.stats().trackedSlots).toBe(10);
+
+      // Account state itself is untouched
+      expect(manager.getAccountCount()).toBe(1);
+      expect(manager.getAccountState(base.pubkey)?.slot).toBe(100);
+    });
+
+    it("should not set currentSlot to a never-processed slot after reorg", () => {
+      const manager = new StateManager();
+      const base: Omit<AccountUpdateEvent, "slot"> = {
+        pubkey: "Acct111111111111111111111111111111111111111",
+        lamports: 5000,
+        owner: "Prog111111111111111111111111111111111111111",
+        data: new Uint8Array([1]),
+        executable: false,
+        rentEpoch: 0,
+        commitment: "confirmed",
+        previousData: null,
+      };
+      manager.processAccountUpdate({ ...base, slot: 10 });
+      manager.processAccountUpdate({ ...base, slot: 20, data: new Uint8Array([2]) });
+      manager.handleReorg(20);
+      // Slots 11-19 never existed; progress must rewind to slot 10
+      expect(manager.getCurrentSlot()).toBe(10);
+    });
+
     it("should upsert account state (only latest)", () => {
       const manager = new StateManager();
       const pubkey = "Acct111111111111111111111111111111111111111";

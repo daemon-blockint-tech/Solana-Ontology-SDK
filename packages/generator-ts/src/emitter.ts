@@ -23,7 +23,10 @@ export interface GeneratedFile {
 export function generateConceptFiles(concept: Concept): GeneratedFile[] {
   const files: GeneratedFile[] = [];
   const name = concept.canonicalName;
-  const fileName = name.charAt(0).toLowerCase() + name.slice(1);
+  // Defense-in-depth: strip any non-identifier characters so an unvalidated
+  // canonicalName can never escape the output directory or inject syntax
+  const safeName = name.replace(/[^a-zA-Z0-9_]/g, "_");
+  const fileName = safeName.charAt(0).toLowerCase() + safeName.slice(1);
 
   const parts: string[] = [];
 

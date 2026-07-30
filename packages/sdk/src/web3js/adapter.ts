@@ -14,6 +14,25 @@ export interface Web3AccountInfo {
   rentEpoch: number;
 }
 
+/** Shape returned by a real web3.js Connection (owner is a PublicKey) */
+interface RawWeb3AccountInfo {
+  lamports: number;
+  data: Buffer;
+  owner: string | { toBase58(): string };
+  executable: boolean;
+  rentEpoch?: number;
+}
+
+function normalizeAccountInfo(info: RawWeb3AccountInfo): Web3AccountInfo {
+  return {
+    lamports: info.lamports,
+    data: info.data,
+    owner: typeof info.owner === "string" ? info.owner : info.owner.toBase58(),
+    executable: info.executable,
+    rentEpoch: info.rentEpoch ?? 0,
+  };
+}
+
 export class Web3jsAdapter {
   readonly config: OntologyClientConfig;
   private _connection: unknown = null;
@@ -41,32 +60,33 @@ export class Web3jsAdapter {
 
   /** Fetch account info as a typed object */
   async getAccountInfo(address: string): Promise<Web3AccountInfo | null> {
+    const { PublicKey } = await import("@solana/web3.js");
     const conn = this._connection as {
-      getAccountInfo: (
-        addr: string,
-        opts?: { encoding: string },
-      ) => Promise<Web3AccountInfo | null>;
+      getAccountInfo: (addr: InstanceType<typeof PublicKey>) => Promise<RawWeb3AccountInfo | null>;
     };
-    return conn.getAccountInfo(address, { encoding: "base64" });
+    const info = await conn.getAccountInfo(new PublicKey(address));
+    return info ? normalizeAccountInfo(info) : null;
   }
 
   /** Fetch multiple accounts */
   async getMultipleAccountsInfo(addresses: string[]): Promise<(Web3AccountInfo | null)[]> {
+    const { PublicKey } = await import("@solana/web3.js");
     const conn = this._connection as {
       getMultipleAccountsInfo: (
-        addrs: string[],
-        opts?: { encoding: string },
-      ) => Promise<(Web3AccountInfo | null)[]>;
+        addrs: InstanceType<typeof PublicKey>[],
+      ) => Promise<(RawWeb3AccountInfo | null)[]>;
     };
-    return conn.getMultipleAccountsInfo(addresses, { encoding: "base64" });
+    const infos = await conn.getMultipleAccountsInfo(addresses.map((a) => new PublicKey(a)));
+    return infos.map((info) => (info ? normalizeAccountInfo(info) : null));
   }
 
   /** Get balance in lamports */
   async getBalance(address: string): Promise<number> {
+    const { PublicKey } = await import("@solana/web3.js");
     const conn = this._connection as {
-      getBalance: (addr: string) => Promise<number>;
+      getBalance: (addr: InstanceType<typeof PublicKey>) => Promise<number>;
     };
-    return conn.getBalance(address);
+    return conn.getBalance(new PublicKey(address));
   }
 
   /** Get latest blockhash */

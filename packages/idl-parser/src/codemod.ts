@@ -23,11 +23,17 @@ export function convertCamelToSnake(name: string): string {
 
 /**
  * Calculate the 8-byte Anchor discriminator for a given seed string.
- * Anchor uses SHA-256("global:<name>") and takes the first 8 bytes.
+ * Anchor uses SHA-256("<namespace>:<name>") and takes the first 8 bytes:
+ * - instructions: namespace "global", name in snake_case
+ * - accounts: namespace "account", name is the struct identifier as written
+ *   (PascalCase — no snake_case conversion)
  */
-export function calculateDiscriminator(seed: string): number[] {
+export function calculateDiscriminator(
+  seed: string,
+  namespace: "global" | "account" = "global",
+): number[] {
   const hash = createHash("sha256");
-  hash.update(`global:${seed}`);
+  hash.update(`${namespace}:${seed}`);
   return Array.from(hash.digest().subarray(0, 8));
 }
 
@@ -71,7 +77,9 @@ function migrateAccount(account: IdlV0Account): IdlV1Account {
   const snakeName = convertCamelToSnake(account.name);
   return {
     name: snakeName,
-    discriminator: calculateDiscriminator(snakeName),
+    // Anchor account discriminators hash the struct identifier as written
+    // (e.g. "account:TokenAccount"), NOT the snake_case name
+    discriminator: calculateDiscriminator(account.name, "account"),
     type: {
       kind: account.type.kind,
       fields: (account.type.fields ?? []).map(migrateField),
@@ -110,23 +118,21 @@ function migrateField(field: IdlV0Field): IdlV1Field {
 
 function migrateType(type: string | IdlV0Type): string | IdlV1Type {
   if (typeof type === "string") {
-    return type;
+    // Pre-0.30 IDLs spell the pubkey primitive "publicKey"; v1 uses "pubkey"
+    return type === "publicKey" ? "pubkey" : type;
   }
   const result: IdlV1Type = {};
   if (type.defined) result.defined = convertCamelToSnake(type.defined);
-  if (type.option)
-    result.option =
-      typeof type.option === "string" ? type.option : (migrateType(type.option) as IdlV1Type);
-  if (type.vec)
-    result.vec = typeof type.vec === "string" ? type.vec : (migrateType(type.vec) as IdlV1Type);
+  // Recurse through migrateType for inner types (including bare strings, so
+  // legacy "publicKey" is translated at any nesting depth)
+  if (type.option) result.option = migrateType(type.option) as typeof result.option;
+  if (type.vec) result.vec = migrateType(type.vec) as typeof result.vec;
   if (type.array) {
     result.array = [
-      typeof type.array[0] === "string" ? type.array[0] : (migrateType(type.array[0]) as IdlV1Type),
+      migrateType(type.array[0]) as string | IdlV1Type,
       type.array[1],
-    ];
+    ] as typeof result.array;
   }
-  if (type.coption)
-    result.coption =
-      typeof type.coption === "string" ? type.coption : (migrateType(type.coption) as IdlV1Type);
+  if (type.coption) result.coption = migrateType(type.coption) as typeof result.coption;
   return result;
 }

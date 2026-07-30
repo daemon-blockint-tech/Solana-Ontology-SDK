@@ -31,7 +31,7 @@ export class OntologyMcpServer {
       ...config,
     };
     this.resourceHandlers = new ResourceHandlers();
-    this.toolHandlers = new ToolHandlers();
+    this.toolHandlers = new ToolHandlers({ approvalToken: this.config.approvalToken });
     this.authProvider = new OAuthProvider(this.config.auth ?? { required: false });
   }
 
@@ -297,10 +297,24 @@ export class OntologyMcpServer {
         }
       }
 
-      // Read body
+      // Read body (bounded — refuse oversized payloads instead of buffering them)
+      const maxBodyBytes = this.config.maxBodyBytes ?? 1024 * 1024;
       let body = "";
+      let bodyBytes = 0;
+      let tooLarge = false;
       for await (const chunk of req) {
+        bodyBytes += (chunk as Buffer).length;
+        if (bodyBytes > maxBodyBytes) {
+          tooLarge = true;
+          break;
+        }
         body += chunk.toString();
+      }
+      if (tooLarge) {
+        res.writeHead(413, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: `Request body exceeds ${maxBodyBytes} bytes` }));
+        req.destroy();
+        return;
       }
 
       try {

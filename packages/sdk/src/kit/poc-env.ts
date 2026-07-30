@@ -215,17 +215,18 @@ export class PoCEnvironment implements IPoCEnvironment {
    * Mirrors: Environment::get_account()
    */
   async getAccount(pubkey: string): Promise<RawAccountData | null> {
+    const { PublicKey } = await import("@solana/web3.js");
     const conn = await this.getConnection();
     const c = conn as {
-      getAccountInfo: (pk: string) => Promise<{
+      getAccountInfo: (pk: InstanceType<typeof PublicKey>) => Promise<{
         lamports: number;
         data: Uint8Array | { type: string; get: () => Uint8Array };
-        owner: string;
+        owner: string | { toBase58(): string };
         executable: boolean;
-        rentEpoch: number;
+        rentEpoch?: number;
       } | null>;
     };
-    const info = await c.getAccountInfo(pubkey);
+    const info = await c.getAccountInfo(new PublicKey(pubkey));
     if (!info) return null;
     const data =
       info.data instanceof Uint8Array ? info.data : (info.data as { get: () => Uint8Array }).get();
@@ -233,9 +234,9 @@ export class PoCEnvironment implements IPoCEnvironment {
       pubkey,
       lamports: BigInt(info.lamports),
       data,
-      owner: info.owner,
+      owner: typeof info.owner === "string" ? info.owner : info.owner.toBase58(),
       executable: info.executable,
-      rentEpoch: BigInt(info.rentEpoch),
+      rentEpoch: BigInt(info.rentEpoch ?? 0),
     };
   }
 

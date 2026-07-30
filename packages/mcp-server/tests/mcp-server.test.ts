@@ -124,19 +124,56 @@ describe("mcp-server", () => {
       expect(response.error!.code).toBe(-32601);
     });
 
-    it("should block destructive actions without approval token", () => {
+    it("should refuse destructive actions when no approval token is configured", () => {
       const server = new OntologyMcpServer();
       server.registerConcepts(concepts);
 
-      // Find a destructive action
       const tools = server.listTools();
       const destructive = tools.find((t) => t.description.includes("DESTRUCTIVE"));
+      expect(destructive).toBeDefined();
 
-      if (destructive) {
-        const result = server.callTool(destructive.name, {});
-        expect(result.isError).toBe(true);
-        expect(result.content[0].text).toContain("requires human approval");
-      }
+      // Fail closed: without an operator-configured token, no value works
+      const result = server.callTool(destructive!.name, { _approvalToken: "APPROVED" });
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain("no approval token configured");
+    });
+
+    it("should gate destructive actions on the operator-configured approval token", () => {
+      const server = new OntologyMcpServer({ approvalToken: "operator-secret" });
+      server.registerConcepts(concepts);
+
+      const tools = server.listTools();
+      const destructive = tools.find((t) => t.description.includes("DESTRUCTIVE"));
+      expect(destructive).toBeDefined();
+
+      const blocked = server.callTool(destructive!.name, {});
+      expect(blocked.isError).toBe(true);
+      expect(blocked.content[0].text).toContain("requires human approval");
+      // The error must not disclose the token itself
+      expect(blocked.content[0].text).not.toContain("operator-secret");
+
+      const wrongToken = server.callTool(destructive!.name, { _approvalToken: "APPROVED" });
+      expect(wrongToken.isError).toBe(true);
+
+      const approved = server.callTool(destructive!.name, { _approvalToken: "operator-secret" });
+      expect(approved.isError).toBeUndefined();
+    });
+
+    it("should gate destructive actions even when the tool name is case-altered", () => {
+      const server = new OntologyMcpServer({ approvalToken: "operator-secret" });
+      server.registerConcepts(concepts);
+
+      const tools = server.listTools();
+      const destructive = tools.find((t) => t.description.includes("DESTRUCTIVE"));
+      expect(destructive).toBeDefined();
+
+      // Lowercase the transition segment — resolution is case-insensitive, so
+      // the gate must still apply
+      const [conceptPart, ...rest] = destructive!.name.split("_");
+      const altered = `${conceptPart}_${rest.join("_").toLowerCase()}`;
+      const result = server.callTool(altered, {});
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain("requires human approval");
     });
   });
 

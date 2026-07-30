@@ -82,4 +82,11 @@ export interface McpServerConfig {
   auth?: OAuthConfig;
   /** OMS server URL (optional — for live data) */
   omsUrl?: string;
+  /**
+   * Operator-issued token that callers must supply as `_approvalToken` to run
+   * destructive actions. When unset, destructive actions are always refused.
+   */
+  approvalToken?: string;
+  /** Maximum accepted HTTP request body size in bytes (default 1 MiB) */
+  maxBodyBytes?: number;
 }

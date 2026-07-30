@@ -3,13 +3,27 @@
  * Human-in-the-loop gate: destructive actions require explicit approval token.
  */
 
+import { createHash, timingSafeEqual } from "node:crypto";
 import type { Concept, StateTransition } from "@solana-ontology/core";
 import type { McpTool, McpToolResult } from "./types.js";
+
+/** Constant-time string comparison (hashes first to equalize lengths). */
+function secureCompare(a: string, b: string): boolean {
+  const ha = createHash("sha256").update(a).digest();
+  const hb = createHash("sha256").update(b).digest();
+  return timingSafeEqual(ha, hb);
+}
 
 export class ToolHandlers {
   private concepts: Map<string, Concept> = new Map();
   /** Actions that require explicit human approval */
   private destructiveActions = new Set<string>();
+  /** Operator-issued approval token; destructive actions are refused when unset */
+  private approvalToken?: string;
+
+  constructor(options?: { approvalToken?: string }) {
+    this.approvalToken = options?.approvalToken;
+  }
 
   registerConcepts(concepts: Concept[]): void {
     for (const concept of concepts) {
@@ -58,7 +72,8 @@ export class ToolHandlers {
         if (isDestructive) {
           properties._approvalToken = {
             type: "string",
-            description: "Human approval token required for destructive action",
+            description:
+              "Operator-issued approval token required for destructive actions. Obtain it out-of-band from the server operator.",
           };
           required.push("_approvalToken");
         }
@@ -84,22 +99,6 @@ export class ToolHandlers {
    * Returns a proposed transaction — does NOT execute on-chain.
    */
   callTool(name: string, params: Record<string, unknown>): McpToolResult {
-    // Check if this is a destructive action
-    if (this.destructiveActions.has(name)) {
-      const approvalToken = params._approvalToken;
-      if (!approvalToken || approvalToken !== "APPROVED") {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `ERROR: Action "${name}" is destructive and requires human approval. Provide _approvalToken="APPROVED" to proceed.`,
-            },
-          ],
-          isError: true,
-        };
-      }
-    }
-
     // Parse the tool name: <ConceptName>_<TransitionVia>
     const parts = name.split("_");
     if (parts.length < 2) {
@@ -134,6 +133,36 @@ export class ToolHandlers {
         ],
         isError: true,
       };
+    }
+
+    // Gate destructive actions AFTER resolution, using the canonical resolved
+    // name — gating on the raw input would let a case-altered tool name skip
+    // the check while still resolving to the destructive transition.
+    const canonicalToolName = `${concept.canonicalName}_${transition.via}`;
+    if (this.destructiveActions.has(canonicalToolName)) {
+      const provided = params._approvalToken;
+      if (!this.approvalToken) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `ERROR: Action "${canonicalToolName}" is destructive and this server has no approval token configured. The server operator must set one to enable destructive actions.`,
+            },
+          ],
+          isError: true,
+        };
+      }
+      if (typeof provided !== "string" || !secureCompare(provided, this.approvalToken)) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `ERROR: Action "${canonicalToolName}" is destructive and requires human approval. Supply the operator-issued _approvalToken (obtained out-of-band) to proceed.`,
+            },
+          ],
+          isError: true,
+        };
+      }
     }
 
     // Build proposed transaction (simulation only — no on-chain execution)

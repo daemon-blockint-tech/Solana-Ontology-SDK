@@ -7,6 +7,7 @@
  */
 
 import { createServer, type Server, type IncomingMessage, type ServerResponse } from "node:http";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import type { Concept } from "@solana-ontology/core";
 import { buildGraph, MetricsRegistry } from "@solana-ontology/core";
@@ -239,7 +240,12 @@ export class OntologyOmsServer {
     // Auth check
     if (this.config.authToken && !isObservability) {
       const auth = req.headers.authorization;
-      if (auth !== `Bearer ${this.config.authToken}`) {
+      // Constant-time comparison (hash both sides to equalize lengths)
+      const expected = createHash("sha256").update(`Bearer ${this.config.authToken}`).digest();
+      const provided = createHash("sha256")
+        .update(auth ?? "")
+        .digest();
+      if (!auth || !timingSafeEqual(expected, provided)) {
         this.json(res, 401, { success: false, error: "Unauthorized" });
         return;
       }
