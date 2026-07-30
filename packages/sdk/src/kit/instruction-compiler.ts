@@ -4,6 +4,7 @@
  */
 
 import type { ActionInstruction } from "./action.js";
+import { decodeBase58 } from "./base58.js";
 
 export interface IdlInstructionDef {
   name: string;
@@ -30,7 +31,7 @@ export function encodeBorshValue(type: string, value: unknown): Uint8Array {
       return new Uint8Array([value ? 1 : 0]);
     }
     case "u8": {
-      return new Uint8Array([value as number & 0xff]);
+      return new Uint8Array([(value as number) & 0xff]);
     }
     case "u16": {
       const buf = new Uint8Array(2);
@@ -43,13 +44,31 @@ export function encodeBorshValue(type: string, value: unknown): Uint8Array {
       return buf;
     }
     case "u64":
-    case "u128":
-    case "i64":
-    case "i128": {
+    case "i64": {
       const v = BigInt(value as string | number | bigint);
+      const min = type === "u64" ? 0n : -(2n ** 63n);
+      const max = type === "u64" ? 2n ** 64n - 1n : 2n ** 63n - 1n;
+      if (v < min || v > max) {
+        throw new Error(`Value ${v} out of range for ${type}`);
+      }
       const buf = new Uint8Array(8);
       const view = new DataView(buf.buffer);
-      view.setBigUint64(0, v & 0xffffffffffffffffn, true);
+      view.setBigUint64(0, BigInt.asUintN(64, v), true);
+      return buf;
+    }
+    case "u128":
+    case "i128": {
+      const v = BigInt(value as string | number | bigint);
+      const min = type === "u128" ? 0n : -(2n ** 127n);
+      const max = type === "u128" ? 2n ** 128n - 1n : 2n ** 127n - 1n;
+      if (v < min || v > max) {
+        throw new Error(`Value ${v} out of range for ${type}`);
+      }
+      const unsigned = BigInt.asUintN(128, v);
+      const buf = new Uint8Array(16);
+      const view = new DataView(buf.buffer);
+      view.setBigUint64(0, unsigned & 0xffffffffffffffffn, true);
+      view.setBigUint64(8, unsigned >> 64n, true);
       return buf;
     }
     case "string": {
@@ -62,11 +81,22 @@ export function encodeBorshValue(type: string, value: unknown): Uint8Array {
       return result;
     }
     case "pubkey": {
-      // Base58 decode would go here — for now we accept Uint8Array
-      if (value instanceof Uint8Array) return value;
-      // If it's a base58 string, we'd need bs58 decode
-      // Return placeholder 32 bytes
-      return new Uint8Array(32);
+      if (value instanceof Uint8Array) {
+        if (value.length !== 32) {
+          throw new Error(`Pubkey must be 32 bytes, got ${value.length}`);
+        }
+        return value;
+      }
+      if (typeof value === "string") {
+        const decoded = decodeBase58(value);
+        if (decoded.length !== 32) {
+          throw new Error(`Pubkey "${value}" decodes to ${decoded.length} bytes, expected 32`);
+        }
+        return decoded;
+      }
+      throw new Error(
+        `Cannot encode pubkey from ${typeof value}; pass a base58 string or 32-byte Uint8Array`,
+      );
     }
     case "bytes": {
       const v = value as Uint8Array;
@@ -78,8 +108,12 @@ export function encodeBorshValue(type: string, value: unknown): Uint8Array {
       return result;
     }
     default: {
-      // For complex types (defined, option, vec, array), return empty for now
-      return new Uint8Array(0);
+      // Complex types (defined, option, vec, array) are not supported by this
+      // minimal encoder — emitting nothing would silently misalign every
+      // subsequent argument, so refuse loudly instead.
+      throw new Error(
+        `Unsupported argument type "${type}" — use a full Borsh encoder for complex types`,
+      );
     }
   }
 }

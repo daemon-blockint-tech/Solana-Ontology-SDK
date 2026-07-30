@@ -21,10 +21,17 @@ export class ConfirmationTracker {
   private emitter = new TransactionEventEmitter();
   private pollIntervalMs: number;
   private timeoutMs: number;
+  private commitment: "confirmed" | "finalized";
 
-  constructor(options?: { pollIntervalMs?: number; timeoutMs?: number }) {
+  constructor(options?: {
+    pollIntervalMs?: number;
+    timeoutMs?: number;
+    /** Commitment level to wait for (default "finalized") */
+    commitment?: "confirmed" | "finalized";
+  }) {
     this.pollIntervalMs = options?.pollIntervalMs ?? 2000;
     this.timeoutMs = options?.timeoutMs ?? 60_000;
+    this.commitment = options?.commitment ?? "finalized";
   }
 
   /**
@@ -77,9 +84,16 @@ export class ConfirmationTracker {
         entry.status = "confirmed";
         entry.confirmedAt = Date.now();
         this.emitter.emit("confirmed", entry);
+        if (this.commitment === "confirmed") {
+          return entry;
+        }
       }
 
       if (status.confirmationStatus === "finalized") {
+        if (entry.status === "pending") {
+          entry.confirmedAt = Date.now();
+          this.emitter.emit("confirmed", entry);
+        }
         entry.status = "finalized";
         entry.finalizedAt = Date.now();
         this.emitter.emit("finalized", entry);
@@ -89,8 +103,12 @@ export class ConfirmationTracker {
       await sleep(this.pollIntervalMs);
     }
 
-    entry.status = "timeout";
-    this.emitter.emit("timeout", entry);
+    // Preserve a reached "confirmed" status rather than overwriting it — the
+    // transaction did land; only the wait for finalization timed out.
+    if (entry.status === "pending") {
+      entry.status = "timeout";
+      this.emitter.emit("timeout", entry);
+    }
     return entry;
   }
 

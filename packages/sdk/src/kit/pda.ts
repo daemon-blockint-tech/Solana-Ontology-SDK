@@ -26,8 +26,13 @@ export async function derivePdaWeb3(programId: string, seeds: Uint8Array[]): Pro
  * @param seeds Array of seed byte arrays
  */
 export async function derivePdaKit(programId: string, seeds: Uint8Array[]): Promise<PdaResult> {
+  let kit: typeof import("@solana/kit");
   try {
-    const kit = await import("@solana/kit");
+    kit = await import("@solana/kit");
+  } catch {
+    throw new Error("@solana/kit is not installed");
+  }
+  try {
     const { getProgramDerivedAddress, address } = kit;
 
     // Kit v7: getProgramDerivedAddress(seeds, programAddress)
@@ -45,8 +50,10 @@ export async function derivePdaKit(programId: string, seeds: Uint8Array[]): Prom
       address: pdaAddress,
       bump,
     };
-  } catch {
-    throw new Error("Failed to derive PDA with @solana/kit. Ensure it is installed.");
+  } catch (err) {
+    // A real derivation error — surface it instead of misreporting an
+    // installation problem
+    throw err instanceof Error ? err : new Error(String(err));
   }
 }
 

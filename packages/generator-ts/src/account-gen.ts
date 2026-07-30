@@ -13,13 +13,17 @@ export function mapSolanaTypeToTs(type: string): string {
     u32: "number",
     u64: "bigint",
     u128: "bigint",
+    i8: "number",
+    i16: "number",
     i32: "number",
     i64: "bigint",
     i128: "bigint",
+    f32: "number",
     f64: "number",
     bool: "boolean",
     bytes: "Uint8Array",
     string: "string",
+    PublicKey: "string",
   };
 
   if (typeMap[type]) return typeMap[type];
@@ -27,6 +31,22 @@ export function mapSolanaTypeToTs(type: string): string {
   if (type.endsWith("[]")) {
     const inner = type.slice(0, -2);
     return `${mapSolanaTypeToTs(inner)}[]`;
+  }
+
+  // Ontology container types produced by the IDL concept generator
+  if (type.startsWith("Option<") && type.endsWith(">")) {
+    const inner = type.slice(7, -1);
+    return `${mapSolanaTypeToTs(inner)} | null`;
+  }
+  if (type.startsWith("Vec<") && type.endsWith(">")) {
+    const inner = type.slice(4, -1);
+    return `${mapSolanaTypeToTs(inner)}[]`;
+  }
+  if (type.startsWith("Array<") && type.endsWith(">")) {
+    const inner = type.slice(6, -1);
+    const commaIdx = inner.lastIndexOf(",");
+    const elem = commaIdx === -1 ? inner : inner.slice(0, commaIdx);
+    return `${mapSolanaTypeToTs(elem.trim())}[]`;
   }
 
   return type;

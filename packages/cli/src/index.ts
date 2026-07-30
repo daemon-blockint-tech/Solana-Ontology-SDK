@@ -110,6 +110,11 @@ program
   .option("--transport <type>", "Transport: stdio or http (default stdio, or $MCP_TRANSPORT)")
   .option("--port <port>", "Port for HTTP transport (default 3001, or $MCP_PORT)")
   .option("--auth-required", "Require OAuth token for access")
+  .option("--auth-secret <secret>", "Bearer secret for --auth-required (or $MCP_AUTH_SECRET)")
+  .option(
+    "--approval-token <token>",
+    "Operator token required for destructive tools (or $MCP_APPROVAL_TOKEN)",
+  )
   .option("--path <path>", "Custom ontology root path")
   .action(async (opts) => {
     const path = opts.path ?? process.env.ONTOLOGY_PATH;
@@ -121,6 +126,8 @@ program
       transport: (opts.transport ?? process.env.MCP_TRANSPORT ?? "stdio") as "stdio" | "http",
       port: parseInt(opts.port ?? process.env.MCP_PORT ?? "3001", 10),
       authRequired: opts.authRequired || process.env.MCP_AUTH_REQUIRED === "true",
+      authSecret: opts.authSecret ?? process.env.MCP_AUTH_SECRET,
+      approvalToken: opts.approvalToken ?? process.env.MCP_APPROVAL_TOKEN,
     });
   });
 

@@ -154,10 +154,15 @@ export function requiredImports(rustTypes: string[]): string[] {
  * Convert a PascalCase concept name to snake_case for Rust.
  */
 export function toSnakeCase(name: string): string {
-  return name
-    .replace(/([A-Z])/g, "_$1")
-    .toLowerCase()
-    .replace(/^_/, "");
+  return (
+    name
+      .replace(/([A-Z])/g, "_$1")
+      .toLowerCase()
+      .replace(/^_/, "")
+      // Defense-in-depth: never let non-identifier characters reach generated
+      // code or output file paths
+      .replace(/[^a-z0-9_]/g, "_")
+  );
 }
 
 /** Collapse a description to a single line so it is a valid doc comment. */

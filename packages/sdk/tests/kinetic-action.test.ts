@@ -135,6 +135,46 @@ describe("Kinetic Action Layer", () => {
       expect(encodeBorshValue("bool", false)).toEqual(new Uint8Array([0]));
     });
 
+    it("should encode base58 pubkey strings to their 32 raw bytes", () => {
+      const result = encodeBorshValue("pubkey", "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+      expect(result).toHaveLength(32);
+      // Must never silently encode as the zero address
+      expect(result.some((b) => b !== 0)).toBe(true);
+      // System program is the base58 all-zero key
+      expect(encodeBorshValue("pubkey", "11111111111111111111111111111111")).toEqual(
+        new Uint8Array(32),
+      );
+    });
+
+    it("should reject invalid pubkey values", () => {
+      expect(() => encodeBorshValue("pubkey", "not-base58!!")).toThrow();
+      expect(() => encodeBorshValue("pubkey", new Uint8Array(31))).toThrow("32 bytes");
+      expect(() => encodeBorshValue("pubkey", 42)).toThrow();
+    });
+
+    it("should encode u128/i128 as 16 little-endian bytes", () => {
+      const v = 2n ** 64n + 5n;
+      const result = encodeBorshValue("u128", v);
+      expect(result).toHaveLength(16);
+      const view = new DataView(result.buffer);
+      const lo = view.getBigUint64(0, true);
+      const hi = view.getBigUint64(8, true);
+      expect((hi << 64n) | lo).toBe(v);
+
+      const neg = encodeBorshValue("i128", -1n);
+      expect(neg).toHaveLength(16);
+      expect(Array.from(neg).every((b) => b === 0xff)).toBe(true);
+    });
+
+    it("should reject out-of-range integers", () => {
+      expect(() => encodeBorshValue("u64", 2n ** 64n)).toThrow("out of range");
+      expect(() => encodeBorshValue("u128", -1n)).toThrow("out of range");
+    });
+
+    it("should reject unsupported complex types instead of emitting nothing", () => {
+      expect(() => encodeBorshValue("unknown", {})).toThrow("Unsupported argument type");
+    });
+
     it("should encode string with length prefix", () => {
       const result = encodeBorshValue("string", "hello");
       const view = new DataView(result.buffer);

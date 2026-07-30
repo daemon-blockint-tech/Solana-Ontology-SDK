@@ -174,6 +174,16 @@ describe("program-ids", () => {
   it("findProgramIdByAddress returns null for an unknown address", () => {
     expect(findProgramIdByAddress("not-a-real-program-id")).toBeNull();
   });
+
+  it("pins every entry to its canonical on-chain address", () => {
+    // Value-level assertions — a length check would not catch a typo'd address
+    expect(SOLANA_PROGRAM_IDS.System).toBe("11111111111111111111111111111111");
+    expect(SOLANA_PROGRAM_IDS.Token).toBe("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+    expect(SOLANA_PROGRAM_IDS.Token2022).toBe("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+    expect(SOLANA_PROGRAM_IDS.AssociatedToken).toBe("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+    expect(SOLANA_PROGRAM_IDS.Memo).toBe("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+    expect(SOLANA_PROGRAM_IDS.ComputeBudget).toBe("ComputeBudget111111111111111111111111111111");
+  });
 });
 
 describe("loader", () => {

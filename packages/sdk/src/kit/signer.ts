@@ -44,11 +44,12 @@ export class KeypairSigner implements SignerProvider {
 
   async signTransaction(messageBytes: Uint8Array): Promise<SignedTransaction> {
     const web3 = await getWeb3();
-    const { Transaction, Keypair } = web3;
+    const { Transaction, Message, Keypair } = web3;
     const kp = this.keypair as { secretKey: Uint8Array; publicKey: Uint8Array };
 
-    // Reconstruct the transaction from message bytes, sign it, and serialize
-    const tx = Transaction.from(Buffer.from(messageBytes));
+    // messageBytes are serialized *message* bytes (not wire-format transaction
+    // bytes), so rebuild via Message.from + Transaction.populate before signing
+    const tx = Transaction.populate(Message.from(Buffer.from(messageBytes)));
     const keypair = Keypair.fromSecretKey(kp.secretKey);
     tx.sign(keypair);
 
@@ -81,7 +82,7 @@ export class KmsSigner implements SignerProvider {
 
   async signTransaction(messageBytes: Uint8Array): Promise<SignedTransaction> {
     const web3 = await getWeb3();
-    const { Transaction } = web3;
+    const { Transaction, Message } = web3;
 
     // KMS signing: send message bytes to KMS, get back Ed25519 signature
     const client = this.kmsClient as {
@@ -89,8 +90,9 @@ export class KmsSigner implements SignerProvider {
     };
     const result = await client.sign({ keyId: this.keyId, message: messageBytes });
 
-    // Reconstruct the transaction and attach the KMS signature
-    const tx = Transaction.from(Buffer.from(messageBytes));
+    // messageBytes are serialized *message* bytes — rebuild the transaction
+    // from the message and attach the KMS signature
+    const tx = Transaction.populate(Message.from(Buffer.from(messageBytes)));
     tx.addSignature(new web3.PublicKey(this.publicKey), Buffer.from(result.signature));
 
     const serialized = tx.serialize();
@@ -136,10 +138,11 @@ export class MpcSigner implements SignerProvider {
     const result = (await response.json()) as { signature: number[] };
     const signature = new Uint8Array(result.signature);
 
-    // Reconstruct the transaction and attach the MPC signature
+    // messageBytes are serialized *message* bytes — rebuild the transaction
+    // from the message and attach the MPC signature
     const web3 = await getWeb3();
-    const { Transaction } = web3;
-    const tx = Transaction.from(Buffer.from(messageBytes));
+    const { Transaction, Message } = web3;
+    const tx = Transaction.populate(Message.from(Buffer.from(messageBytes)));
     tx.addSignature(new web3.PublicKey(this.publicKey), Buffer.from(signature));
     const serialized = tx.serialize();
 

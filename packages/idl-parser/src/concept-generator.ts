@@ -31,6 +31,8 @@ export function mapIdlTypeToOntology(idlType: string | IdlV1Type): string {
       f32: "f32",
       f64: "f64",
       pubkey: "Address",
+      // Legacy pre-0.30 IDL spelling
+      publicKey: "Address",
       string: "string",
       bytes: "bytes",
       void: "void",
@@ -68,7 +70,7 @@ export function mapIdlTypeToOntology(idlType: string | IdlV1Type): string {
  * Detect if a field type is a Pubkey (potential relationship).
  */
 function isPubkeyField(type: string | IdlV1Type): boolean {
-  if (typeof type === "string") return type === "pubkey";
+  if (typeof type === "string") return type === "pubkey" || type === "publicKey";
   return type.pubkey === true;
 }
 
@@ -218,13 +220,15 @@ export function generateConceptsFromIdl(idl: IdlV1): Concept[] {
       accountLayout,
       ...(programId ? { programId } : {}),
       idlInstruction,
-      constraints: [
-        {
-          name: "discriminator_check",
-          expression: `first 8 bytes must equal [${account.discriminator.join(", ")}]`,
-          description: "Anchor account discriminator must match",
-        },
-      ],
+      constraints: account.discriminator
+        ? [
+            {
+              name: "discriminator_check",
+              expression: `first 8 bytes must equal [${account.discriminator.join(", ")}]`,
+              description: "Anchor account discriminator must match",
+            },
+          ]
+        : undefined,
       links: [
         {
           label: "Program",

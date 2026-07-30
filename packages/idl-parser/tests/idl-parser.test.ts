@@ -55,6 +55,49 @@ describe("idl-parser", () => {
       expect(calculateDiscriminator("account")).toEqual(disc);
     });
 
+    it("should match Anchor's canonical discriminator values", () => {
+      // Instruction: sha256("global:initialize")[0..8] — the well-known Anchor sighash
+      expect(calculateDiscriminator("initialize")).toEqual([175, 175, 109, 31, 13, 152, 155, 237]);
+      // Account: sha256("account:<StructName as written>")[0..8]
+      expect(calculateDiscriminator("TokenAccount", "account")).toEqual([
+        220, 131, 236, 16, 145, 206, 207, 54,
+      ]);
+      // Published Whirlpool IDL account discriminator
+      expect(calculateDiscriminator("Whirlpool", "account")).toEqual([
+        63, 149, 209, 12, 225, 128, 99, 9,
+      ]);
+    });
+
+    it("should use the account namespace and original casing for migrated account discriminators", () => {
+      const v0 = loadFixture("token-v0.json") as IdlV0;
+      const v1 = migrateIdlV0ToV1(v0);
+      const original = v0.accounts![0].name;
+      expect(v1.accounts[0].discriminator).toEqual(calculateDiscriminator(original, "account"));
+    });
+
+    it("should translate legacy publicKey type to pubkey", () => {
+      const v0 = loadFixture("token-v0.json") as IdlV0;
+      const modified: IdlV0 = {
+        ...v0,
+        accounts: [
+          {
+            name: "Sample",
+            type: {
+              kind: "struct",
+              fields: [
+                { name: "owner", type: "publicKey" },
+                { name: "delegate", type: { option: "publicKey" } },
+              ],
+            },
+          },
+        ],
+      };
+      const v1 = migrateIdlV0ToV1(modified);
+      const fields = v1.accounts[0].type.fields;
+      expect(fields[0].type).toBe("pubkey");
+      expect((fields[1].type as { option?: unknown }).option).toBe("pubkey");
+    });
+
     it("should migrate v0 to v1", () => {
       const v0 = loadFixture("token-v0.json") as IdlV0;
       const v1 = migrateIdlV0ToV1(v0);
