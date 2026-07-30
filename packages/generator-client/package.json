@@ -27,7 +27,8 @@
   "devDependencies": {
     "typescript": "^5.4.0",
     "vitest": "^3.2.6",
-    "@types/node": "^20.14.0"
+    "@types/node": "^20.14.0",
+    "@solana-ontology/sdk": "workspace:*"
   },
   "license": "Apache-2.0",
   "homepage": "https://github.com/daemon-blockint-tech/Solana-Ontology-SDK/tree/main/packages/generator-client#readme",
