@@ -1,4 +1,4 @@
-import type { Concept, ConceptProperty } from "@solana-ontology/core";
+import type { Concept } from "@solana-ontology/core";
 import {
   hasAccountLayout,
   generateAccountDataInterface,

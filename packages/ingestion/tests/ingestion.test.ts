@@ -40,7 +40,7 @@ describe("ingestion", () => {
 
       const mockEvent: AccountUpdateEvent = {
         pubkey: "Test1111111111111111111111111111111111111",
-        lamports: 1000,
+        lamports: 1000n,
         owner: "Owner11111111111111111111111111111111111111",
         data: new Uint8Array([1, 2, 3]),
         executable: false,
@@ -68,7 +68,7 @@ describe("ingestion", () => {
       const manager = new StateManager();
       const event: AccountUpdateEvent = {
         pubkey: "Acct111111111111111111111111111111111111111",
-        lamports: 5000,
+        lamports: 5000n,
         owner: "Prog111111111111111111111111111111111111111",
         data: new Uint8Array([1, 2, 3, 4]),
         executable: false,
@@ -80,7 +80,7 @@ describe("ingestion", () => {
 
       const state = manager.processAccountUpdate(event);
       expect(state.pubkey).toBe("Acct111111111111111111111111111111111111111");
-      expect(state.lamports).toBe(5000);
+      expect(state.lamports).toBe(5000n);
       expect(manager.getAccountCount()).toBe(1);
       expect(manager.getCurrentSlot()).toBe(42);
     });
@@ -89,7 +89,7 @@ describe("ingestion", () => {
       const manager = new StateManager();
       const base: AccountUpdateEvent = {
         pubkey: "Acct111111111111111111111111111111111111111",
-        lamports: 5000,
+        lamports: 5000n,
         owner: "Prog111111111111111111111111111111111111111",
         data: new Uint8Array([1, 2, 3, 4]),
         executable: false,
@@ -108,7 +108,7 @@ describe("ingestion", () => {
       const manager = new StateManager();
       const base: Omit<AccountUpdateEvent, "slot"> = {
         pubkey: "Acct111111111111111111111111111111111111111",
-        lamports: 5000,
+        lamports: 5000n,
         owner: "Prog111111111111111111111111111111111111111",
         data: new Uint8Array([1]),
         executable: false,
@@ -135,7 +135,7 @@ describe("ingestion", () => {
       const manager = new StateManager();
       const base: Omit<AccountUpdateEvent, "slot"> = {
         pubkey: "Acct111111111111111111111111111111111111111",
-        lamports: 5000,
+        lamports: 5000n,
         owner: "Prog111111111111111111111111111111111111111",
         data: new Uint8Array([1]),
         executable: false,
@@ -156,7 +156,7 @@ describe("ingestion", () => {
 
       manager.processAccountUpdate({
         pubkey,
-        lamports: 1000,
+        lamports: 1000n,
         owner: "Prog111111111111111111111111111111111111111",
         data: new Uint8Array([1]),
         executable: false,
@@ -168,7 +168,7 @@ describe("ingestion", () => {
 
       manager.processAccountUpdate({
         pubkey,
-        lamports: 2000,
+        lamports: 2000n,
         owner: "Prog111111111111111111111111111111111111111",
         data: new Uint8Array([2]),
         executable: false,
@@ -179,7 +179,7 @@ describe("ingestion", () => {
       });
 
       const state = manager.getAccountState(pubkey);
-      expect(state?.lamports).toBe(2000); // Latest state
+      expect(state?.lamports).toBe(2000n); // Latest state
       expect(state?.slot).toBe(11);
       expect(manager.getAccountCount()).toBe(1); // Not duplicated
     });
@@ -211,7 +211,7 @@ describe("ingestion", () => {
       // Write account at slot 10
       manager.processAccountUpdate({
         pubkey: "Acct111111111111111111111111111111111111111",
-        lamports: 1000,
+        lamports: 1000n,
         owner: "Prog111111111111111111111111111111111111111",
         data: new Uint8Array([10]),
         executable: false,
@@ -224,7 +224,7 @@ describe("ingestion", () => {
       // Update same account at slot 11 (overwrites slot 10 state)
       manager.processAccountUpdate({
         pubkey: "Acct111111111111111111111111111111111111111",
-        lamports: 2000,
+        lamports: 2000n,
         owner: "Prog111111111111111111111111111111111111111",
         data: new Uint8Array([11]),
         executable: false,
@@ -237,7 +237,7 @@ describe("ingestion", () => {
       // Write a new account at slot 12 (didn't exist before)
       manager.processAccountUpdate({
         pubkey: "Acct22211111111111111111111111111111111111111",
-        lamports: 3000,
+        lamports: 3000n,
         owner: "Prog111111111111111111111111111111111111111",
         data: new Uint8Array([12]),
         executable: false,
@@ -258,7 +258,7 @@ describe("ingestion", () => {
       // Acct1 should be restored to its slot 10 state, not deleted
       const restored = manager.getAccountState("Acct111111111111111111111111111111111111111");
       expect(restored).toBeDefined();
-      expect(restored!.lamports).toBe(1000); // Restored to slot 10 value, not slot 11
+      expect(restored!.lamports).toBe(1000n); // Restored to slot 10 value, not slot 11
       expect(restored!.data).toEqual(new Uint8Array([10]));
       expect(restored!.slot).toBe(10);
 
@@ -274,7 +274,7 @@ describe("ingestion", () => {
       const manager = new StateManager();
       manager.processAccountUpdate({
         pubkey: "Acct111111111111111111111111111111111111111",
-        lamports: 1000,
+        lamports: 1000n,
         owner: "Prog111111111111111111111111111111111111111",
         data: new Uint8Array([1, 2, 3]),
         executable: false,
@@ -300,7 +300,7 @@ describe("ingestion", () => {
       const manager = new StateManager();
       manager.processAccountUpdate({
         pubkey: "Acct111111111111111111111111111111111111111",
-        lamports: 1000,
+        lamports: 1000n,
         owner: "OwnerA111111111111111111111111111111111111111",
         data: new Uint8Array([1]),
         executable: false,
@@ -311,7 +311,7 @@ describe("ingestion", () => {
       });
       manager.processAccountUpdate({
         pubkey: "Acct21111111111111111111111111111111111111111",
-        lamports: 2000,
+        lamports: 2000n,
         owner: "OwnerB111111111111111111111111111111111111111",
         data: new Uint8Array([2]),
         executable: false,
@@ -325,7 +325,7 @@ describe("ingestion", () => {
         "OwnerA111111111111111111111111111111111111111",
       );
       expect(ownerAAccounts).toHaveLength(1);
-      expect(ownerAAccounts[0].lamports).toBe(1000);
+      expect(ownerAAccounts[0].lamports).toBe(1000n);
     });
   });
 
@@ -334,7 +334,7 @@ describe("ingestion", () => {
       const processor = new EventProcessor();
       const event: AccountUpdateEvent = {
         pubkey: "Acct111111111111111111111111111111111111111",
-        lamports: 1000,
+        lamports: 1000n,
         owner: "Prog111111111111111111111111111111111111111",
         data: new Uint8Array([1, 2, 3]),
         executable: false,
@@ -361,7 +361,7 @@ describe("ingestion", () => {
 
       const result = processor.processAccountUpdate({
         pubkey: "Acct111111111111111111111111111111111111111",
-        lamports: 1000,
+        lamports: 1000n,
         owner: "Prog111111111111111111111111111111111111111",
         data,
         executable: false,
@@ -383,7 +383,7 @@ describe("ingestion", () => {
 
       processor.processAccountUpdate({
         pubkey: "Acct111111111111111111111111111111111111111",
-        lamports: 1000,
+        lamports: 1000n,
         owner: "Prog111111111111111111111111111111111111111",
         data: new Uint8Array([1]),
         executable: false,
@@ -411,7 +411,7 @@ describe("ingestion", () => {
 describe("StateManager instrumentation", () => {
   const acct = (over: Partial<AccountUpdateEvent> = {}): AccountUpdateEvent => ({
     pubkey: "Acc11111111111111111111111111111111111111",
-    lamports: 1000,
+    lamports: 1000n,
     owner: "Own11111111111111111111111111111111111111",
     data: new Uint8Array([1, 2, 3]),
     executable: false,

@@ -74,7 +74,6 @@ function generateTransitionGuard(t: StateTransition): string | null {
  * Tests that unauthorized callers are rejected.
  */
 export function generateAdversarialTest(concept: Concept): string {
-  const testName = concept.canonicalName.replace(/([A-Z])/g, "_$1").toLowerCase();
   const tests: string[] = [];
 
   tests.push(
@@ -143,8 +142,6 @@ export function generateSecurityArtifacts(concept: Concept): {
 }
 
 // ── PoC Test Scaffold Generator ─────────────────────────────────────────────
-
-import type { ConceptCategory } from "@solana-ontology/core";
 
 /**
  * Vulnerability pattern → exploit test mapping.
@@ -249,11 +246,6 @@ ${exploits.join("\n")}
  * Generate a generic PoC test for concepts without a specific pattern.
  */
 function generateGenericPoCTest(concept: Concept): string {
-  const testName = concept.canonicalName
-    .replace(/([A-Z])/g, "_$1")
-    .toLowerCase()
-    .slice(1);
-
   return `/**
  * PoC Exploit Test: ${concept.canonicalName}
  * Auto-generated — no specific exploit pattern mapped.

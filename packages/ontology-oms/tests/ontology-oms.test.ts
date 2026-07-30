@@ -9,9 +9,6 @@ import {
   autoDetectLinks,
   MemoryStorage,
   NullAdapter,
-  type ObjectTypeDefinition,
-  type LinkTypeDefinition,
-  type ActionTypeDefinition,
 } from "../src/index.js";
 import type { Concept } from "@solana-ontology/core";
 

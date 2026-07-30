@@ -122,12 +122,12 @@ ${transitions.map((t) => generateTransactionBuilder(t, structName)).join("\n\n")
 /**
  * Generate the #[init] function that sets up initial state.
  */
-function generateInitFunction(concept: Concept, structName: string): string {
+function generateInitFunction(concept: Concept, _structName: string): string {
   const initTransition = concept.stateMachine?.transitions.find(
     (t) => t.from === concept.stateMachine?.states[0],
   );
 
-  const initIxName = initTransition ? toRustFnName(initTransition.via) : "initialize";
+  const _initIxName = initTransition ? toRustFnName(initTransition.via) : "initialize";
 
   return `#[init]
 fn start(&mut self) {
@@ -149,7 +149,7 @@ fn start(&mut self) {
 /**
  * Generate a #[flow] function for a state transition.
  */
-function generateFlowFunction(t: StateTransition, structName: string): string {
+function generateFlowFunction(t: StateTransition, _structName: string): string {
   const fnName = toRustFnName(t.via);
   const txBuilderName = toRustStructName(t.via);
 
@@ -219,7 +219,7 @@ fn ${fnName}_invariant(&self) {
 /**
  * Generate a transaction builder struct for a transition.
  */
-function generateTransactionBuilder(t: StateTransition, structName: string): string {
+function generateTransactionBuilder(t: StateTransition, _structName: string): string {
   const txName = toRustStructName(t.via);
   const fnName = toRustFnName(t.via);
 

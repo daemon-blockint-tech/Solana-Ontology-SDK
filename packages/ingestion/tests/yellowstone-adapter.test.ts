@@ -83,7 +83,7 @@ describe("YellowstoneStreamAdapter", () => {
     expect(events).toHaveLength(1);
     const event = events[0] as Record<string, unknown>;
     expect(event.pubkey).toBe(encodeBase58(PUBKEY_BYTES));
-    expect(event.lamports).toBe(5000);
+    expect(event.lamports).toBe(5000n);
     expect(event.slot).toBe(42);
     expect(event.commitment).toBe("confirmed");
   });

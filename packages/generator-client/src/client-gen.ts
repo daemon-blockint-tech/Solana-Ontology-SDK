@@ -3,7 +3,7 @@
  * Produces ObjectTypes.ts, ActionTypes.ts, Client.ts, Queries.ts.
  */
 
-import type { Concept, ConceptProperty } from "@solana-ontology/core";
+import type { Concept } from "@solana-ontology/core";
 import type { ClientGenConfig, GeneratedClientFile } from "./types.js";
 
 /**

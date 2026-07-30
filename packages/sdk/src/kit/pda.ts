@@ -3,6 +3,8 @@
  * Supports both @solana/kit and web3.js v1.
  */
 
+import type * as Kit from "@solana/kit";
+
 export interface PdaResult {
   address: string;
   bump: number;
@@ -26,7 +28,7 @@ export async function derivePdaWeb3(programId: string, seeds: Uint8Array[]): Pro
  * @param seeds Array of seed byte arrays
  */
 export async function derivePdaKit(programId: string, seeds: Uint8Array[]): Promise<PdaResult> {
-  let kit: typeof import("@solana/kit");
+  let kit: typeof Kit;
   try {
     kit = await import("@solana/kit");
   } catch {
