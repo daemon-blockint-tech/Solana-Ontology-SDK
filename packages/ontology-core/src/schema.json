@@ -307,6 +307,11 @@
           "items": {
             "$ref": "#/$defs/borshField"
           }
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total byte size for a fixed-width offset-addressed layout (native programs); inferred when omitted"
         }
       }
     },
