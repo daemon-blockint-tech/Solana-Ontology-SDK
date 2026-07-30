@@ -39,6 +39,3 @@ relationships:
 constraints:
   - expression: "type in ['security', 'performance', 'dependency', 'manual-approval']"
     description: "Constraint type must be recognized"
-links:
-  docs:
-    - "https://www.palantir.com/docs/foundry/apollo/"

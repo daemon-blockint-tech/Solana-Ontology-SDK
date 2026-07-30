@@ -39,6 +39,3 @@ relationships:
 constraints:
   - expression: "name in ['canary', 'beta', 'stable']"
     description: "Channel must be a recognized name"
-links:
-  docs:
-    - "https://www.palantir.com/docs/foundry/apollo/"
