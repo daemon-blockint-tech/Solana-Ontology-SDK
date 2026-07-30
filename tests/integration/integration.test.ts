@@ -5,11 +5,17 @@ import {
   migrateIdlV0ToV1,
   generateConceptsFromIdl,
   type IdlV0,
+  type IdlV1,
 } from "@solana-ontology/idl-parser";
 import { OntologyOmsServer } from "@solana-ontology/oms";
 import { OntologyMcpServer } from "@solana-ontology/mcp-server";
 import { generateClientFiles } from "@solana-ontology/generator-client";
-import { resolve } from "node:path";
+import { generateAll } from "@solana-ontology/generator-ts";
+import { mkdtempSync, writeFileSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { resolve, join } from "node:path";
+import { pathToFileURL } from "node:url";
+import ts from "typescript";
 
 const ONTOLOGY_ROOT = resolve(__dirname, "../../ontology");
 const CONCEPTS_DIR = resolve(ONTOLOGY_ROOT, "concepts");
@@ -203,5 +209,98 @@ describe("Cross-Package Integration", () => {
     for (const r of resources) {
       expect(r.uri).toMatch(/^solana-ontology:\/\/concept\//);
     }
+  });
+});
+
+// ── IDL → concepts → generated code → runtime (the full chain) ──────────────
+
+const SDK_DIST = pathToFileURL(resolve(__dirname, "../../packages/sdk/dist/index.js")).href;
+
+/** Transpile the generated TS (pointing @solana-ontology/sdk at the built dist) and import it. */
+async function importGeneratedConceptModule(
+  concepts: Concept[],
+  fileBasename: string,
+): Promise<Record<string, unknown>> {
+  const dir = mkdtempSync(join(tmpdir(), "idl-pipeline-"));
+  const files = generateAll(concepts, { outputDir: dir, generateIndex: false });
+  let target: string | undefined;
+  for (const file of files) {
+    const source = file.content.replace(/"@solana-ontology\/sdk"/g, `"${SDK_DIST}"`);
+    const js = ts.transpileModule(source, {
+      compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },
+    }).outputText;
+    const jsPath = file.path.replace(/\.ts$/, ".js");
+    writeFileSync(jsPath, js);
+    if (jsPath.endsWith(`${fileBasename}.js`)) target = jsPath;
+  }
+  return import(pathToFileURL(target!).href);
+}
+
+describe("IDL → concept → generated code → runtime", () => {
+  const idlV1: IdlV1 = JSON.parse(
+    readFileSync(
+      resolve(__dirname, "../../packages/idl-parser/tests/fixtures/token-v1.json"),
+      "utf-8",
+    ),
+  );
+
+  it("generates concepts that carry decodable layouts and buildable instructions", () => {
+    const concepts = generateConceptsFromIdl(idlV1);
+    const mint = concepts.find((c) => c.canonicalName === "Mint");
+    expect(mint).toBeDefined();
+
+    // Account layout preserves real (composite) field types, not "complex"
+    const fieldTypes = Object.fromEntries(
+      (mint!.accountLayout!.fields ?? []).map((f) => [f.name, f.type]),
+    );
+    expect(fieldTypes.mint_authority).toBe("Option<Address>");
+    expect(fieldTypes.supply).toBe("u64");
+    expect(mint!.accountLayout!.fields.some((f) => f.type === "complex")).toBe(false);
+
+    // Instruction data carried through for typed action-builder codegen
+    expect(mint!.idlInstruction!.instructionName).toBe("initialize_mint");
+    expect(mint!.idlInstruction!.args!.map((a) => a.type)).toEqual([
+      "u8",
+      "pubkey",
+      "option<pubkey>",
+    ]);
+    expect(mint!.idlInstruction!.accounts!.length).toBe(2);
+  });
+
+  it("decodes a real account and builds a real instruction from IDL-derived generated code", async () => {
+    const concepts = generateConceptsFromIdl(idlV1);
+    const mod = await importGeneratedConceptModule(concepts, "mint");
+
+    const encodeMint = mod.encodeMint as (v: Record<string, unknown>) => Uint8Array;
+    const decodeMint = mod.decodeMint as (d: Uint8Array) => Record<string, unknown>;
+
+    // Round-trip an account with a Some and a None option through the generated Borsh codec
+    const value = {
+      mint_authority: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      supply: 1_000_000n,
+      decimals: 6,
+      is_initialized: true,
+      freeze_authority: null,
+    };
+    const decoded = decodeMint(encodeMint(value));
+    expect(decoded).toEqual(value);
+
+    // The generated action builder produces a real instruction via the SDK compiler
+    const build = mod.buildInitializeMintMintInstruction as (
+      params: Record<string, unknown>,
+      accounts: Record<string, string>,
+    ) => { programId: string; data: Uint8Array; accounts: unknown[] };
+    const ix = build(
+      { decimals: 6, mint_authority: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" },
+      {
+        mint: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+        rent: "SysvarRent111111111111111111111111111111111",
+      },
+    );
+    expect(ix.programId).toBe("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+    // discriminator(8) + u8(1) + pubkey(32) + option None tag(1) = 42 bytes
+    expect(ix.data.length).toBe(8 + 1 + 32 + 1);
+    expect(Array.from(ix.data.subarray(0, 8))).toEqual([24, 77, 231, 94, 77, 226, 46, 173]);
+    expect(ix.accounts).toHaveLength(2);
   });
 });
