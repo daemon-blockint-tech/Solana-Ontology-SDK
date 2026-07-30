@@ -165,22 +165,46 @@ export class ToolHandlers {
       }
     }
 
-    // Build proposed transaction (simulation only — no on-chain execution)
+    // Build proposed transaction (proposal only — no signing, no on-chain
+    // execution). Fields are filled from the concept's ontology/IDL data so
+    // the proposal is directly buildable with the SDK.
+    const idlRef = concept.idlInstruction;
+    const programId = concept.programId ?? idlRef?.programId ?? null;
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([k]) => k !== "_approvalToken"),
+    );
+
+    // Accounts: prefer the IDL instruction's account list (with roles);
+    // fall back to Address-typed concept properties
+    const accounts =
+      idlRef?.accounts && idlRef.accounts.length > 0
+        ? idlRef.accounts.map((acc) => ({
+            name: acc.name,
+            pubkey: (params[acc.name] as string | undefined) ?? acc.address ?? null,
+            writable: acc.writable === true,
+            signer: acc.signer === true,
+          }))
+        : (concept.properties ?? [])
+            .filter((p) => p.type === "Address")
+            .map((p) => ({ name: p.name, pubkey: (params[p.name] as string | undefined) ?? null }));
+
     const proposedTx = {
       concept: conceptName,
       action: transitionVia,
       stateTransition: `${transition.from} → ${transition.to}`,
-      params: Object.fromEntries(Object.entries(params).filter(([k]) => k !== "_approvalToken")),
+      params: cleanParams,
       instructions: [
         {
-          programId: "TBD",
-          accounts: (concept.properties ?? [])
-            .filter((p) => p.type === "Address")
-            .map((p) => ({ name: p.name, pubkey: params[p.name] ?? "TBD" })),
-          data: "TBD",
+          programId,
+          instructionName: idlRef?.instructionName ?? null,
+          discriminator: idlRef?.discriminator ?? null,
+          args: idlRef?.args ?? null,
+          accounts,
         },
       ],
-      note: "This is a proposed transaction. Use the SDK to build, simulate, and dispatch.",
+      note: programId
+        ? "This is a proposed transaction (not signed, not executed). Build it with the SDK's compileInstruction, simulate, then dispatch."
+        : "This is a proposed transaction (not signed, not executed). The concept declares no programId — regenerate concepts from the program IDL to fill instruction fields.",
     };
 
     return {

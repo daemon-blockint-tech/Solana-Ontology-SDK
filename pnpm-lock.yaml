@@ -122,6 +122,9 @@ importers:
         specifier: workspace:*
         version: link:../ontology-core
     devDependencies:
+      '@solana-ontology/sdk':
+        specifier: workspace:*
+        version: link:../sdk
       '@types/node':
         specifier: ^20.14.0
         version: 20.19.43

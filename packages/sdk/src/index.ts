@@ -45,6 +45,7 @@ export {
   compileInstruction,
   encodeInstructionData,
   encodeBorshValue,
+  idlTypeToString,
   resolveAccounts,
   type IdlInstructionDef,
   type CompiledAccount,

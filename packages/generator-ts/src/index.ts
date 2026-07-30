@@ -8,14 +8,28 @@ export {
 
 export {
   generateAccountInterface,
+  generateAccountDataTypes,
   generateDecoder,
   generateEncoder,
   mapSolanaTypeToTs,
 } from "./account-gen.js";
 
+export {
+  hasAccountLayout,
+  generateAccountDataInterface,
+  generateLayoutDecoder,
+  generateLayoutEncoder,
+  generateLayoutRuntime,
+} from "./layout-gen.js";
+
 export { generatePdaHelper, isPDA } from "./pda-gen.js";
 
-export { generateActions, generateStateEnum } from "./action-gen.js";
+export {
+  generateActions,
+  generateStateEnum,
+  generateInstructionBuilder,
+  hasInstructionData,
+} from "./action-gen.js";
 
 export { generateQuery, generateBatchQuery } from "./query-gen.js";
 

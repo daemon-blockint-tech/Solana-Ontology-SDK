@@ -83,10 +83,33 @@ export interface AccountLayoutDef {
   fields: BorshFieldDef[];
 }
 
+/** Typed instruction argument captured from the program IDL. */
+export interface IdlInstructionArgDef {
+  name: string;
+  /**
+   * Textual IDL type: a primitive ("u64", "pubkey", ...) or parametric form
+   * ("option<u64>", "vec<pubkey>", "array<u8,32>", "defined<MyStruct>").
+   */
+  type: string;
+}
+
+/** Instruction account captured from the program IDL. */
+export interface IdlInstructionAccountDef {
+  name: string;
+  writable?: boolean;
+  signer?: boolean;
+  /** Fixed address (e.g. a program or sysvar), when the IDL pins one */
+  address?: string;
+}
+
 export interface IdlInstructionRef {
   programId?: string;
   instructionName?: string;
   discriminator?: string;
+  /** Instruction arguments (enables typed action-builder codegen) */
+  args?: IdlInstructionArgDef[];
+  /** Instruction accounts (enables typed action-builder codegen) */
+  accounts?: IdlInstructionAccountDef[];
 }
 
 export type TokenStandard = "spl" | "token2022";
