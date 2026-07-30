@@ -16,6 +16,10 @@ export default defineConfig({
         __dirname,
         "../../packages/generator-client/src/index.ts",
       ),
+      "@solana-ontology/generator-ts": resolve(
+        __dirname,
+        "../../packages/generator-ts/src/index.ts",
+      ),
     },
   },
 });

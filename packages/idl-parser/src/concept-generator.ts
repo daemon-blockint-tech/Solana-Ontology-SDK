@@ -195,10 +195,14 @@ export function generateConceptsFromIdl(idl: IdlV1): Concept[] {
     const relationships = inferRelationships(account, accountNames);
     const stateMachine = generateStateTransitions(idl, account.name);
 
-    // Build accountLayout from IDL account struct fields
+    // Build accountLayout from IDL account struct fields. Preserve the real
+    // (possibly composite) type as an ontology type string — e.g. Option<Address>,
+    // Vec<u64> — so the generated Borsh decoder can consume it. Flattening
+    // composites to "complex" here would make accounts with option/vec fields
+    // undecodable.
     const layoutFields: BorshFieldDef[] = (account.type.fields ?? []).map((field: IdlV1Field) => ({
       name: field.name,
-      type: typeof field.type === "string" ? field.type : "complex",
+      type: mapIdlTypeToOntology(field.type),
       description: `${field.name} field of ${pascalName}`,
     }));
     const accountLayout: AccountLayoutDef = {
