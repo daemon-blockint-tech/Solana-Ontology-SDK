@@ -22,7 +22,7 @@ export {
   generateLayoutRuntime,
 } from "./layout-gen.js";
 
-export { generatePdaHelper, isPDA } from "./pda-gen.js";
+export { generatePdaHelper, isPDA, SDK_PDA_IMPORT } from "./pda-gen.js";
 
 export {
   generateActions,
@@ -31,7 +31,7 @@ export {
   hasInstructionData,
 } from "./action-gen.js";
 
-export { generateQuery, generateBatchQuery } from "./query-gen.js";
+export { generateQuery, generateBatchQuery, SDK_QUERY_IMPORT } from "./query-gen.js";
 
 export {
   generateCpiHelper,
