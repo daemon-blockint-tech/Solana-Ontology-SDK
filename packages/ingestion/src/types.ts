@@ -4,7 +4,8 @@ export type CommitmentLevel = "processed" | "confirmed" | "finalized";
 
 export interface AccountUpdateEvent {
   pubkey: string;
-  lamports: number;
+  /** Balance in lamports. bigint — a u64 that exceeds Number.MAX_SAFE_INTEGER. */
+  lamports: bigint;
   owner: string;
   data: Uint8Array;
   executable: boolean;
@@ -65,7 +66,8 @@ export interface SubscriptionFilter {
 
 export interface AccountState {
   pubkey: string;
-  lamports: number;
+  /** Balance in lamports. bigint — a u64 that exceeds Number.MAX_SAFE_INTEGER. */
+  lamports: bigint;
   owner: string;
   data: Uint8Array;
   executable: boolean;
@@ -78,7 +80,8 @@ export interface AccountState {
 export interface StateSnapshot {
   accounts: Array<{
     pubkey: string;
-    lamports: number;
+    /** Serialized as a decimal string — bigint is not JSON-safe. */
+    lamports: string;
     owner: string;
     data: number[];
     executable: boolean;

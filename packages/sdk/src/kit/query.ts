@@ -2,7 +2,6 @@
  * Type-safe query helpers for fetching ontology-typed accounts.
  */
 
-import type { Concept } from "@solana-ontology/core";
 import { fetchAccount, fetchMultipleAccounts } from "./account.js";
 import type { AccountDecoder } from "./account.js";
 

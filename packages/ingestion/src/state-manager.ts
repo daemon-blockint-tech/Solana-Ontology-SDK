@@ -344,7 +344,7 @@ export class StateManager {
     return {
       accounts: Array.from(this.accounts.values()).map((a) => ({
         pubkey: a.pubkey,
-        lamports: a.lamports,
+        lamports: a.lamports.toString(),
         owner: a.owner,
         data: Array.from(a.data),
         executable: a.executable,
@@ -373,7 +373,7 @@ export class StateManager {
     for (const acc of snapshot.accounts) {
       const state: AccountState = {
         pubkey: acc.pubkey,
-        lamports: acc.lamports,
+        lamports: BigInt(acc.lamports),
         owner: acc.owner,
         data: new Uint8Array(acc.data),
         executable: acc.executable,

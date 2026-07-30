@@ -18,8 +18,10 @@ export interface SignerProvider {
   signTransaction(messageBytes: Uint8Array): Promise<SignedTransaction>;
 }
 
-let _web3: typeof import("@solana/web3.js") | null = null;
-async function getWeb3(): Promise<typeof import("@solana/web3.js")> {
+import type * as Web3 from "@solana/web3.js";
+
+let _web3: typeof Web3 | null = null;
+async function getWeb3(): Promise<typeof Web3> {
   if (!_web3) _web3 = await import("@solana/web3.js");
   return _web3;
 }

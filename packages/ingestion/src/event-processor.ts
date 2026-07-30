@@ -3,7 +3,7 @@
  * Supports registered decoders for Borsh deserialization per program.
  */
 
-import type { AccountUpdateEvent, AccountState } from "./types.js";
+import type { AccountUpdateEvent } from "./types.js";
 
 export type AccountDecoderFn = (data: Uint8Array) => Record<string, unknown>;
 

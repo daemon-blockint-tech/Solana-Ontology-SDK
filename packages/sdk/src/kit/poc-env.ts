@@ -313,7 +313,7 @@ export class PoCEnvironment implements IPoCEnvironment {
     owner: string,
   ): Promise<PoCTransactionResult> {
     const web3 = await import("@solana/web3.js");
-    const { SystemProgram, Transaction } = web3;
+    const { SystemProgram } = web3;
     const kp = keypair as { publicKey: { toString(): string } };
 
     const ix = SystemProgram.createAccount({
@@ -367,7 +367,7 @@ export class PoCEnvironment implements IPoCEnvironment {
   ): Promise<PoCTransactionResult> {
     const web3 = await import("@solana/web3.js");
     const spl = await import("@solana/spl-token");
-    const conn = await this.getConnection();
+    await this.getConnection();
     const mintKp = mint as { publicKey: { toString(): string }; secretKey: Uint8Array };
 
     const ix = await spl.createInitializeMintInstruction(
