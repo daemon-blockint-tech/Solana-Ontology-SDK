@@ -17,8 +17,6 @@
 
 A concept-centric SDK for building Solana applications with a **fully independent** ontology system. Define your on-chain concepts as YAML, validate them against a JSON Schema, generate typed SDK code, and interact with them at runtime using `@solana/kit` or `web3.js`. Includes an independent Ontology Metadata Service (OMS), MCP server for LLM agents, Yellowstone gRPC ingestion, and Helm deployment configs.
 
-**Not dependent on Palantir Foundry or any external platform.**
-
 ## Architecture
 
 ```
@@ -448,7 +446,7 @@ helm template solana-ontology ./packages/deploy -f ./packages/deploy/values-main
 
 This ontology SDK is **fully independent** and does not depend on:
 
-- Palantir Foundry or any external ontology platform
+- Any external ontology platform
 - Any proprietary metadata service
 - Any external database (in-memory storage by default)
 
