@@ -48,6 +48,15 @@ export function idlTypeToString(
   throw new Error(`Unrecognized IDL type: ${JSON.stringify(type)}`);
 }
 
+/** Validate a value fits an unsigned integer of `bits` width, else throw. */
+function checkUint(value: unknown, bits: number, type: string): number {
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < 0 || n > 2 ** bits - 1) {
+    throw new Error(`Value ${String(value)} out of range for ${type}`);
+  }
+  return n;
+}
+
 /** Split "outer<inner>" — returns null if type is not parametric. */
 function parseParametric(type: string): { outer: string; inner: string } | null {
   const match = type.match(/^(option|vec|array|defined)<(.+)>$/);
@@ -136,16 +145,16 @@ export function encodeBorshValue(type: string, value: unknown): Uint8Array {
       return new Uint8Array([value ? 1 : 0]);
     }
     case "u8": {
-      return new Uint8Array([(value as number) & 0xff]);
+      return new Uint8Array([checkUint(value, 8, type)]);
     }
     case "u16": {
       const buf = new Uint8Array(2);
-      new DataView(buf.buffer).setUint16(0, value as number, true);
+      new DataView(buf.buffer).setUint16(0, checkUint(value, 16, type), true);
       return buf;
     }
     case "u32": {
       const buf = new Uint8Array(4);
-      new DataView(buf.buffer).setUint32(0, value as number, true);
+      new DataView(buf.buffer).setUint32(0, checkUint(value, 32, type), true);
       return buf;
     }
     case "u64":

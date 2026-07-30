@@ -4,7 +4,7 @@
  */
 
 import { createHash, timingSafeEqual } from "node:crypto";
-import type { Concept, StateTransition } from "@solana-ontology/core";
+import type { Concept } from "@solana-ontology/core";
 import type { McpTool, McpToolResult } from "./types.js";
 
 /** Constant-time string comparison (hashes first to equalize lengths). */

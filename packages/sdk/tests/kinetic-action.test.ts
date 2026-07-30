@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import {
-  ActionBuilder,
   TransactionEventEmitter,
   ConfirmationTracker,
   BlockhashCache,
@@ -117,6 +116,12 @@ describe("Kinetic Action Layer", () => {
   describe("Borsh encoding", () => {
     it("should encode u8", () => {
       expect(encodeBorshValue("u8", 255)).toEqual(new Uint8Array([255]));
+    });
+
+    it("rejects out-of-range small unsigned ints instead of truncating", () => {
+      expect(() => encodeBorshValue("u8", 256)).toThrow(/out of range/);
+      expect(() => encodeBorshValue("u16", 65536)).toThrow(/out of range/);
+      expect(() => encodeBorshValue("u32", -1)).toThrow(/out of range/);
     });
 
     it("should encode u32", () => {

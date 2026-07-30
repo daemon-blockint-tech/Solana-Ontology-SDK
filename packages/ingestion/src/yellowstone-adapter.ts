@@ -103,6 +103,15 @@ function toNumber(v: string | number | bigint | undefined, field: string): numbe
   return n;
 }
 
+function toBigInt(v: string | number | bigint | undefined, field: string): bigint {
+  if (v === undefined) throw new Error(`Missing numeric field: ${field}`);
+  try {
+    return BigInt(typeof v === "number" ? Math.trunc(v) : v);
+  } catch {
+    throw new Error(`Invalid numeric field ${field}: ${String(v)}`);
+  }
+}
+
 function toBase58(v: WirePubkey, field: string): string {
   if (typeof v === "string") return v;
   if (v instanceof Uint8Array) return encodeBase58(v);
@@ -298,7 +307,7 @@ export class YellowstoneStreamAdapter {
       const acc = update.account.account;
       const event: AccountUpdateEvent = {
         pubkey: toBase58(acc.pubkey, "account.pubkey"),
-        lamports: toNumber(acc.lamports, "account.lamports"),
+        lamports: toBigInt(acc.lamports, "account.lamports"),
         owner: toBase58(acc.owner, "account.owner"),
         data: acc.data instanceof Uint8Array ? acc.data : new Uint8Array(0),
         executable: acc.executable === true,

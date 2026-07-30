@@ -192,7 +192,7 @@ describe("on-chain linkage fields", () => {
       version: "1.0.0",
       tokenStandard: "spl",
     };
-    const result = validateConcept(concept);
+    validateConcept(concept);
     // Schema validation passes (tokenStandard is valid string), but semantic check should catch it
     const allResult = validateAll([concept]);
     expect(allResult.errors.some((e) => e.message.includes("tokenStandard"))).toBe(true);

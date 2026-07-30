@@ -1,5 +1,4 @@
 import { loadConcepts } from "@solana-ontology/core";
-import type { ConceptCategory } from "@solana-ontology/core";
 import type { CliConfig } from "../config.js";
 
 export function listCommand(config: CliConfig, category?: string): void {

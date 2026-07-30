@@ -1,4 +1,4 @@
-import type { IdlV1, IdlV1Account, IdlV1Field, IdlV1Instruction, IdlV1Type } from "./types.js";
+import type { IdlV1, IdlV1Account, IdlV1Field, IdlV1Type } from "./types.js";
 import type {
   Concept,
   ConceptProperty,
