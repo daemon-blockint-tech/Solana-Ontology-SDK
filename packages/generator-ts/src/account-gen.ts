@@ -1,4 +1,10 @@
 import type { Concept, ConceptProperty } from "@solana-ontology/core";
+import {
+  hasAccountLayout,
+  generateAccountDataInterface,
+  generateLayoutDecoder,
+  generateLayoutEncoder,
+} from "./layout-gen.js";
 
 /**
  * Map Solana ontology types to TypeScript types.
@@ -82,37 +88,60 @@ export function generateAccountInterface(concept: Concept): string {
 }
 
 /**
+ * Generate the decoded-account-data interface for a concept with a layout.
+ * Returns null when the concept has no accountLayout.
+ */
+export function generateAccountDataTypes(concept: Concept): string | null {
+  if (!hasAccountLayout(concept)) return null;
+  return generateAccountDataInterface(concept);
+}
+
+/**
  * Generate a decoder function for a concept.
+ *
+ * Concepts with an `accountLayout` get a real Borsh decoder (discriminator
+ * check + sequential typed reads). Concepts without one get a function that
+ * throws an explicit "no layout in the ontology" error — decoding an account
+ * without a declared layout is unsupported, not unimplemented.
  */
 export function generateDecoder(concept: Concept): string {
+  if (hasAccountLayout(concept)) {
+    return generateLayoutDecoder(concept);
+  }
   const name = concept.canonicalName;
   return [
     `/**`,
-    ` * Decode raw account data into a typed ${name} object.`,
-    ` * NOTE: This is a generated stub. Implement actual byte layout decoding.`,
+    ` * Decoding is unavailable for ${name}: its ontology concept declares no`,
+    ` * \`accountLayout\`. Add one (or regenerate concepts from the program IDL)`,
+    ` * to enable real decoding.`,
     ` */`,
-    `export function decode${name}(data: Uint8Array): ${name} {`,
-    `  // TODO: Implement actual byte-layout decoding based on Anchor IDL`,
-    `  // or program-specific account layout.`,
-    `  throw new Error(\`decode${name} not yet implemented — requires IDL or layout spec\`);`,
+    `export function decode${name}(_data: Uint8Array): never {`,
+    `  throw new Error(`,
+    `    "decode${name}: concept has no accountLayout in the ontology — add one (or run \`solana-ontology idl <program.json>\`) to enable decoding",`,
+    `  );`,
     `}`,
   ].join("\n");
 }
 
 /**
  * Generate an encoder function for a concept.
+ * Same support rule as {@link generateDecoder}.
  */
 export function generateEncoder(concept: Concept): string {
+  if (hasAccountLayout(concept)) {
+    return generateLayoutEncoder(concept);
+  }
   const name = concept.canonicalName;
   return [
     `/**`,
-    ` * Encode a ${name} object into raw bytes for on-chain storage.`,
-    ` * NOTE: This is a generated stub. Implement actual byte layout encoding.`,
+    ` * Encoding is unavailable for ${name}: its ontology concept declares no`,
+    ` * \`accountLayout\`. Add one (or regenerate concepts from the program IDL)`,
+    ` * to enable real encoding.`,
     ` */`,
-    `export function encode${name}(value: ${name}): Uint8Array {`,
-    `  // TODO: Implement actual byte-layout encoding based on Anchor IDL`,
-    `  // or program-specific account layout.`,
-    `  throw new Error(\`encode${name} not yet implemented — requires IDL or layout spec\`);`,
+    `export function encode${name}(_value: ${name}): never {`,
+    `  throw new Error(`,
+    `    "encode${name}: concept has no accountLayout in the ontology — add one (or run \`solana-ontology idl <program.json>\`) to enable encoding",`,
+    `  );`,
     `}`,
   ].join("\n");
 }

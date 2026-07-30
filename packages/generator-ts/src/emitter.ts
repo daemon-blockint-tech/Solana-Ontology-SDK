@@ -1,9 +1,21 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import type { Concept } from "@solana-ontology/core";
-import { generateAccountInterface, generateDecoder, generateEncoder } from "./account-gen.js";
+import {
+  generateAccountInterface,
+  generateAccountDataTypes,
+  generateDecoder,
+  generateEncoder,
+} from "./account-gen.js";
+import { hasAccountLayout, generateLayoutRuntime, LAYOUT_RUNTIME_IMPORT } from "./layout-gen.js";
 import { generatePdaHelper } from "./pda-gen.js";
-import { generateActions, generateStateEnum } from "./action-gen.js";
+import {
+  generateActions,
+  generateStateEnum,
+  generateInstructionBuilder,
+  hasInstructionData,
+  SDK_COMPILER_IMPORT,
+} from "./action-gen.js";
 import { generateQuery, generateBatchQuery } from "./query-gen.js";
 
 export interface GenerateOptions {
@@ -30,7 +42,20 @@ export function generateConceptFiles(concept: Concept): GeneratedFile[] {
 
   const parts: string[] = [];
 
+  const imports: string[] = [];
+  if (hasAccountLayout(concept)) imports.push(LAYOUT_RUNTIME_IMPORT);
+  if (hasInstructionData(concept)) imports.push(SDK_COMPILER_IMPORT);
+  if (imports.length > 0) {
+    parts.push(imports.join("\n"));
+    parts.push("");
+  }
+
   parts.push(generateAccountInterface(concept));
+  const accountDataTypes = generateAccountDataTypes(concept);
+  if (accountDataTypes) {
+    parts.push("");
+    parts.push(accountDataTypes);
+  }
   parts.push("");
   parts.push(generateDecoder(concept));
   parts.push("");
@@ -46,6 +71,12 @@ export function generateConceptFiles(concept: Concept): GeneratedFile[] {
   if (stateEnum) {
     parts.push("");
     parts.push(stateEnum);
+  }
+
+  const instructionBuilder = generateInstructionBuilder(concept);
+  if (instructionBuilder) {
+    parts.push("");
+    parts.push(instructionBuilder);
   }
 
   const actions = generateActions(concept);
@@ -92,6 +123,14 @@ export function generateIndexFile(concepts: Concept[]): string {
 export function generateAll(concepts: Concept[], options: GenerateOptions): GeneratedFile[] {
   const allFiles: GeneratedFile[] = [];
   mkdirSync(options.outputDir, { recursive: true });
+
+  // Shared Borsh runtime for concepts with an accountLayout
+  if (concepts.some(hasAccountLayout)) {
+    const runtimePath = join(options.outputDir, "runtime.ts");
+    const runtimeContent = generateLayoutRuntime();
+    writeFileSync(runtimePath, runtimeContent, "utf-8");
+    allFiles.push({ path: runtimePath, content: runtimeContent });
+  }
 
   for (const concept of concepts) {
     const files = generateConceptFiles(concept);

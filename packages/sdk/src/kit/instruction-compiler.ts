@@ -23,9 +23,114 @@ export interface CompiledAccount {
 }
 
 /**
- * Encode a primitive value to Borsh bytes.
+ * Convert an IDL type (string or composite object) to the textual form
+ * understood by {@link encodeBorshValue}: "u64", "option<u64>",
+ * "vec<pubkey>", "array<u8,32>", "defined<MyStruct>".
+ */
+export function idlTypeToString(
+  type: string | { defined?: string; option?: unknown; vec?: unknown; array?: unknown },
+): string {
+  if (typeof type === "string") return type;
+  if (type.option !== undefined) {
+    return `option<${idlTypeToString(type.option as string | Record<string, unknown>)}>`;
+  }
+  if (type.vec !== undefined) {
+    return `vec<${idlTypeToString(type.vec as string | Record<string, unknown>)}>`;
+  }
+  if (type.array !== undefined) {
+    const [inner, len] = type.array as [string | Record<string, unknown>, number];
+    return `array<${idlTypeToString(inner)},${len}>`;
+  }
+  if (type.defined !== undefined) {
+    const name = typeof type.defined === "string" ? type.defined : JSON.stringify(type.defined);
+    return `defined<${name}>`;
+  }
+  throw new Error(`Unrecognized IDL type: ${JSON.stringify(type)}`);
+}
+
+/** Split "outer<inner>" — returns null if type is not parametric. */
+function parseParametric(type: string): { outer: string; inner: string } | null {
+  const match = type.match(/^(option|vec|array|defined)<(.+)>$/);
+  return match ? { outer: match[1], inner: match[2] } : null;
+}
+
+/**
+ * Encode a value to Borsh bytes. Supports all primitives plus the parametric
+ * forms option<T>, vec<T>, and array<T,N> (arbitrarily nested). defined<T>
+ * (program-specific structs) requires the program's full type registry and is
+ * rejected explicitly.
  */
 export function encodeBorshValue(type: string, value: unknown): Uint8Array {
+  const parametric = parseParametric(type);
+  if (parametric) {
+    switch (parametric.outer) {
+      case "option": {
+        if (value === null || value === undefined) {
+          return new Uint8Array([0]);
+        }
+        const inner = encodeBorshValue(parametric.inner, value);
+        const out = new Uint8Array(1 + inner.length);
+        out[0] = 1;
+        out.set(inner, 1);
+        return out;
+      }
+      case "vec": {
+        if (!Array.isArray(value)) {
+          throw new Error(`Expected an array for ${type}, got ${typeof value}`);
+        }
+        const parts = value.map((v) => encodeBorshValue(parametric.inner, v));
+        const total = parts.reduce((sum, p) => sum + p.length, 0);
+        const out = new Uint8Array(4 + total);
+        new DataView(out.buffer).setUint32(0, value.length, true);
+        let offset = 4;
+        for (const part of parts) {
+          out.set(part, offset);
+          offset += part.length;
+        }
+        return out;
+      }
+      case "array": {
+        const commaIdx = parametric.inner.lastIndexOf(",");
+        if (commaIdx === -1) {
+          throw new Error(`Malformed array type "${type}" — expected array<T,N>`);
+        }
+        const elemType = parametric.inner.slice(0, commaIdx).trim();
+        const len = Number(parametric.inner.slice(commaIdx + 1));
+        if (!Number.isInteger(len) || len < 0) {
+          throw new Error(`Malformed array length in "${type}"`);
+        }
+        // [u8; N] accepts a Uint8Array directly
+        if (elemType === "u8" && value instanceof Uint8Array) {
+          if (value.length !== len) {
+            throw new Error(`Expected ${len} bytes for ${type}, got ${value.length}`);
+          }
+          return value;
+        }
+        if (!Array.isArray(value) || value.length !== len) {
+          throw new Error(
+            `Expected an array of length ${len} for ${type}, got ${
+              Array.isArray(value) ? `length ${value.length}` : typeof value
+            }`,
+          );
+        }
+        const parts = value.map((v) => encodeBorshValue(elemType, v));
+        const total = parts.reduce((sum, p) => sum + p.length, 0);
+        const out = new Uint8Array(total);
+        let offset = 0;
+        for (const part of parts) {
+          out.set(part, offset);
+          offset += part.length;
+        }
+        return out;
+      }
+      case "defined": {
+        throw new Error(
+          `Cannot encode defined type "${parametric.inner}" — program-specific structs require the program's full IDL type registry. Encode the struct manually or use a full Borsh/Anchor client.`,
+        );
+      }
+    }
+  }
+
   switch (type) {
     case "bool": {
       return new Uint8Array([value ? 1 : 0]);
@@ -130,7 +235,8 @@ export function encodeInstructionData(
 
   for (const arg of args) {
     const value = params[arg.name];
-    if (value === undefined) {
+    // option<T> args may be omitted — that encodes as None
+    if (value === undefined && !arg.type.startsWith("option<")) {
       throw new Error(`Missing required argument: ${arg.name}`);
     }
     parts.push(encodeBorshValue(arg.type, value));
@@ -184,7 +290,7 @@ export function compileInstruction(
 
   const argTypes = def.args.map((a) => ({
     name: a.name,
-    type: typeof a.type === "string" ? a.type : "unknown",
+    type: idlTypeToString(a.type),
   }));
 
   const data = encodeInstructionData(def.discriminator, argTypes, params);

@@ -5,6 +5,7 @@ import {
   ConfirmationTracker,
   BlockhashCache,
   encodeBorshValue,
+  idlTypeToString,
   encodeInstructionData,
   resolveAccounts,
   compileInstruction,
@@ -173,6 +174,49 @@ describe("Kinetic Action Layer", () => {
 
     it("should reject unsupported complex types instead of emitting nothing", () => {
       expect(() => encodeBorshValue("unknown", {})).toThrow("Unsupported argument type");
+    });
+
+    it("should encode option<T> with a 1-byte tag", () => {
+      expect(encodeBorshValue("option<u64>", null)).toEqual(new Uint8Array([0]));
+      expect(encodeBorshValue("option<u64>", undefined)).toEqual(new Uint8Array([0]));
+      const some = encodeBorshValue("option<u64>", 7n);
+      expect(some.length).toBe(9);
+      expect(some[0]).toBe(1);
+      expect(new DataView(some.buffer, 1).getBigUint64(0, true)).toBe(7n);
+    });
+
+    it("should encode vec<T> with a u32 length prefix", () => {
+      const encoded = encodeBorshValue("vec<u16>", [1, 2, 3]);
+      expect(encoded.length).toBe(4 + 6);
+      expect(new DataView(encoded.buffer).getUint32(0, true)).toBe(3);
+      expect(() => encodeBorshValue("vec<u16>", "nope")).toThrow("Expected an array");
+    });
+
+    it("should encode array<T,N> with exact length enforcement", () => {
+      const encoded = encodeBorshValue("array<u8,4>", [1, 2, 3, 4]);
+      expect(encoded).toEqual(new Uint8Array([1, 2, 3, 4]));
+      // [u8; N] accepts a Uint8Array directly
+      expect(encodeBorshValue("array<u8,4>", new Uint8Array([9, 9, 9, 9]))).toEqual(
+        new Uint8Array([9, 9, 9, 9]),
+      );
+      expect(() => encodeBorshValue("array<u8,4>", [1, 2])).toThrow("length 4");
+    });
+
+    it("should encode nested parametric types", () => {
+      const encoded = encodeBorshValue("vec<option<u8>>", [5, null, 6]);
+      expect(encoded).toEqual(new Uint8Array([3, 0, 0, 0, 1, 5, 0, 1, 6]));
+    });
+
+    it("should reject defined<T> structs with an explicit error", () => {
+      expect(() => encodeBorshValue("defined<MyStruct>", {})).toThrow("full IDL type registry");
+    });
+
+    it("idlTypeToString converts composite IDL types to textual form", () => {
+      expect(idlTypeToString("u64")).toBe("u64");
+      expect(idlTypeToString({ option: "u64" })).toBe("option<u64>");
+      expect(idlTypeToString({ vec: { option: "pubkey" } })).toBe("vec<option<pubkey>>");
+      expect(idlTypeToString({ array: ["u8", 32] })).toBe("array<u8,32>");
+      expect(idlTypeToString({ defined: "Foo" })).toBe("defined<Foo>");
     });
 
     it("should encode string with length prefix", () => {

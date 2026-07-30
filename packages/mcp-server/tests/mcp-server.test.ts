@@ -159,6 +159,39 @@ describe("mcp-server", () => {
       expect(approved.isError).toBeUndefined();
     });
 
+    it("fills proposals with real concept/IDL data instead of TBD placeholders", () => {
+      const server = new OntologyMcpServer();
+      server.registerConcepts(concepts);
+
+      const tools = server.listTools();
+      const nonDestructive = tools.find((t) => !t.description.includes("DESTRUCTIVE"));
+      expect(nonDestructive).toBeDefined();
+
+      const result = server.callTool(nonDestructive!.name, {});
+      expect(result.isError).toBeUndefined();
+      const text = result.content[0].text;
+      expect(text).not.toContain('"TBD"');
+
+      const proposal = JSON.parse(text);
+      const ix = proposal.instructions[0];
+      // Real fields present (null when the ontology lacks them, never "TBD")
+      expect("programId" in ix).toBe(true);
+      expect("discriminator" in ix).toBe(true);
+      expect(Array.isArray(ix.accounts)).toBe(true);
+      expect(proposal.note).toContain("not signed, not executed");
+
+      // At least the concepts with a programId produce fully-addressed proposals
+      const withProgram = concepts.find((c) => c.programId && c.stateMachine?.transitions?.length);
+      if (withProgram) {
+        const t = withProgram.stateMachine!.transitions[0];
+        const r = server.callTool(`${withProgram.canonicalName}_${t.via}`, {});
+        if (r.isError === undefined) {
+          const p = JSON.parse(r.content[0].text);
+          expect(p.instructions[0].programId).toBe(withProgram.programId);
+        }
+      }
+    });
+
     it("should gate destructive actions even when the tool name is case-altered", () => {
       const server = new OntologyMcpServer({ approvalToken: "operator-secret" });
       server.registerConcepts(concepts);

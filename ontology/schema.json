@@ -82,7 +82,9 @@
     "pdaSeeds": {
       "type": "array",
       "description": "Formal PDA seed structure for type-safe derivation",
-      "items": { "$ref": "#/$defs/pdaSeed" }
+      "items": {
+        "$ref": "#/$defs/pdaSeed"
+      }
     },
     "accountLayout": {
       "$ref": "#/$defs/accountLayout"
@@ -236,8 +238,13 @@
             "required": ["label", "url"],
             "additionalProperties": false,
             "properties": {
-              "label": { "type": "string" },
-              "url": { "type": "string", "format": "uri" }
+              "label": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              }
             }
           }
         },
@@ -247,12 +254,20 @@
           "properties": {
             "docs": {
               "type": "array",
-              "items": { "type": "string", "format": "uri" }
+              "items": {
+                "type": "string",
+                "format": "uri"
+              }
             },
-            "anchorIdl": { "type": "string" },
+            "anchorIdl": {
+              "type": "string"
+            },
             "auditReports": {
               "type": "array",
-              "items": { "type": "string", "format": "uri" }
+              "items": {
+                "type": "string",
+                "format": "uri"
+              }
             }
           }
         }
@@ -272,7 +287,9 @@
           "type": "string",
           "enum": ["string", "u8", "u32", "u64", "publicKey", "bytes"]
         },
-        "description": { "type": "string" }
+        "description": {
+          "type": "string"
+        }
       }
     },
     "accountLayout": {
@@ -287,7 +304,9 @@
         },
         "fields": {
           "type": "array",
-          "items": { "$ref": "#/$defs/borshField" }
+          "items": {
+            "$ref": "#/$defs/borshField"
+          }
         }
       }
     },
@@ -301,9 +320,16 @@
           "pattern": "^[a-z][a-zA-Z0-9]*$",
           "minLength": 1
         },
-        "type": { "type": "string" },
-        "offset": { "type": "integer", "minimum": 0 },
-        "description": { "type": "string" }
+        "type": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "description": {
+          "type": "string"
+        }
       }
     },
     "idlInstruction": {
@@ -314,10 +340,53 @@
           "type": "string",
           "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$"
         },
-        "instructionName": { "type": "string" },
+        "instructionName": {
+          "type": "string"
+        },
         "discriminator": {
           "type": "string",
           "pattern": "^[0-9a-fA-F]{16}$"
+        },
+        "args": {
+          "type": "array",
+          "description": "Instruction arguments from the program IDL (enables typed action-builder codegen)",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "type"],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "accounts": {
+          "type": "array",
+          "description": "Instruction accounts from the program IDL (enables typed action-builder codegen)",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name"],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "writable": {
+                "type": "boolean"
+              },
+              "signer": {
+                "type": "boolean"
+              },
+              "address": {
+                "type": "string",
+                "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$"
+              }
+            }
+          }
         }
       }
     }

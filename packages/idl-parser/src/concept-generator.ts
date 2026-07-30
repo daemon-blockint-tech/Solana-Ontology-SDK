@@ -67,6 +67,24 @@ export function mapIdlTypeToOntology(idlType: string | IdlV1Type): string {
 }
 
 /**
+ * Convert an IDL type to the textual form used by IdlInstructionRef.args and
+ * the SDK's borsh encoder: "u64", "option<u64>", "vec<pubkey>",
+ * "array<u8,32>", "defined<MyStruct>".
+ */
+export function idlTypeToTextual(idlType: string | IdlV1Type): string {
+  if (typeof idlType === "string") {
+    return idlType === "publicKey" ? "pubkey" : idlType;
+  }
+  if (idlType.defined) return `defined<${idlType.defined}>`;
+  if (idlType.option) return `option<${idlTypeToTextual(idlType.option)}>`;
+  if (idlType.coption) return `coption<${idlTypeToTextual(idlType.coption)}>`;
+  if (idlType.vec) return `vec<${idlTypeToTextual(idlType.vec)}>`;
+  if (idlType.array) return `array<${idlTypeToTextual(idlType.array[0])},${idlType.array[1]}>`;
+  if (idlType.pubkey) return "pubkey";
+  return "unknown";
+}
+
+/**
  * Detect if a field type is a Pubkey (potential relationship).
  */
 function isPubkeyField(type: string | IdlV1Type): boolean {
@@ -205,6 +223,18 @@ export function generateConceptsFromIdl(idl: IdlV1): Concept[] {
                 .map((b: number) => b.toString(16).padStart(2, "0"))
                 .join("")
             : undefined,
+          // Preserve typed args/accounts so downstream generators can emit
+          // real instruction builders instead of stubs
+          args: targetInstruction.args.map((arg) => ({
+            name: arg.name,
+            type: idlTypeToTextual(arg.type),
+          })),
+          accounts: targetInstruction.accounts.map((acc) => ({
+            name: acc.name,
+            ...(acc.writable ? { writable: true } : {}),
+            ...(acc.signer ? { signer: true } : {}),
+            ...(acc.address ? { address: acc.address } : {}),
+          })),
         }
       : undefined;
 
