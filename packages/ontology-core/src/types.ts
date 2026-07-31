@@ -113,6 +113,13 @@ export interface IdlInstructionAccountDef {
   address?: string;
 }
 
+/** A program-defined struct type captured from the IDL `types` section. */
+export interface IdlDefinedTypeDef {
+  name: string;
+  /** Struct fields in borsh serialization order (textual IDL types). */
+  fields: IdlInstructionArgDef[];
+}
+
 export interface IdlInstructionRef {
   programId?: string;
   instructionName?: string;
@@ -126,6 +133,11 @@ export interface IdlInstructionRef {
   args?: IdlInstructionArgDef[];
   /** Instruction accounts (enables typed action-builder codegen) */
   accounts?: IdlInstructionAccountDef[];
+  /**
+   * Program-defined struct types referenced (transitively) by args, so
+   * defined<T> arguments can be borsh-encoded without the full program IDL.
+   */
+  definedTypes?: IdlDefinedTypeDef[];
 }
 
 export type TokenStandard = "spl" | "token2022";

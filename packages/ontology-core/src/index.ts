@@ -17,6 +17,9 @@ export type {
   BorshFieldDef,
   AccountLayoutDef,
   IdlInstructionRef,
+  IdlInstructionArgDef,
+  IdlInstructionAccountDef,
+  IdlDefinedTypeDef,
   TokenStandard,
 } from "./types.js";
 

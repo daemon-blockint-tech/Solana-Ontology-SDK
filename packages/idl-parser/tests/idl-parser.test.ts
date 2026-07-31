@@ -185,6 +185,59 @@ describe("idl-parser", () => {
       expect(concepts.some((c) => c.canonicalName === "TokenAccount")).toBe(true);
     });
 
+    it("carries defined struct types (transitively) into idlInstruction.definedTypes", () => {
+      const v1: IdlV1 = {
+        address: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        metadata: { name: "vault_program", version: "1.0.0", spec: "0.1.0" },
+        instructions: [
+          {
+            name: "configure",
+            discriminator: [1, 2, 3, 4, 5, 6, 7, 8],
+            accounts: [{ name: "vault", writable: true, signer: false }],
+            args: [{ name: "config", type: { defined: "VaultConfig" } }],
+          },
+        ],
+        accounts: [
+          {
+            name: "vault",
+            discriminator: [9, 9, 9, 9, 9, 9, 9, 9],
+            type: { kind: "struct", fields: [{ name: "fee", type: "u16" }] },
+          },
+        ],
+        types: [
+          {
+            name: "VaultConfig",
+            type: {
+              kind: "struct",
+              fields: [
+                { name: "fee", type: "u16" },
+                { name: "limits", type: { defined: "Limits" } }, // nested struct
+              ],
+            },
+          },
+          {
+            name: "Limits",
+            type: { kind: "struct", fields: [{ name: "max", type: "u64" }] },
+          },
+          {
+            name: "UnrelatedEnum",
+            type: { kind: "enum", fields: [] },
+          },
+        ],
+      };
+      const concepts = generateConceptsFromIdl(v1);
+      const definedTypes = concepts[0].idlInstruction?.definedTypes;
+      expect(definedTypes).toBeDefined();
+      expect(definedTypes!.map((t) => t.name).sort()).toEqual(["Limits", "VaultConfig"]);
+      const config = definedTypes!.find((t) => t.name === "VaultConfig")!;
+      expect(config.fields).toEqual([
+        { name: "fee", type: "u16" },
+        { name: "limits", type: "defined<Limits>" },
+      ]);
+      // Generated concepts (including definedTypes) still pass schema validation
+      expect(validateAll(concepts).valid).toBe(true);
+    });
+
     it("omits programId when the IDL address is empty/invalid (v0 without metadata.address)", () => {
       // A v0 IDL with no metadata.address migrates to v1 with address "".
       const v0: IdlV0 = {

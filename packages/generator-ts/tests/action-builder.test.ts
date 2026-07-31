@@ -137,6 +137,67 @@ describe("generated instruction builders", () => {
   });
 });
 
+describe("defined<T> struct args", () => {
+  const structConcept: Concept = {
+    canonicalName: "Vault",
+    purpose: "Vault with struct-typed instruction arg",
+    category: "defi",
+    version: "1.0.0",
+    properties: [],
+    programId: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+    idlInstruction: {
+      programId: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      instructionName: "configure",
+      discriminator: "0807060504030201",
+      args: [{ name: "config", type: "defined<VaultConfig>" }],
+      accounts: [
+        { name: "vault", writable: true },
+        { name: "authority", signer: true },
+      ],
+      definedTypes: [
+        {
+          name: "VaultConfig",
+          fields: [
+            { name: "fee", type: "u16" },
+            { name: "admin", type: "pubkey" },
+            { name: "label", type: "option<string>" },
+          ],
+        },
+      ],
+    },
+  };
+
+  it("emits a typed struct interface and threads definedTypes to the compiler", () => {
+    const code = generateInstructionBuilder(structConcept)!;
+    expect(code).toContain("export interface VaultConfig {");
+    expect(code).toContain("config: VaultConfig;");
+    expect(code).toContain('definedTypes: [');
+    // The struct arg is typed against the interface, not an unknown fallback
+    expect(code).not.toContain("config: unknown");
+  });
+
+  it("encodes a struct arg through the generated builder for real", async () => {
+    const mod = await importGenerated(structConcept, "vault");
+    const ix = mod.buildConfigureVaultInstruction(
+      {
+        config: {
+          fee: 250,
+          admin: "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
+          label: null,
+        },
+      },
+      {
+        vault: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+        authority: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+      },
+    );
+    // discriminator(8) + u16 fee(2) + pubkey(32) + option tag None(1)
+    expect(ix.data.length).toBe(8 + 2 + 32 + 1);
+    expect(new DataView(ix.data.buffer, ix.data.byteOffset + 8).getUint16(0, true)).toBe(250);
+    expect(ix.data[ix.data.length - 1]).toBe(0);
+  });
+});
+
 describe("native 1-byte instruction tags", () => {
   const nativeTransfer: Concept = {
     canonicalName: "TokenAccount",

@@ -52,6 +52,8 @@ export {
   encodeBorshValue,
   idlTypeToString,
   resolveAccounts,
+  buildDefinedTypeRegistry,
+  type DefinedTypeRegistry,
   type IdlInstructionDef,
   type CompiledAccount,
 } from "./kit/instruction-compiler.js";
