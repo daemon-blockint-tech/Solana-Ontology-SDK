@@ -1,0 +1,38 @@
+canonicalName: PluginRegistryV1
+purpose: On-chain PluginRegistryV1 account defined by mpl_core_program program
+category: primitive
+version: 0.2.0
+owner: mpl_core_program
+properties:
+  - name: key
+    type: key
+    required: true
+    description: key field of PluginRegistryV1
+  - name: registry
+    type: Vec<registry_record>
+    required: true
+    description: registry field of PluginRegistryV1
+  - name: externalRegistry
+    type: Vec<external_registry_record>
+    required: true
+    description: external_registry field of PluginRegistryV1
+accountLayout:
+  discriminator: a916f6dce5e5a4cc
+  fields:
+    - name: key
+      type: key
+      description: key field of PluginRegistryV1
+    - name: registry
+      type: Vec<registry_record>
+      description: registry field of PluginRegistryV1
+    - name: externalRegistry
+      type: Vec<external_registry_record>
+      description: external_registry field of PluginRegistryV1
+programId: CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d
+constraints:
+  - name: discriminator_check
+    expression: first 8 bytes must equal [169, 22, 246, 220, 229, 229, 164, 204]
+    description: Anchor account discriminator must match
+links:
+  - label: Program
+    url: https://solana.fm/address/CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d

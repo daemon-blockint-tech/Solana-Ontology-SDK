@@ -1,0 +1,114 @@
+canonicalName: NcnOperatorState
+purpose: On-chain NcnOperatorState account defined by jito_restaking program
+category: primitive
+version: 0.0.5
+owner: jito_restaking
+properties:
+  - name: ncn
+    type: Address
+    required: true
+    description: ncn field of NcnOperatorState
+  - name: operator
+    type: Address
+    required: true
+    description: operator field of NcnOperatorState
+  - name: index
+    type: pod_u64
+    required: true
+    description: index field of NcnOperatorState
+  - name: ncnOptInState
+    type: slot_toggle
+    required: true
+    description: ncn_opt_in_state field of NcnOperatorState
+  - name: operatorOptInState
+    type: slot_toggle
+    required: true
+    description: operator_opt_in_state field of NcnOperatorState
+  - name: bump
+    type: u8
+    required: true
+    description: bump field of NcnOperatorState
+  - name: reserved
+    type: Array<u8, 263>
+    required: true
+    description: reserved field of NcnOperatorState
+relationships:
+  - type: references
+    target: Ncn
+    cardinality: many:1
+    description: NcnOperatorState references a Ncn via ncn
+  - type: references
+    target: Operator
+    cardinality: many:1
+    description: NcnOperatorState references a Operator via operator
+stateMachine:
+  states:
+    - Uninitialized
+    - Active
+  transitions:
+    - from: Uninitialized
+      to: Active
+      via: InitializeNcnOperatorState
+    - from: Active
+      to: Active
+      via: NcnWarmupOperator
+    - from: Active
+      to: Active
+      via: NcnCooldownOperator
+    - from: Active
+      to: Active
+      via: OperatorWarmupNcn
+    - from: Active
+      to: Active
+      via: OperatorCooldownNcn
+accountLayout:
+  discriminator: 9de76c05d1a561a0
+  fields:
+    - name: ncn
+      type: Address
+      description: ncn field of NcnOperatorState
+    - name: operator
+      type: Address
+      description: operator field of NcnOperatorState
+    - name: index
+      type: pod_u64
+      description: index field of NcnOperatorState
+    - name: ncnOptInState
+      type: slot_toggle
+      description: ncn_opt_in_state field of NcnOperatorState
+    - name: operatorOptInState
+      type: slot_toggle
+      description: operator_opt_in_state field of NcnOperatorState
+    - name: bump
+      type: u8
+      description: bump field of NcnOperatorState
+    - name: reserved
+      type: Array<u8, 263>
+      description: reserved field of NcnOperatorState
+programId: RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q
+idlInstruction:
+  programId: RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q
+  instructionName: initialize_ncn_operator_state
+  discriminator: 8530d21f20520a3c
+  args: []
+  accounts:
+    - name: config
+    - name: ncn
+      writable: true
+    - name: operator
+      writable: true
+    - name: ncn_operator_state
+      writable: true
+    - name: admin
+      signer: true
+    - name: payer
+      writable: true
+      signer: true
+    - name: system_program
+constraints:
+  - name: discriminator_check
+    expression: first 8 bytes must equal [157, 231, 108, 5, 209, 165, 97, 160]
+    description: Anchor account discriminator must match
+links:
+  - label: Program
+    url: https://solana.fm/address/RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q

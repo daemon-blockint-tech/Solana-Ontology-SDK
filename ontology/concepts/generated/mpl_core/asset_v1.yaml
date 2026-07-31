@@ -1,0 +1,59 @@
+canonicalName: AssetV1
+purpose: On-chain AssetV1 account defined by mpl_core_program program
+category: primitive
+version: 0.2.0
+owner: mpl_core_program
+properties:
+  - name: key
+    type: key
+    required: true
+    description: key field of AssetV1
+  - name: owner
+    type: Address
+    required: true
+    description: owner field of AssetV1
+  - name: updateAuthority
+    type: update_authority
+    required: true
+    description: update_authority field of AssetV1
+  - name: name
+    type: string
+    required: true
+    description: name field of AssetV1
+  - name: uri
+    type: string
+    required: true
+    description: uri field of AssetV1
+  - name: seq
+    type: Option<u64>
+    required: true
+    description: seq field of AssetV1
+accountLayout:
+  discriminator: e011749de6d41eda
+  fields:
+    - name: key
+      type: key
+      description: key field of AssetV1
+    - name: owner
+      type: Address
+      description: owner field of AssetV1
+    - name: updateAuthority
+      type: update_authority
+      description: update_authority field of AssetV1
+    - name: name
+      type: string
+      description: name field of AssetV1
+    - name: uri
+      type: string
+      description: uri field of AssetV1
+    - name: seq
+      type: Option<u64>
+      description: seq field of AssetV1
+programId: CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d
+constraints:
+  - name: discriminator_check
+    expression: first 8 bytes must equal [224, 17, 116, 157, 230, 212, 30, 218]
+    description: Anchor account discriminator must match
+links:
+  - label: Program
+    url: https://solana.fm/address/CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d

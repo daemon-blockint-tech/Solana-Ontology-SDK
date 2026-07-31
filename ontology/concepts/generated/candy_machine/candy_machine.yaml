@@ -1,0 +1,135 @@
+canonicalName: CandyMachine
+purpose: On-chain CandyMachine account defined by candy_machine_core program
+category: primitive
+version: 3.0.1
+owner: candy_machine_core
+properties:
+  - name: version
+    type: account_version
+    required: true
+    description: version field of CandyMachine
+  - name: tokenStandard
+    type: u8
+    required: true
+    description: token_standard field of CandyMachine
+  - name: features
+    type: Array<u8, 6>
+    required: true
+    description: features field of CandyMachine
+  - name: authority
+    type: Address
+    required: true
+    description: authority field of CandyMachine
+  - name: mintAuthority
+    type: Address
+    required: true
+    description: mint_authority field of CandyMachine
+  - name: collectionMint
+    type: Address
+    required: true
+    description: collection_mint field of CandyMachine
+  - name: itemsRedeemed
+    type: u64
+    required: true
+    description: items_redeemed field of CandyMachine
+  - name: data
+    type: candy_machine_data
+    required: true
+    description: data field of CandyMachine
+stateMachine:
+  states:
+    - Uninitialized
+    - Active
+  transitions:
+    - from: Active
+      to: Active
+      via: AddConfigLines
+    - from: Uninitialized
+      to: Active
+      via: Initialize
+    - from: Uninitialized
+      to: Active
+      via: InitializeV2
+    - from: Active
+      to: Active
+      via: Mint
+    - from: Active
+      to: Active
+      via: MintV2
+    - from: Active
+      to: Active
+      via: SetAuthority
+    - from: Active
+      to: Active
+      via: SetCollection
+    - from: Active
+      to: Active
+      via: SetCollectionV2
+    - from: Active
+      to: Active
+      via: SetMintAuthority
+    - from: Active
+      to: Active
+      via: SetTokenStandard
+    - from: Active
+      to: Active
+      via: Update
+    - from: Active
+      to: Active
+      via: Withdraw
+accountLayout:
+  discriminator: 33adb17119f16dbd
+  fields:
+    - name: version
+      type: account_version
+      description: version field of CandyMachine
+    - name: tokenStandard
+      type: u8
+      description: token_standard field of CandyMachine
+    - name: features
+      type: Array<u8, 6>
+      description: features field of CandyMachine
+    - name: authority
+      type: Address
+      description: authority field of CandyMachine
+    - name: mintAuthority
+      type: Address
+      description: mint_authority field of CandyMachine
+    - name: collectionMint
+      type: Address
+      description: collection_mint field of CandyMachine
+    - name: itemsRedeemed
+      type: u64
+      description: items_redeemed field of CandyMachine
+    - name: data
+      type: candy_machine_data
+      description: data field of CandyMachine
+programId: CndyV3LdqHUfDLmE5naZjVN8rBZz4tqhdefbAnjHG3JR
+idlInstruction:
+  programId: CndyV3LdqHUfDLmE5naZjVN8rBZz4tqhdefbAnjHG3JR
+  instructionName: add_config_lines
+  discriminator: df32e0e39708736a
+  args:
+    - name: index
+      type: u32
+    - name: config_lines
+      type: vec<defined<config_line>>
+  accounts:
+    - name: candy_machine
+      writable: true
+    - name: authority
+      signer: true
+  definedTypes:
+    - name: config_line
+      fields:
+        - name: name
+          type: string
+        - name: uri
+          type: string
+constraints:
+  - name: discriminator_check
+    expression: first 8 bytes must equal [51, 173, 177, 113, 25, 241, 109, 189]
+    description: Anchor account discriminator must match
+links:
+  - label: Program
+    url: https://solana.fm/address/CndyV3LdqHUfDLmE5naZjVN8rBZz4tqhdefbAnjHG3JR

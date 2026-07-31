@@ -171,7 +171,7 @@ describe("defined<T> struct args", () => {
     const code = generateInstructionBuilder(structConcept)!;
     expect(code).toContain("export interface VaultConfig {");
     expect(code).toContain("config: VaultConfig;");
-    expect(code).toContain('definedTypes: [');
+    expect(code).toContain("definedTypes: [");
     // The struct arg is typed against the interface, not an unknown fallback
     expect(code).not.toContain("config: unknown");
   });
@@ -233,11 +233,7 @@ describe("native 1-byte instruction tags", () => {
     expect(ix.data.length).toBe(9);
     expect(ix.data[0]).toBe(3);
     expect(new DataView(ix.data.buffer, ix.data.byteOffset + 1).getBigUint64(0, true)).toBe(42n);
-    expect(ix.accounts.map((a: { isSigner: boolean }) => a.isSigner)).toEqual([
-      false,
-      false,
-      true,
-    ]);
+    expect(ix.accounts.map((a: { isSigner: boolean }) => a.isSigner)).toEqual([false, false, true]);
   });
 });
 

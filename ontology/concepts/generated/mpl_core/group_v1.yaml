@@ -1,0 +1,73 @@
+canonicalName: GroupV1
+purpose: On-chain GroupV1 account defined by mpl_core_program program
+category: primitive
+version: 0.2.0
+owner: mpl_core_program
+properties:
+  - name: key
+    type: key
+    required: true
+    description: key field of GroupV1
+  - name: updateAuthority
+    type: Address
+    required: true
+    description: update_authority field of GroupV1
+  - name: name
+    type: string
+    required: true
+    description: name field of GroupV1
+  - name: uri
+    type: string
+    required: true
+    description: uri field of GroupV1
+  - name: collections
+    type: Vec<Address>
+    required: true
+    description: collections field of GroupV1
+  - name: groups
+    type: Vec<Address>
+    required: true
+    description: groups field of GroupV1
+  - name: parentGroups
+    type: Vec<Address>
+    required: true
+    description: parent_groups field of GroupV1
+  - name: assets
+    type: Vec<Address>
+    required: true
+    description: assets field of GroupV1
+accountLayout:
+  discriminator: a7366514e3b3fd9f
+  fields:
+    - name: key
+      type: key
+      description: key field of GroupV1
+    - name: updateAuthority
+      type: Address
+      description: update_authority field of GroupV1
+    - name: name
+      type: string
+      description: name field of GroupV1
+    - name: uri
+      type: string
+      description: uri field of GroupV1
+    - name: collections
+      type: Vec<Address>
+      description: collections field of GroupV1
+    - name: groups
+      type: Vec<Address>
+      description: groups field of GroupV1
+    - name: parentGroups
+      type: Vec<Address>
+      description: parent_groups field of GroupV1
+    - name: assets
+      type: Vec<Address>
+      description: assets field of GroupV1
+programId: CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d
+constraints:
+  - name: discriminator_check
+    expression: first 8 bytes must equal [167, 54, 101, 20, 227, 179, 253, 159]
+    description: Anchor account discriminator must match
+links:
+  - label: Program
+    url: https://solana.fm/address/CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d

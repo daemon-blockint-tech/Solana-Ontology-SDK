@@ -1,0 +1,31 @@
+canonicalName: PluginHeaderV1
+purpose: On-chain PluginHeaderV1 account defined by mpl_core_program program
+category: primitive
+version: 0.2.0
+owner: mpl_core_program
+properties:
+  - name: key
+    type: key
+    required: true
+    description: key field of PluginHeaderV1
+  - name: pluginRegistryOffset
+    type: u64
+    required: true
+    description: plugin_registry_offset field of PluginHeaderV1
+accountLayout:
+  discriminator: ed32a5d026fd9998
+  fields:
+    - name: key
+      type: key
+      description: key field of PluginHeaderV1
+    - name: pluginRegistryOffset
+      type: u64
+      description: plugin_registry_offset field of PluginHeaderV1
+programId: CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d
+constraints:
+  - name: discriminator_check
+    expression: first 8 bytes must equal [237, 50, 165, 208, 38, 253, 153, 152]
+    description: Anchor account discriminator must match
+links:
+  - label: Program
+    url: https://solana.fm/address/CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d

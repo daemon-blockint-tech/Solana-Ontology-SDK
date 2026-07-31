@@ -220,8 +220,10 @@ export function generateConceptsFromIdl(idl: IdlV1): Concept[] {
 
   for (const account of idl.accounts) {
     const pascalName = toPascalCase(account.name);
+    // IDL field names are snake_case; ontology property/field names are
+    // camelCase (schema-enforced ^[a-z][a-zA-Z0-9]*$)
     const properties: ConceptProperty[] = (account.type.fields ?? []).map((field: IdlV1Field) => ({
-      name: field.name,
+      name: toCamelCase(field.name),
       type: mapIdlTypeToOntology(field.type),
       required: !field.attrs?.includes("optional"),
       description: `${field.name} field of ${pascalName}`,
@@ -236,7 +238,7 @@ export function generateConceptsFromIdl(idl: IdlV1): Concept[] {
     // composites to "complex" here would make accounts with option/vec fields
     // undecodable.
     const layoutFields: BorshFieldDef[] = (account.type.fields ?? []).map((field: IdlV1Field) => ({
-      name: field.name,
+      name: toCamelCase(field.name),
       type: mapIdlTypeToOntology(field.type),
       description: `${field.name} field of ${pascalName}`,
     }));
@@ -322,6 +324,11 @@ export function generateConceptsFromIdl(idl: IdlV1): Concept[] {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+
+function toCamelCase(snake: string): string {
+  const pascal = toPascalCase(snake);
+  return pascal.charAt(0).toLowerCase() + pascal.slice(1);
+}
 
 function toPascalCase(snake: string): string {
   return snake

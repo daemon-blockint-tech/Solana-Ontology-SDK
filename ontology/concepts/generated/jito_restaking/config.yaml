@@ -1,0 +1,141 @@
+canonicalName: Config
+purpose: On-chain Config account defined by jito_restaking program
+category: primitive
+version: 0.0.5
+owner: jito_restaking
+properties:
+  - name: admin
+    type: Address
+    required: true
+    description: admin field of Config
+  - name: vaultProgram
+    type: Address
+    required: true
+    description: vault_program field of Config
+  - name: ncnCount
+    type: pod_u64
+    required: true
+    description: ncn_count field of Config
+  - name: operatorCount
+    type: pod_u64
+    required: true
+    description: operator_count field of Config
+  - name: epochLength
+    type: pod_u64
+    required: true
+    description: epoch_length field of Config
+  - name: bump
+    type: u8
+    required: true
+    description: bump field of Config
+  - name: reserved
+    type: Array<u8, 263>
+    required: true
+    description: reserved field of Config
+stateMachine:
+  states:
+    - Uninitialized
+    - Active
+  transitions:
+    - from: Uninitialized
+      to: Active
+      via: InitializeConfig
+    - from: Uninitialized
+      to: Active
+      via: InitializeNcn
+    - from: Uninitialized
+      to: Active
+      via: InitializeOperator
+    - from: Uninitialized
+      to: Active
+      via: InitializeNcnVaultSlasherTicket
+    - from: Uninitialized
+      to: Active
+      via: InitializeNcnVaultTicket
+    - from: Uninitialized
+      to: Active
+      via: InitializeOperatorVaultTicket
+    - from: Uninitialized
+      to: Active
+      via: InitializeNcnOperatorState
+    - from: Active
+      to: Active
+      via: WarmupNcnVaultTicket
+    - from: Active
+      to: Active
+      via: CooldownNcnVaultTicket
+    - from: Active
+      to: Active
+      via: NcnWarmupOperator
+    - from: Active
+      to: Active
+      via: NcnCooldownOperator
+    - from: Active
+      to: Active
+      via: OperatorWarmupNcn
+    - from: Active
+      to: Active
+      via: OperatorCooldownNcn
+    - from: Active
+      to: Active
+      via: WarmupNcnVaultSlasherTicket
+    - from: Active
+      to: Active
+      via: CooldownNcnVaultSlasherTicket
+    - from: Active
+      to: Active
+      via: WarmupOperatorVaultTicket
+    - from: Active
+      to: Active
+      via: CooldownOperatorVaultTicket
+    - from: Active
+      to: Active
+      via: OperatorSetFee
+    - from: Active
+      to: Active
+      via: SetConfigAdmin
+accountLayout:
+  discriminator: 9b0caae01efacc82
+  fields:
+    - name: admin
+      type: Address
+      description: admin field of Config
+    - name: vaultProgram
+      type: Address
+      description: vault_program field of Config
+    - name: ncnCount
+      type: pod_u64
+      description: ncn_count field of Config
+    - name: operatorCount
+      type: pod_u64
+      description: operator_count field of Config
+    - name: epochLength
+      type: pod_u64
+      description: epoch_length field of Config
+    - name: bump
+      type: u8
+      description: bump field of Config
+    - name: reserved
+      type: Array<u8, 263>
+      description: reserved field of Config
+programId: RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q
+idlInstruction:
+  programId: RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q
+  instructionName: initialize_config
+  discriminator: d07f1501c2bec446
+  args: []
+  accounts:
+    - name: config
+      writable: true
+    - name: admin
+      writable: true
+      signer: true
+    - name: vault_program
+    - name: system_program
+constraints:
+  - name: discriminator_check
+    expression: first 8 bytes must equal [155, 12, 170, 224, 30, 250, 204, 130]
+    description: Anchor account discriminator must match
+links:
+  - label: Program
+    url: https://solana.fm/address/RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q

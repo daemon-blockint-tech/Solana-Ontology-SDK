@@ -1,0 +1,96 @@
+canonicalName: OperatorVaultTicket
+purpose: On-chain OperatorVaultTicket account defined by jito_restaking program
+category: defi
+version: 0.0.5
+owner: jito_restaking
+properties:
+  - name: operator
+    type: Address
+    required: true
+    description: operator field of OperatorVaultTicket
+  - name: vault
+    type: Address
+    required: true
+    description: vault field of OperatorVaultTicket
+  - name: index
+    type: pod_u64
+    required: true
+    description: index field of OperatorVaultTicket
+  - name: state
+    type: slot_toggle
+    required: true
+    description: state field of OperatorVaultTicket
+  - name: bump
+    type: u8
+    required: true
+    description: bump field of OperatorVaultTicket
+  - name: reserved
+    type: Array<u8, 263>
+    required: true
+    description: reserved field of OperatorVaultTicket
+relationships:
+  - type: references
+    target: Operator
+    cardinality: many:1
+    description: OperatorVaultTicket references a Operator via operator
+stateMachine:
+  states:
+    - Uninitialized
+    - Active
+  transitions:
+    - from: Uninitialized
+      to: Active
+      via: InitializeOperatorVaultTicket
+    - from: Active
+      to: Active
+      via: WarmupOperatorVaultTicket
+    - from: Active
+      to: Active
+      via: CooldownOperatorVaultTicket
+accountLayout:
+  discriminator: 5203135a11a28cb2
+  fields:
+    - name: operator
+      type: Address
+      description: operator field of OperatorVaultTicket
+    - name: vault
+      type: Address
+      description: vault field of OperatorVaultTicket
+    - name: index
+      type: pod_u64
+      description: index field of OperatorVaultTicket
+    - name: state
+      type: slot_toggle
+      description: state field of OperatorVaultTicket
+    - name: bump
+      type: u8
+      description: bump field of OperatorVaultTicket
+    - name: reserved
+      type: Array<u8, 263>
+      description: reserved field of OperatorVaultTicket
+programId: RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q
+idlInstruction:
+  programId: RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q
+  instructionName: initialize_operator_vault_ticket
+  discriminator: 9cf0ea8b47b3ee78
+  args: []
+  accounts:
+    - name: config
+    - name: operator
+      writable: true
+    - name: vault
+    - name: operator_vault_ticket
+      writable: true
+    - name: admin
+      signer: true
+    - name: payer
+      writable: true
+      signer: true
+    - name: system_program
+constraints:
+  - name: discriminator_check
+    expression: first 8 bytes must equal [82, 3, 19, 90, 17, 162, 140, 178]
+    description: Anchor account discriminator must match
+links:
+  - label: Program
+    url: https://solana.fm/address/RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q

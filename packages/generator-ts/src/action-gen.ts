@@ -105,9 +105,7 @@ export function generateInstructionBuilder(concept: Concept): string | null {
   if (definedTypes.length > 0) {
     lines.push(`  definedTypes: [`);
     for (const dt of definedTypes) {
-      const fields = dt.fields
-        .map((f) => `{ name: "${f.name}", type: "${f.type}" }`)
-        .join(", ");
+      const fields = dt.fields.map((f) => `{ name: "${f.name}", type: "${f.type}" }`).join(", ");
       lines.push(`    { name: "${dt.name}", fields: [${fields}] },`);
     }
     lines.push(`  ],`);
