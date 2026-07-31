@@ -133,3 +133,34 @@ describe("generated instruction builders", () => {
     );
   });
 });
+
+describe("action builder identifier sanitization", () => {
+  it("produces a valid identifier when the transition via is free-form prose", () => {
+    const prose: Concept = {
+      canonicalName: "Widget",
+      purpose: "x",
+      category: "primitive",
+      version: "1.0.0",
+      properties: [],
+      stateMachine: {
+        states: ["Uninitialized", "Active"],
+        transitions: [
+          { from: "Uninitialized", to: "Active", via: "Initialize account or create the ATA!" },
+        ],
+      },
+    };
+    const [code] = generateActions(prose);
+    // No spaces/punctuation may leak into the emitted function name
+    const m = code.match(/export function (\w+)\(/);
+    expect(m).not.toBeNull();
+    expect(m![1]).toBe("buildUninitializedToActiveViaInitializeAccountOrCreateTheATAWidgetAction");
+    // And the whole thing transpiles without a syntax error
+    expect(() =>
+      ts.transpileModule(code, {
+        compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },
+      }),
+    ).not.toThrow();
+    // The prose is preserved verbatim inside the (safely escaped) error string
+    expect(code).toContain("Initialize account or create the ATA!");
+  });
+});

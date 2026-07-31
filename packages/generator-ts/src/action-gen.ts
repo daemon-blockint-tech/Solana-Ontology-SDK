@@ -148,6 +148,19 @@ function normalizeIxName(name: string): string {
 }
 
 /**
+ * Turn an arbitrary label (state name, or a `via` that may be free-form prose)
+ * into a safe PascalCase identifier fragment. Splits on any non-alphanumeric
+ * run so spaces/punctuation can never leak into the emitted function name.
+ */
+function toIdent(label: string): string {
+  return label
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join("");
+}
+
+/**
  * Generate an action builder function for a state machine transition.
  *
  * When the transition's instruction matches the concept's idlInstruction
@@ -157,7 +170,11 @@ function normalizeIxName(name: string): string {
  */
 function generateTransitionAction(concept: Concept, transition: StateTransition): string {
   const conceptName = concept.canonicalName;
-  const fnName = `build${transition.from}To${transition.to}Via${transition.via}${conceptName}Action`;
+  // Sanitize every label so a free-form `via`/state (e.g. a prose description)
+  // can never produce an invalid identifier in the emitted function name.
+  const fnName = `build${toIdent(transition.from)}To${toIdent(transition.to)}Via${toIdent(
+    transition.via,
+  )}${conceptName}Action`;
 
   const ref = concept.idlInstruction;
   const matchesIx =
@@ -180,17 +197,20 @@ function generateTransitionAction(concept: Concept, transition: StateTransition)
     ].join("\n");
   }
 
+  // Keep the human `via` in the comment, but neutralize any comment terminator.
+  const viaComment = transition.via.replace(/\*\//g, "*\\/");
+  const errorMessage = JSON.stringify(
+    `${fnName}: no IDL instruction data for transition ${transition.via} in the ontology — regenerate concepts from the program IDL to enable this builder`,
+  );
   return [
     `/**`,
-    ` * The ${transition.via} transition (${transition.from} → ${transition.to}) has no`,
+    ` * The ${viaComment} transition (${transition.from} → ${transition.to}) has no`,
     ` * IDL instruction data in the ontology, so a typed builder cannot be generated.`,
     ` * Regenerate concepts from the program IDL (\`solana-ontology idl <program.json>\`)`,
     ` * or add \`idlInstruction.args\`/\`accounts\` to the concept to enable it.`,
     ` */`,
     `export function ${fnName}(): never {`,
-    `  throw new Error(`,
-    `    "${fnName}: no IDL instruction data for transition ${transition.via} in the ontology — regenerate concepts from the program IDL to enable this builder",`,
-    `  );`,
+    `  throw new Error(${errorMessage});`,
     `}`,
   ].join("\n");
 }
