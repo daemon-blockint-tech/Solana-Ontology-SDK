@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ActionBuilder } from "../src/kit/action.js";
-import { OntologyClient } from "../src/kit/client.js";
+import { OntologyClient, buildKitRpc } from "../src/kit/client.js";
 import { OntologyQuery } from "../src/kit/query.js";
 import { Web3jsAdapter } from "../src/web3js/adapter.js";
 import { normalizeWeb3Account, web3DataToBytes } from "../src/web3js/compat.js";
@@ -31,6 +31,55 @@ describe("OntologyClient", () => {
     expect(client.listConcepts()).toContain("TestToken");
     expect(client.getConcept("TestToken")).toBeDefined();
     expect(client.getConcept("NonExistent")).toBeUndefined();
+  });
+
+  it("getKitClient throws before initKit", () => {
+    const client = new OntologyClient({ rpcUrl: "http://localhost:8899" });
+    expect(() => client.getKitClient()).toThrow(/not initialized/);
+  });
+});
+
+describe("buildKitRpc (initKit RPC construction)", () => {
+  const RPC_URL = "https://api.devnet.solana.com";
+
+  it("builds an RPC via Kit's createSolanaRpc factory", () => {
+    let seenUrl: string | undefined;
+    const fakeRpc = { getSlot: () => ({ send: async () => 1n }) };
+    const kit = {
+      createSolanaRpc: (url: string) => {
+        seenUrl = url;
+        return fakeRpc;
+      },
+    };
+    const rpc = buildKitRpc(kit, RPC_URL);
+    expect(seenUrl).toBe(RPC_URL);
+    expect(rpc).toBe(fakeRpc);
+  });
+
+  it("falls back to createRpc + transport composition when createSolanaRpc is absent", () => {
+    const calls: Record<string, unknown> = {};
+    const fakeRpc = { getSlot: () => ({ send: async () => 2n }) };
+    const kit = {
+      createSolanaRpcApi: () => ({ __api: true }),
+      createDefaultRpcTransport: (cfg: { url: string }) => {
+        calls.transportUrl = cfg.url;
+        return { __transport: true };
+      },
+      createRpc: (cfg: { api: unknown; transport: unknown }) => {
+        calls.rpcConfig = cfg;
+        return fakeRpc;
+      },
+    };
+    const rpc = buildKitRpc(kit, RPC_URL);
+    expect(calls.transportUrl).toBe(RPC_URL);
+    expect(calls.rpcConfig).toEqual({ api: { __api: true }, transport: { __transport: true } });
+    expect(rpc).toBe(fakeRpc);
+  });
+
+  it("throws an explicit error when the installed Kit exposes no known factory", () => {
+    expect(() => buildKitRpc({ somethingElse: () => {} }, RPC_URL)).toThrow(
+      /does not expose createSolanaRpc/,
+    );
   });
 });
 
