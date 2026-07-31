@@ -20,8 +20,42 @@ export interface OntologyClientConfig {
  * optional peer dependency — callers narrow it themselves.
  */
 export interface KitClient {
+  /** The imported @solana/kit module namespace. */
   kit: unknown;
+  /** A ready-to-use Kit RPC client (from createSolanaRpc), e.g. `rpc.getSlot().send()`. */
+  rpc: unknown;
   rpcUrl: string;
+}
+
+/**
+ * Build a Kit RPC client from the imported @solana/kit module namespace.
+ *
+ * `createSolanaRpc(url)` is Kit's canonical RPC-client factory; when it is
+ * absent (older/newer surface) we fall back to the transport-composed form
+ * `createRpc({ api: createSolanaRpcApi(), transport: createDefaultRpcTransport({ url }) })`.
+ * Feature-detected so it stays tolerant across Kit versions.
+ */
+export function buildKitRpc(kit: Record<string, unknown>, rpcUrl: string): unknown {
+  const createSolanaRpc = kit.createSolanaRpc as ((url: string) => unknown) | undefined;
+  if (typeof createSolanaRpc === "function") {
+    return createSolanaRpc(rpcUrl);
+  }
+
+  const createRpc = kit.createRpc as ((cfg: unknown) => unknown) | undefined;
+  const createHttpTransport = kit.createDefaultRpcTransport as
+    ((cfg: { url: string }) => unknown) | undefined;
+  const createApi = kit.createSolanaRpcApi as ((cfg?: unknown) => unknown) | undefined;
+  if (
+    typeof createRpc === "function" &&
+    typeof createHttpTransport === "function" &&
+    typeof createApi === "function"
+  ) {
+    return createRpc({ api: createApi(), transport: createHttpTransport({ url: rpcUrl }) });
+  }
+
+  throw new Error(
+    "Installed @solana/kit does not expose createSolanaRpc (or createRpc + createDefaultRpcTransport); cannot build an RPC client.",
+  );
 }
 
 /**
@@ -29,8 +63,8 @@ export interface KitClient {
  * with ontology-typed methods for account fetching, PDA derivation,
  * action building, and queries.
  *
- * When @solana/kit is available, it uses Kit's createClient() under the hood.
- * Otherwise, it falls back to the web3.js adapter.
+ * When @solana/kit is available, initKit() builds a Kit RPC client via
+ * createSolanaRpc. Otherwise, initWeb3() falls back to the web3.js adapter.
  */
 export class OntologyClient {
   readonly config: OntologyClientConfig;
@@ -80,19 +114,28 @@ export class OntologyClient {
   }
 
   /**
-   * Initialize the Kit client.
-   * Requires @solana/kit to be installed.
+   * Initialize the Kit client: import @solana/kit and build a real RPC client
+   * from the configured endpoint via Kit's standard `createSolanaRpc` factory.
+   * Requires @solana/kit to be installed (optional peer dependency).
    */
   async initKit(): Promise<void> {
-    // Dynamic import — only fails if @solana/kit is not installed
+    let kit: Record<string, unknown>;
     try {
-      const kit = await import("@solana/kit");
-      // Use Kit's createClient with RPC plugin
-      // This is a stub — actual implementation depends on Kit API surface
-      this._kitClient = { kit, rpcUrl: this.config.rpcUrl };
+      kit = (await import("@solana/kit")) as unknown as Record<string, unknown>;
     } catch {
       throw new Error("@solana/kit is not installed. Install it with: pnpm add @solana/kit");
     }
+
+    const rpc = buildKitRpc(kit, this.config.rpcUrl);
+    this._kitClient = { kit, rpc, rpcUrl: this.config.rpcUrl };
+  }
+
+  /**
+   * Get the initialized Kit RPC client (from {@link initKit}).
+   * Throws if Kit has not been initialized.
+   */
+  getKitRpc(): unknown {
+    return this.getKitClient().rpc;
   }
 
   /**
