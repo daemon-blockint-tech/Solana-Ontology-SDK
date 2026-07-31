@@ -79,6 +79,11 @@ export interface BorshFieldDef {
 }
 
 export interface AccountLayoutDef {
+  /**
+   * Hex discriminator prefix: 8 bytes for Anchor accounts, down to a single
+   * byte for native-program tags. Omit for native accounts with no prefix
+   * (e.g. SPL Token accounts, identified by owner + data length).
+   */
   discriminator?: string;
   fields: BorshFieldDef[];
   /**
@@ -111,6 +116,11 @@ export interface IdlInstructionAccountDef {
 export interface IdlInstructionRef {
   programId?: string;
   instructionName?: string;
+  /**
+   * Hex instruction discriminator: 8 bytes (Anchor `global:<name>` sha256
+   * prefix) down to a single byte (native program instruction tags — e.g.
+   * SPL Token Transfer = "03").
+   */
   discriminator?: string;
   /** Instruction arguments (enables typed action-builder codegen) */
   args?: IdlInstructionArgDef[];

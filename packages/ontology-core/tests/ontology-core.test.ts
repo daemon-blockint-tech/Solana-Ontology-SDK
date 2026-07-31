@@ -214,6 +214,36 @@ describe("on-chain linkage fields", () => {
     expect(result.errors.some((e) => e.path?.includes("discriminator"))).toBe(true);
   });
 
+  it("accepts variable-length discriminators (native 1-byte tags through Anchor 8-byte)", () => {
+    for (const disc of ["03", "0102", "0102030405060708"]) {
+      const concept: Concept = {
+        canonicalName: "TestNativeTag",
+        purpose: "Native program discriminator tag",
+        category: "token",
+        version: "1.0.0",
+        programId: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        accountLayout: { discriminator: disc, fields: [{ name: "test", type: "u8" }] },
+      };
+      const result = validateConcept(concept);
+      expect(result.valid, `discriminator "${disc}" should validate`).toBe(true);
+    }
+  });
+
+  it("rejects odd-length and oversized discriminators", () => {
+    for (const disc of ["3", "010", "010203040506070809"]) {
+      const concept: Concept = {
+        canonicalName: "TestBadTag",
+        purpose: "Bad discriminator lengths",
+        category: "token",
+        version: "1.0.0",
+        programId: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        accountLayout: { discriminator: disc, fields: [{ name: "test", type: "u8" }] },
+      };
+      const result = validateConcept(concept);
+      expect(result.valid, `discriminator "${disc}" should be rejected`).toBe(false);
+    }
+  });
+
   it("should reject duplicate pdaSeeds names", () => {
     const concept: Concept = {
       canonicalName: "TestPdaSeeds",

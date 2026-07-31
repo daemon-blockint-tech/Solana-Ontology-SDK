@@ -46,6 +46,22 @@ accountLayout:
       type: COption<publicKey>
       offset: 129
       description: "Optional authority to close the account (COption<Pubkey>, 36 bytes)"
+# Native SPL Token instructions use a single-byte tag, not an Anchor 8-byte
+# discriminator: Transfer = 3, followed by the borsh-encoded amount (u64 LE).
+idlInstruction:
+  programId: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+  instructionName: transfer
+  discriminator: "03"
+  args:
+    - name: amount
+      type: u64
+  accounts:
+    - name: source
+      writable: true
+    - name: destination
+      writable: true
+    - name: authority
+      signer: true
 properties:
   - name: mint
     type: Address

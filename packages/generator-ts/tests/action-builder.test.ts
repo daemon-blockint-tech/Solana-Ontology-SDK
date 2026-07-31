@@ -39,7 +39,10 @@ const ixConcept: Concept = {
   },
 };
 
-async function importGenerated(concept: Concept): Promise<Record<string, any>> {
+async function importGenerated(
+  concept: Concept,
+  basename = "escrow",
+): Promise<Record<string, any>> {
   const dir = mkdtempSync(join(tmpdir(), "gen-ix-"));
   const files = generateAll([concept], { outputDir: dir, generateIndex: false });
   let target: string | undefined;
@@ -51,7 +54,7 @@ async function importGenerated(concept: Concept): Promise<Record<string, any>> {
     }).outputText;
     const jsPath = file.path.replace(/\.ts$/, ".js");
     writeFileSync(jsPath, js);
-    if (jsPath.includes("escrow")) target = jsPath;
+    if (jsPath.includes(basename)) target = jsPath;
   }
   return import(pathToFileURL(target!).href);
 }
@@ -131,6 +134,49 @@ describe("generated instruction builders", () => {
     expect(() => mod.buildActiveToActiveViaTopUpEscrowAction()).toThrow(
       /no IDL instruction data for transition TopUp/,
     );
+  });
+});
+
+describe("native 1-byte instruction tags", () => {
+  const nativeTransfer: Concept = {
+    canonicalName: "TokenAccount",
+    purpose: "SPL token account",
+    category: "token",
+    version: "1.0.0",
+    properties: [],
+    programId: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+    idlInstruction: {
+      programId: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      instructionName: "transfer",
+      discriminator: "03", // native SPL Token tag — a single byte, not Anchor's 8
+      args: [{ name: "amount", type: "u64" }],
+      accounts: [
+        { name: "source", writable: true },
+        { name: "destination", writable: true },
+        { name: "authority", signer: true },
+      ],
+    },
+  };
+
+  it("builds a real SPL Token Transfer with a single-byte tag", async () => {
+    const mod = await importGenerated(nativeTransfer, "tokenAccount");
+    const ix = mod.buildTransferTokenAccountInstruction(
+      { amount: 42n },
+      {
+        source: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+        destination: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+        authority: "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
+      },
+    );
+    // tag(1) + u64 amount(8) — exactly the native wire format
+    expect(ix.data.length).toBe(9);
+    expect(ix.data[0]).toBe(3);
+    expect(new DataView(ix.data.buffer, ix.data.byteOffset + 1).getBigUint64(0, true)).toBe(42n);
+    expect(ix.accounts.map((a: { isSigner: boolean }) => a.isSigner)).toEqual([
+      false,
+      false,
+      true,
+    ]);
   });
 });
 
