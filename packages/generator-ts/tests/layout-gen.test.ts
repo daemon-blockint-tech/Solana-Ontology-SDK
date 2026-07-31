@@ -153,3 +153,100 @@ describe("layout-gen", () => {
     expect(none.find((f) => f.path.endsWith("runtime.ts"))).toBeUndefined();
   });
 });
+
+// ── Fixed-width, offset-addressed layouts (native programs, e.g. SPL Token) ──
+
+/** The canonical SPL Token *account* layout (165 bytes) — as read out of Ghidra. */
+const splTokenAccount: Concept = {
+  canonicalName: "SplTokenAccount",
+  purpose: "SPL Token account (native, fixed C-layout, no IDL)",
+  category: "token",
+  version: "1.0.0",
+  properties: [],
+  accountLayout: {
+    fields: [
+      { name: "mint", type: "publicKey", offset: 0 },
+      { name: "owner", type: "publicKey", offset: 32 },
+      { name: "amount", type: "u64", offset: 64 },
+      { name: "delegate", type: "COption<publicKey>", offset: 72 },
+      { name: "state", type: "u8", offset: 108 },
+      { name: "is_native", type: "COption<u64>", offset: 109 },
+      { name: "delegated_amount", type: "u64", offset: 121 },
+      { name: "close_authority", type: "COption<publicKey>", offset: 129 },
+    ],
+  },
+};
+
+async function importByBasename(concept: Concept, basename: string): Promise<Record<string, any>> {
+  const dir = mkdtempSync(join(tmpdir(), "gen-fx-"));
+  const files = generateAll([concept], { outputDir: dir, generateIndex: false });
+  let target: string | undefined;
+  for (const file of files) {
+    const js = ts.transpileModule(file.content, {
+      compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },
+    }).outputText;
+    const jsPath = file.path.replace(/\.ts$/, ".js");
+    writeFileSync(jsPath, js);
+    if (jsPath.endsWith(`${basename}.js`)) target = jsPath;
+  }
+  return import(pathToFileURL(target!).href);
+}
+
+describe("layout-gen fixed (offset-addressed) layouts", () => {
+  it("emits seek-based reads and a FixedWriter, not sequential Borsh", () => {
+    const decoder = generateDecoder(splTokenAccount);
+    const encoder = generateEncoder(splTokenAccount);
+    expect(decoder).toContain("r.seek(64); result.amount = r.u64()");
+    expect(decoder).toContain("r.seek(129); result.close_authority = r.coptionTag()");
+    expect(encoder).toContain("new FixedWriter(165)");
+  });
+
+  it("decodes a real 165-byte SPL token account (None COptions keep reserved width)", async () => {
+    const mod = await importByBasename(splTokenAccount, "splTokenAccount");
+
+    const buf = new Uint8Array(165);
+    const dv = new DataView(buf.buffer);
+    buf.fill(7, 0, 32); // mint
+    buf.fill(9, 32, 64); // owner
+    dv.setBigUint64(64, 250_000_000n, true); // amount
+    dv.setUint32(72, 0, true); // delegate = None (but reserves 36 bytes)
+    buf[108] = 1; // state = Initialized
+    dv.setUint32(109, 1, true); // is_native = Some
+    dv.setBigUint64(113, 2_039_280n, true);
+    dv.setBigUint64(121, 0n, true); // delegated_amount
+    dv.setUint32(129, 0, true); // close_authority = None
+
+    const decoded = mod.decodeSplTokenAccount(buf);
+    // The bug this guards: a None COption must NOT shift subsequent fields.
+    expect(decoded.amount).toBe(250_000_000n);
+    expect(decoded.delegate).toBeNull();
+    expect(decoded.state).toBe(1);
+    expect(decoded.is_native).toBe(2_039_280n);
+    expect(decoded.close_authority).toBeNull();
+  });
+
+  it("round-trips encode → decode through the fixed-width buffer", async () => {
+    const mod = await importByBasename(splTokenAccount, "splTokenAccount");
+    const value = {
+      mint: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      owner: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+      amount: 12345n,
+      delegate: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb", // Some
+      state: 1,
+      is_native: null, // None
+      delegated_amount: 999n,
+      close_authority: null,
+    };
+    const encoded = mod.encodeSplTokenAccount(value);
+    expect(encoded.length).toBe(165);
+    expect(mod.decodeSplTokenAccount(encoded)).toEqual(value);
+  });
+
+  it("rejects variable-length (borsh Option/string) fields in an offset-addressed layout", () => {
+    const bad: Concept = {
+      ...splTokenAccount,
+      accountLayout: { fields: [{ name: "x", type: "Option<u64>", offset: 0 }] },
+    };
+    expect(() => generateDecoder(bad)).toThrow(/Unsupported fixed-layout field type/);
+  });
+});

@@ -1,9 +1,13 @@
 /**
- * Real Borsh account decode/encode generation from concept.accountLayout.
+ * Real account decode/encode generation from concept.accountLayout, against a
+ * small shared runtime (`runtime.ts`). Two modes:
  *
- * Emits sequential reads/writes (offsets in the layout are treated as
- * documentation — variable-length fields make static offsets unreliable) plus
- * a discriminator check, against a small shared runtime (`runtime.ts`).
+ * - Sequential Borsh (default): variable-length fields, read/written in order.
+ *   Used for Anchor/Borsh accounts; a None Option consumes only its tag.
+ * - Fixed / offset-addressed: every field carries an explicit `offset`. Reads
+ *   seek to each offset and writes target a pre-sized buffer, so fixed-width
+ *   COption fields (native programs like SPL Token) keep their reserved space
+ *   even when None. This is the shape a reverse-engineer reads out of Ghidra.
  */
 
 import type { Concept } from "@solana-ontology/core";
@@ -35,6 +39,26 @@ const SCALAR_READERS: Record<string, { reader: string; writer: string; ts: strin
   Address: { reader: "pubkey", writer: "pubkey", ts: "string" },
   string: { reader: "string", writer: "string", ts: "string" },
   bytes: { reader: "bytes", writer: "bytes", ts: "Uint8Array" },
+};
+
+/** Fixed byte width of each scalar type (for fixed-layout, offset-addressed accounts). */
+const SCALAR_WIDTH: Record<string, number> = {
+  bool: 1,
+  u8: 1,
+  i8: 1,
+  u16: 2,
+  i16: 2,
+  u32: 4,
+  i32: 4,
+  f32: 4,
+  u64: 8,
+  i64: 8,
+  f64: 8,
+  u128: 16,
+  i128: 16,
+  publicKey: 32,
+  pubkey: 32,
+  Address: 32,
 };
 
 interface ResolvedField {
@@ -87,6 +111,87 @@ export function hasAccountLayout(concept: Concept): boolean {
 }
 
 /**
+ * A "fixed layout" (every field carries an explicit byte offset) is decoded by
+ * seeking to each offset rather than reading sequentially. This is required for
+ * native programs — e.g. SPL Token — whose COption fields reserve their full
+ * width even when None (C-style Pack), unlike variable-length Borsh.
+ */
+function isFixedLayout(fields: LayoutField[]): boolean {
+  return fields.length > 0 && fields.every((f) => Number.isInteger(f.offset));
+}
+
+interface FixedField {
+  name: string;
+  tsType: string;
+  offset: number;
+  /** Total reserved width at this offset (COption reserves tag + inner even when None). */
+  width: number;
+  /** Statement assigning the decoded value to `result.<name>`, seeking `r` first. */
+  decodeStmt: string;
+  /** Statement writing `value.<name>` into fixed-buffer writer `w` at this offset. */
+  encodeStmt: string;
+}
+
+function resolveFixedField(conceptName: string, field: LayoutField): FixedField {
+  const off = field.offset as number;
+  const scalar = SCALAR_READERS[field.type];
+  if (scalar) {
+    const width = SCALAR_WIDTH[field.type];
+    if (width === undefined) {
+      throw new Error(
+        `accountLayout field "${field.name}" of type "${field.type}" has no fixed width and cannot be used in an offset-addressed layout on ${conceptName}`,
+      );
+    }
+    return {
+      name: field.name,
+      tsType: scalar.ts,
+      offset: off,
+      width,
+      decodeStmt: `  r.seek(${off}); result.${field.name} = r.${scalar.reader}();`,
+      encodeStmt: `  w.${scalar.writer}(${off}, value.${field.name});`,
+    };
+  }
+
+  // COption<T> — native fixed-width optional: 4-byte tag + inner reserved always
+  const optionMatch = field.type.match(/^(C?)Option<(.+)>$/);
+  if (optionMatch && optionMatch[1] === "C") {
+    const inner = SCALAR_READERS[optionMatch[2]];
+    const innerWidth = SCALAR_WIDTH[optionMatch[2]];
+    if (inner && innerWidth !== undefined) {
+      return {
+        name: field.name,
+        tsType: `${inner.ts} | null`,
+        offset: off,
+        width: 4 + innerWidth,
+        decodeStmt: `  r.seek(${off}); result.${field.name} = r.coptionTag() ? r.${inner.reader}() : null;`,
+        encodeStmt: `  if (value.${field.name} !== null) { w.u32(${off}, 1); w.${inner.writer}(${off + 4}, value.${field.name}); }`,
+      };
+    }
+  }
+
+  throw new Error(
+    `Unsupported fixed-layout field type "${field.type}" on ${conceptName}.${field.name} — ` +
+      `offset-addressed layouts support ${Object.keys(SCALAR_WIDTH).join(", ")} and COption<T> ` +
+      `(borsh Option<T> is variable-length; drop the offset to use sequential Borsh instead)`,
+  );
+}
+
+/** Total buffer size for a fixed layout: explicit accountLayout.size, else max(offset + width). */
+function fixedLayoutSize(concept: Concept, resolved: FixedField[]): number {
+  const computed = resolved.reduce((max, f) => Math.max(max, f.offset + f.width), 0);
+  const explicit = (concept.accountLayout as { size?: number } | undefined)?.size;
+  if (explicit !== undefined) {
+    if (explicit < computed) {
+      throw new Error(
+        `accountLayout.size ${explicit} is smaller than the computed layout extent ${computed} on ${concept.canonicalName}`,
+      );
+    }
+    return explicit;
+  }
+  return computed;
+}
+
+/**
  * Generate the `XxxAccountData` interface typed from the layout fields.
  */
 export function generateAccountDataInterface(concept: Concept): string {
@@ -115,22 +220,30 @@ export function generateLayoutDecoder(concept: Concept): string {
   const lines: string[] = [];
   lines.push(`/**`);
   lines.push(` * Decode raw account data into a typed ${name}AccountData object.`);
-  lines.push(` * Verifies the account discriminator before reading fields.`);
+  if (disc) lines.push(` * Verifies the account discriminator before reading fields.`);
   lines.push(` */`);
   lines.push(`export function decode${name}(data: Uint8Array): ${name}AccountData {`);
   if (disc) {
     lines.push(`  const discriminator = hexToBytes("${disc}");`);
     lines.push(`  checkDiscriminator("${name}", data, discriminator);`);
-    lines.push(`  const r = new BorshReader(data, discriminator.length);`);
-  } else {
+  }
+
+  if (isFixedLayout(fields)) {
+    // Offset-addressed (fixed-width) layout — seek to each field.
     lines.push(`  const r = new BorshReader(data, 0);`);
+    lines.push(`  const result = {} as ${name}AccountData;`);
+    for (const field of fields) {
+      lines.push(resolveFixedField(name, field).decodeStmt);
+    }
+    lines.push(`  return result;`);
+  } else {
+    lines.push(`  const r = new BorshReader(data, ${disc ? "discriminator.length" : "0"});`);
+    lines.push(`  return {`);
+    for (const field of fields) {
+      lines.push(`    ${field.name}: ${resolveField(name, field).readExpr},`);
+    }
+    lines.push(`  };`);
   }
-  lines.push(`  return {`);
-  for (const field of fields) {
-    const resolved = resolveField(name, field);
-    lines.push(`    ${field.name}: ${resolved.readExpr},`);
-  }
-  lines.push(`  };`);
   lines.push(`}`);
   return lines.join("\n");
 }
@@ -145,26 +258,36 @@ export function generateLayoutEncoder(concept: Concept): string {
 
   const lines: string[] = [];
   lines.push(`/**`);
-  lines.push(` * Encode a ${name}AccountData object into raw on-chain bytes`);
-  lines.push(` * (discriminator-prefixed, Borsh field order per accountLayout).`);
+  lines.push(` * Encode a ${name}AccountData object into raw on-chain bytes.`);
   lines.push(` */`);
   lines.push(`export function encode${name}(value: ${name}AccountData): Uint8Array {`);
-  lines.push(`  const w = new BorshWriter();`);
-  if (disc) {
-    lines.push(`  w.raw(hexToBytes("${disc}"));`);
+
+  if (isFixedLayout(fields)) {
+    // Offset-addressed fixed-width buffer (COption None leaves its reserved space zeroed).
+    const resolved = fields.map((f) => resolveFixedField(name, f));
+    const size = fixedLayoutSize(concept, resolved);
+    lines.push(`  const w = new FixedWriter(${size});`);
+    for (const f of resolved) {
+      lines.push(f.encodeStmt);
+    }
+    lines.push(`  return w.toBytes();`);
+  } else {
+    lines.push(`  const w = new BorshWriter();`);
+    if (disc) {
+      lines.push(`  w.raw(hexToBytes("${disc}"));`);
+    }
+    for (const field of fields) {
+      lines.push(`  ${resolveField(name, field).writeStmt}`);
+    }
+    lines.push(`  return w.toBytes();`);
   }
-  for (const field of fields) {
-    const resolved = resolveField(name, field);
-    lines.push(`  ${resolved.writeStmt}`);
-  }
-  lines.push(`  return w.toBytes();`);
   lines.push(`}`);
   return lines.join("\n");
 }
 
 /** Import line for generated files that use the layout runtime. */
 export const LAYOUT_RUNTIME_IMPORT =
-  'import { BorshReader, BorshWriter, hexToBytes, checkDiscriminator } from "./runtime.js";';
+  'import { BorshReader, BorshWriter, FixedWriter, hexToBytes, checkDiscriminator } from "./runtime.js";';
 
 /**
  * The shared runtime emitted once per output directory as `runtime.ts`.
@@ -341,6 +464,13 @@ export class BorshReader {
     this.offset += len;
     return out;
   }
+  /** Absolute-position the cursor (for offset-addressed fixed layouts). */
+  seek(offset: number): void {
+    if (offset < 0 || offset > this.data.length) {
+      throw new Error(\`seek offset \${offset} out of bounds (data length \${this.data.length})\`);
+    }
+    this.offset = offset;
+  }
   string(): string {
     return new TextDecoder().decode(this.bytes());
   }
@@ -455,6 +585,70 @@ export class BorshWriter {
       offset += part.length;
     }
     return out;
+  }
+}
+
+/**
+ * Writer for fixed-width, offset-addressed layouts (native programs like SPL
+ * Token). Every value is written at an absolute offset into a pre-sized,
+ * zero-filled buffer, so a None COption simply leaves its reserved bytes zero.
+ */
+export class FixedWriter {
+  private out: Uint8Array;
+  private view: DataView;
+  constructor(size: number) {
+    this.out = new Uint8Array(size);
+    this.view = new DataView(this.out.buffer);
+  }
+  bool(o: number, v: boolean): void {
+    this.out[o] = v ? 1 : 0;
+  }
+  u8(o: number, v: number): void {
+    this.out[o] = v & 0xff;
+  }
+  i8(o: number, v: number): void {
+    this.view.setInt8(o, v);
+  }
+  u16(o: number, v: number): void {
+    this.view.setUint16(o, v, true);
+  }
+  i16(o: number, v: number): void {
+    this.view.setInt16(o, v, true);
+  }
+  u32(o: number, v: number): void {
+    this.view.setUint32(o, v, true);
+  }
+  i32(o: number, v: number): void {
+    this.view.setInt32(o, v, true);
+  }
+  u64(o: number, v: bigint): void {
+    this.view.setBigUint64(o, v, true);
+  }
+  i64(o: number, v: bigint): void {
+    this.view.setBigInt64(o, v, true);
+  }
+  u128(o: number, v: bigint): void {
+    this.view.setBigUint64(o, v & 0xffffffffffffffffn, true);
+    this.view.setBigUint64(o + 8, v >> 64n, true);
+  }
+  i128(o: number, v: bigint): void {
+    this.u128(o, BigInt.asUintN(128, v));
+  }
+  f32(o: number, v: number): void {
+    this.view.setFloat32(o, v, true);
+  }
+  f64(o: number, v: number): void {
+    this.view.setFloat64(o, v, true);
+  }
+  pubkey(o: number, v: string): void {
+    const bytes = decodeBase58(v);
+    if (bytes.length !== 32) {
+      throw new Error(\`Pubkey "\${v}" decodes to \${bytes.length} bytes, expected 32\`);
+    }
+    this.out.set(bytes, o);
+  }
+  toBytes(): Uint8Array {
+    return this.out;
   }
 }
 `;

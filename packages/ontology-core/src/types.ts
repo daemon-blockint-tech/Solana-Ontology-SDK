@@ -81,6 +81,12 @@ export interface BorshFieldDef {
 export interface AccountLayoutDef {
   discriminator?: string;
   fields: BorshFieldDef[];
+  /**
+   * Total on-chain byte size for a fixed-width, offset-addressed layout
+   * (native programs like SPL Token). Optional — inferred from field offsets
+   * and widths when omitted.
+   */
+  size?: number;
 }
 
 /** Typed instruction argument captured from the program IDL. */
