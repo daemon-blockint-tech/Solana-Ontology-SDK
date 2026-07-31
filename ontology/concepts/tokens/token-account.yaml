@@ -9,7 +9,10 @@ owner: token-team
 programId: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 tokenStandard: spl
 accountLayout:
-  discriminator: "0000000000000000"
+  # SPL Token is a native program: accounts have NO 8-byte discriminator prefix
+  # (they are identified by data length 165 + owner program). The fields are a
+  # fixed C-layout addressed by absolute offset.
+  size: 165
   fields:
     - name: mint
       type: publicKey
@@ -90,13 +93,13 @@ stateMachine:
   transitions:
     - from: Uninitialized
       to: Active
-      via: "Initialize token account or create ATA instruction"
+      via: InitializeAccount
     - from: Active
       to: Frozen
-      via: "Mint freeze authority freezes the account"
+      via: FreezeAccount
     - from: Active
       to: Closed
-      via: "Close account instruction drains lamports to destination"
+      via: CloseAccount
 constraints:
   - expression: "amount <= mint.supply"
     description: "Token account balance cannot exceed mint supply"
