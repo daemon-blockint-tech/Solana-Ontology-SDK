@@ -4,7 +4,7 @@ import type { Concept, StateTransition, IdlInstructionRef } from "@solana-ontolo
  * Map a textual IDL arg type ("u64", "option<pubkey>", ...) to the TS
  * parameter type accepted by the SDK's borsh encoder.
  */
-function mapIdlArgTypeToTs(type: string): string {
+function mapIdlArgTypeToTs(type: string, definedNames: ReadonlySet<string> = new Set()): string {
   const scalar: Record<string, string> = {
     bool: "boolean",
     u8: "number",
@@ -25,13 +25,17 @@ function mapIdlArgTypeToTs(type: string): string {
   };
   if (scalar[type]) return scalar[type];
   const option = type.match(/^option<(.+)>$/);
-  if (option) return `${mapIdlArgTypeToTs(option[1])} | null`;
+  if (option) return `${mapIdlArgTypeToTs(option[1], definedNames)} | null`;
   const vec = type.match(/^vec<(.+)>$/);
-  if (vec) return `${mapIdlArgTypeToTs(vec[1])}[]`;
+  if (vec) return `${mapIdlArgTypeToTs(vec[1], definedNames)}[]`;
   const array = type.match(/^array<(.+),\s*\d+>$/);
-  if (array) return array[1] === "u8" ? "Uint8Array" : `${mapIdlArgTypeToTs(array[1])}[]`;
-  // defined<Struct> and anything else: accepted structurally, validated by the
-  // encoder at runtime (defined structs are rejected there with an explicit error)
+  if (array)
+    return array[1] === "u8" ? "Uint8Array" : `${mapIdlArgTypeToTs(array[1], definedNames)}[]`;
+  // defined<Struct>: typed against the generated struct interface when the
+  // concept carries its definition; the encoder encodes it via the registry
+  const defined = type.match(/^defined<(.+)>$/);
+  if (defined) return definedNames.has(defined[1]) ? defined[1] : "unknown";
+  // Anything else: accepted structurally, validated by the encoder at runtime
   return "unknown";
 }
 
@@ -97,14 +101,36 @@ export function generateInstructionBuilder(concept: Concept): string | null {
     lines.push(`    { name: "${arg.name}", type: "${arg.type}" },`);
   }
   lines.push(`  ],`);
+  const definedTypes = ref.definedTypes ?? [];
+  if (definedTypes.length > 0) {
+    lines.push(`  definedTypes: [`);
+    for (const dt of definedTypes) {
+      const fields = dt.fields.map((f) => `{ name: "${f.name}", type: "${f.type}" }`).join(", ");
+      lines.push(`    { name: "${dt.name}", fields: [${fields}] },`);
+    }
+    lines.push(`  ],`);
+  }
   lines.push(`};`);
   lines.push(``);
+
+  // Typed interfaces for program-defined structs referenced by the args
+  const definedNames = new Set(definedTypes.map((dt) => dt.name));
+  for (const dt of definedTypes) {
+    lines.push(`/** Program-defined struct ${dt.name} (from the ${conceptName} IDL). */`);
+    lines.push(`export interface ${dt.name} {`);
+    for (const f of dt.fields) {
+      const optional = f.type.startsWith("option<") ? "?" : "";
+      lines.push(`  ${f.name}${optional}: ${mapIdlArgTypeToTs(f.type, definedNames)};`);
+    }
+    lines.push(`}`);
+    lines.push(``);
+  }
 
   // Typed params interface
   lines.push(`export interface ${ixPascal}${conceptName}Params {`);
   for (const arg of ref.args!) {
     const optional = arg.type.startsWith("option<") ? "?" : "";
-    lines.push(`  ${arg.name}${optional}: ${mapIdlArgTypeToTs(arg.type)};`);
+    lines.push(`  ${arg.name}${optional}: ${mapIdlArgTypeToTs(arg.type, definedNames)};`);
   }
   lines.push(`}`);
   lines.push(``);

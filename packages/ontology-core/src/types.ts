@@ -79,6 +79,11 @@ export interface BorshFieldDef {
 }
 
 export interface AccountLayoutDef {
+  /**
+   * Hex discriminator prefix: 8 bytes for Anchor accounts, down to a single
+   * byte for native-program tags. Omit for native accounts with no prefix
+   * (e.g. SPL Token accounts, identified by owner + data length).
+   */
   discriminator?: string;
   fields: BorshFieldDef[];
   /**
@@ -108,14 +113,31 @@ export interface IdlInstructionAccountDef {
   address?: string;
 }
 
+/** A program-defined struct type captured from the IDL `types` section. */
+export interface IdlDefinedTypeDef {
+  name: string;
+  /** Struct fields in borsh serialization order (textual IDL types). */
+  fields: IdlInstructionArgDef[];
+}
+
 export interface IdlInstructionRef {
   programId?: string;
   instructionName?: string;
+  /**
+   * Hex instruction discriminator: 8 bytes (Anchor `global:<name>` sha256
+   * prefix) down to a single byte (native program instruction tags — e.g.
+   * SPL Token Transfer = "03").
+   */
   discriminator?: string;
   /** Instruction arguments (enables typed action-builder codegen) */
   args?: IdlInstructionArgDef[];
   /** Instruction accounts (enables typed action-builder codegen) */
   accounts?: IdlInstructionAccountDef[];
+  /**
+   * Program-defined struct types referenced (transitively) by args, so
+   * defined<T> arguments can be borsh-encoded without the full program IDL.
+   */
+  definedTypes?: IdlDefinedTypeDef[];
 }
 
 export type TokenStandard = "spl" | "token2022";

@@ -253,7 +253,7 @@ describe("IDL → concept → generated code → runtime", () => {
     const fieldTypes = Object.fromEntries(
       (mint!.accountLayout!.fields ?? []).map((f) => [f.name, f.type]),
     );
-    expect(fieldTypes.mint_authority).toBe("Option<Address>");
+    expect(fieldTypes.mintAuthority).toBe("Option<Address>");
     expect(fieldTypes.supply).toBe("u64");
     expect(mint!.accountLayout!.fields.some((f) => f.type === "complex")).toBe(false);
 
@@ -275,12 +275,13 @@ describe("IDL → concept → generated code → runtime", () => {
     const decodeMint = mod.decodeMint as (d: Uint8Array) => Record<string, unknown>;
 
     // Round-trip an account with a Some and a None option through the generated Borsh codec
+    // Layout field names are normalized to camelCase (schema-enforced)
     const value = {
-      mint_authority: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      mintAuthority: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
       supply: 1_000_000n,
       decimals: 6,
-      is_initialized: true,
-      freeze_authority: null,
+      isInitialized: true,
+      freezeAuthority: null,
     };
     const decoded = decodeMint(encodeMint(value));
     expect(decoded).toEqual(value);

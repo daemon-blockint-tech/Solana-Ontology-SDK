@@ -212,8 +212,54 @@ describe("Kinetic Action Layer", () => {
       expect(encoded).toEqual(new Uint8Array([3, 0, 0, 0, 1, 5, 0, 1, 6]));
     });
 
-    it("should reject defined<T> structs with an explicit error", () => {
-      expect(() => encodeBorshValue("defined<MyStruct>", {})).toThrow("full IDL type registry");
+    it("should reject defined<T> structs missing from the registry with an explicit error", () => {
+      expect(() => encodeBorshValue("defined<MyStruct>", {})).toThrow("defined-type registry");
+      // The error names the structs that ARE known, for diagnosis
+      expect(() =>
+        encodeBorshValue("defined<MyStruct>", {}, { Other: [{ name: "x", type: "u8" }] }),
+      ).toThrow("known: Other");
+    });
+
+    it("should encode defined<T> structs field-by-field via the registry", () => {
+      const registry = {
+        Params: [
+          { name: "amount", type: "u64" },
+          { name: "memo", type: "option<string>" },
+        ],
+      };
+      const encoded = encodeBorshValue("defined<Params>", { amount: 7n, memo: "hi" }, registry);
+      // u64(8) + option tag(1) + string len(4) + "hi"(2)
+      expect(encoded.length).toBe(8 + 1 + 4 + 2);
+      expect(new DataView(encoded.buffer).getBigUint64(0, true)).toBe(7n);
+      expect(encoded[8]).toBe(1);
+      // omitted option field encodes as None
+      expect(encodeBorshValue("defined<Params>", { amount: 1n }, registry).length).toBe(9);
+      // missing required field is an explicit error
+      expect(() => encodeBorshValue("defined<Params>", { memo: "x" }, registry)).toThrow(
+        'Missing required field "amount"',
+      );
+      expect(() => encodeBorshValue("defined<Params>", "nope", registry)).toThrow(
+        "Expected an object",
+      );
+    });
+
+    it("should encode nested defined structs and defined-in-parametric forms", () => {
+      const registry = {
+        Inner: [{ name: "x", type: "u16" }],
+        Outer: [
+          { name: "inner", type: "defined<Inner>" },
+          { name: "tag", type: "u8" },
+        ],
+      };
+      expect(encodeBorshValue("defined<Outer>", { inner: { x: 258 }, tag: 5 }, registry)).toEqual(
+        new Uint8Array([2, 1, 5]),
+      );
+      expect(encodeBorshValue("vec<defined<Inner>>", [{ x: 1 }, { x: 2 }], registry)).toEqual(
+        new Uint8Array([2, 0, 0, 0, 1, 0, 2, 0]),
+      );
+      expect(encodeBorshValue("option<defined<Inner>>", null, registry)).toEqual(
+        new Uint8Array([0]),
+      );
     });
 
     it("idlTypeToString converts composite IDL types to textual form", () => {

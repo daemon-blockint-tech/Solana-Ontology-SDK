@@ -29,6 +29,13 @@ export default tseslint.config(
     },
   },
   {
+    // Node scripts (tools/) run under Node — allow its globals
+    files: ["tools/**/*.mjs"],
+    languageOptions: {
+      globals: { console: "readonly", process: "readonly" },
+    },
+  },
+  {
     files: ["**/*.test.ts", "**/tests/**/*.ts"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",

@@ -28,6 +28,7 @@
     "generate": "turbo generate",
     "docs": "turbo docs",
     "validate": "node packages/cli/dist/index.js validate",
+    "regen:concepts": "node tools/regen-concepts.mjs",
     "clean": "turbo clean && rm -rf node_modules"
   },
   "devDependencies": {

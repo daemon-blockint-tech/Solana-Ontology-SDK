@@ -85,6 +85,41 @@ export function idlTypeToTextual(idlType: string | IdlV1Type): string {
 }
 
 /**
+ * Collect the program-defined struct types referenced (transitively) by a set
+ * of IDL types, resolving names against the IDL `types` section. Returns them
+ * with textual field types, ready for IdlInstructionRef.definedTypes.
+ * Non-struct definitions (enums) are skipped — the encoder cannot express them.
+ */
+export function collectDefinedTypes(
+  argTypes: (string | IdlV1Type)[],
+  idlTypes: { name: string; type: { kind: string; fields?: IdlV1Field[] } }[] | undefined,
+): { name: string; fields: { name: string; type: string }[] }[] {
+  if (!idlTypes?.length) return [];
+  const byName = new Map(idlTypes.map((t) => [t.name, t]));
+  const collected = new Map<string, { name: string; fields: { name: string; type: string }[] }>();
+
+  const visitTextual = (textual: string): void => {
+    const match = textual.match(/^(?:option|vec|coption)<(.+)>$|^array<(.+),\d+>$|^defined<(.+)>$/);
+    if (!match) return;
+    const inner = match[3];
+    if (inner === undefined) {
+      // parametric wrapper — recurse into the inner type
+      visitTextual(match[1] ?? match[2]);
+      return;
+    }
+    if (collected.has(inner)) return;
+    const def = byName.get(inner);
+    if (!def || def.type.kind !== "struct" || !def.type.fields) return;
+    const fields = def.type.fields.map((f) => ({ name: f.name, type: idlTypeToTextual(f.type) }));
+    collected.set(inner, { name: inner, fields });
+    for (const f of fields) visitTextual(f.type);
+  };
+
+  for (const t of argTypes) visitTextual(idlTypeToTextual(t));
+  return [...collected.values()];
+}
+
+/**
  * Detect if a field type is a Pubkey (potential relationship).
  */
 function isPubkeyField(type: string | IdlV1Type): boolean {
@@ -185,8 +220,10 @@ export function generateConceptsFromIdl(idl: IdlV1): Concept[] {
 
   for (const account of idl.accounts) {
     const pascalName = toPascalCase(account.name);
+    // IDL field names are snake_case; ontology property/field names are
+    // camelCase (schema-enforced ^[a-z][a-zA-Z0-9]*$)
     const properties: ConceptProperty[] = (account.type.fields ?? []).map((field: IdlV1Field) => ({
-      name: field.name,
+      name: toCamelCase(field.name),
       type: mapIdlTypeToOntology(field.type),
       required: !field.attrs?.includes("optional"),
       description: `${field.name} field of ${pascalName}`,
@@ -201,7 +238,7 @@ export function generateConceptsFromIdl(idl: IdlV1): Concept[] {
     // composites to "complex" here would make accounts with option/vec fields
     // undecodable.
     const layoutFields: BorshFieldDef[] = (account.type.fields ?? []).map((field: IdlV1Field) => ({
-      name: field.name,
+      name: toCamelCase(field.name),
       type: mapIdlTypeToOntology(field.type),
       description: `${field.name} field of ${pascalName}`,
     }));
@@ -239,6 +276,15 @@ export function generateConceptsFromIdl(idl: IdlV1): Concept[] {
             ...(acc.signer ? { signer: true } : {}),
             ...(acc.address ? { address: acc.address } : {}),
           })),
+          // Carry the struct definitions the args reference so defined<T>
+          // params can be borsh-encoded without the full program IDL
+          ...(() => {
+            const definedTypes = collectDefinedTypes(
+              targetInstruction.args.map((arg) => arg.type),
+              idl.types,
+            );
+            return definedTypes.length > 0 ? { definedTypes } : {};
+          })(),
         }
       : undefined;
 
@@ -278,6 +324,11 @@ export function generateConceptsFromIdl(idl: IdlV1): Concept[] {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+
+function toCamelCase(snake: string): string {
+  const pascal = toPascalCase(snake);
+  return pascal.charAt(0).toLowerCase() + pascal.slice(1);
+}
 
 function toPascalCase(snake: string): string {
   return snake

@@ -1,0 +1,59 @@
+canonicalName: CollectionV1
+purpose: On-chain CollectionV1 account defined by mpl_core_program program
+category: primitive
+version: 0.2.0
+owner: mpl_core_program
+properties:
+  - name: key
+    type: key
+    required: true
+    description: key field of CollectionV1
+  - name: updateAuthority
+    type: Address
+    required: true
+    description: update_authority field of CollectionV1
+  - name: name
+    type: string
+    required: true
+    description: name field of CollectionV1
+  - name: uri
+    type: string
+    required: true
+    description: uri field of CollectionV1
+  - name: numMinted
+    type: u32
+    required: true
+    description: num_minted field of CollectionV1
+  - name: currentSize
+    type: u32
+    required: true
+    description: current_size field of CollectionV1
+accountLayout:
+  discriminator: f1e9caaec3d4e560
+  fields:
+    - name: key
+      type: key
+      description: key field of CollectionV1
+    - name: updateAuthority
+      type: Address
+      description: update_authority field of CollectionV1
+    - name: name
+      type: string
+      description: name field of CollectionV1
+    - name: uri
+      type: string
+      description: uri field of CollectionV1
+    - name: numMinted
+      type: u32
+      description: num_minted field of CollectionV1
+    - name: currentSize
+      type: u32
+      description: current_size field of CollectionV1
+programId: CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d
+constraints:
+  - name: discriminator_check
+    expression: first 8 bytes must equal [241, 233, 202, 174, 195, 212, 229, 96]
+    description: Anchor account discriminator must match
+links:
+  - label: Program
+    url: https://solana.fm/address/CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d

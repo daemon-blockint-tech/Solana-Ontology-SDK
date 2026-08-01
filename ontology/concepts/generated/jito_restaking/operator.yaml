@@ -1,0 +1,170 @@
+canonicalName: Operator
+purpose: On-chain Operator account defined by jito_restaking program
+category: primitive
+version: 0.0.5
+owner: jito_restaking
+properties:
+  - name: base
+    type: Address
+    required: true
+    description: base field of Operator
+  - name: admin
+    type: Address
+    required: true
+    description: admin field of Operator
+  - name: ncnAdmin
+    type: Address
+    required: true
+    description: ncn_admin field of Operator
+  - name: vaultAdmin
+    type: Address
+    required: true
+    description: vault_admin field of Operator
+  - name: delegateAdmin
+    type: Address
+    required: true
+    description: delegate_admin field of Operator
+  - name: metadataAdmin
+    type: Address
+    required: true
+    description: metadata_admin field of Operator
+  - name: voter
+    type: Address
+    required: true
+    description: voter field of Operator
+  - name: index
+    type: pod_u64
+    required: true
+    description: index field of Operator
+  - name: ncnCount
+    type: pod_u64
+    required: true
+    description: ncn_count field of Operator
+  - name: vaultCount
+    type: pod_u64
+    required: true
+    description: vault_count field of Operator
+  - name: operatorFeeBps
+    type: pod_u16
+    required: true
+    description: operator_fee_bps field of Operator
+  - name: bump
+    type: u8
+    required: true
+    description: bump field of Operator
+  - name: reservedSpace
+    type: Array<u8, 261>
+    required: true
+    description: reserved_space field of Operator
+stateMachine:
+  states:
+    - Uninitialized
+    - Active
+  transitions:
+    - from: Uninitialized
+      to: Active
+      via: InitializeOperator
+    - from: Uninitialized
+      to: Active
+      via: InitializeOperatorVaultTicket
+    - from: Uninitialized
+      to: Active
+      via: InitializeNcnOperatorState
+    - from: Active
+      to: Active
+      via: NcnWarmupOperator
+    - from: Active
+      to: Active
+      via: NcnCooldownOperator
+    - from: Active
+      to: Active
+      via: OperatorWarmupNcn
+    - from: Active
+      to: Active
+      via: OperatorCooldownNcn
+    - from: Active
+      to: Active
+      via: WarmupOperatorVaultTicket
+    - from: Active
+      to: Active
+      via: CooldownOperatorVaultTicket
+    - from: Active
+      to: Active
+      via: OperatorSetAdmin
+    - from: Active
+      to: Active
+      via: OperatorSetSecondaryAdmin
+    - from: Active
+      to: Active
+      via: OperatorSetFee
+    - from: Active
+      to: Active
+      via: OperatorDelegateTokenAccount
+accountLayout:
+  discriminator: db1fbc91458bcc75
+  fields:
+    - name: base
+      type: Address
+      description: base field of Operator
+    - name: admin
+      type: Address
+      description: admin field of Operator
+    - name: ncnAdmin
+      type: Address
+      description: ncn_admin field of Operator
+    - name: vaultAdmin
+      type: Address
+      description: vault_admin field of Operator
+    - name: delegateAdmin
+      type: Address
+      description: delegate_admin field of Operator
+    - name: metadataAdmin
+      type: Address
+      description: metadata_admin field of Operator
+    - name: voter
+      type: Address
+      description: voter field of Operator
+    - name: index
+      type: pod_u64
+      description: index field of Operator
+    - name: ncnCount
+      type: pod_u64
+      description: ncn_count field of Operator
+    - name: vaultCount
+      type: pod_u64
+      description: vault_count field of Operator
+    - name: operatorFeeBps
+      type: pod_u16
+      description: operator_fee_bps field of Operator
+    - name: bump
+      type: u8
+      description: bump field of Operator
+    - name: reservedSpace
+      type: Array<u8, 261>
+      description: reserved_space field of Operator
+programId: RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q
+idlInstruction:
+  programId: RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q
+  instructionName: initialize_operator
+  discriminator: 9b21d8fee9e3afd4
+  args:
+    - name: operator_fee_bps
+      type: u16
+  accounts:
+    - name: config
+      writable: true
+    - name: operator
+      writable: true
+    - name: admin
+      writable: true
+      signer: true
+    - name: base
+      signer: true
+    - name: system_program
+constraints:
+  - name: discriminator_check
+    expression: first 8 bytes must equal [219, 31, 188, 145, 69, 139, 204, 117]
+    description: Anchor account discriminator must match
+links:
+  - label: Program
+    url: https://solana.fm/address/RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q

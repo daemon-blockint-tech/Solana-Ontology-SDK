@@ -1,0 +1,106 @@
+canonicalName: NcnVaultTicket
+purpose: On-chain NcnVaultTicket account defined by jito_restaking program
+category: defi
+version: 0.0.5
+owner: jito_restaking
+properties:
+  - name: ncn
+    type: Address
+    required: true
+    description: ncn field of NcnVaultTicket
+  - name: vault
+    type: Address
+    required: true
+    description: vault field of NcnVaultTicket
+  - name: index
+    type: pod_u64
+    required: true
+    description: index field of NcnVaultTicket
+  - name: state
+    type: slot_toggle
+    required: true
+    description: state field of NcnVaultTicket
+  - name: bump
+    type: u8
+    required: true
+    description: bump field of NcnVaultTicket
+  - name: reserved
+    type: Array<u8, 263>
+    required: true
+    description: reserved field of NcnVaultTicket
+relationships:
+  - type: references
+    target: Ncn
+    cardinality: many:1
+    description: NcnVaultTicket references a Ncn via ncn
+stateMachine:
+  states:
+    - Uninitialized
+    - Active
+  transitions:
+    - from: Uninitialized
+      to: Active
+      via: InitializeNcnVaultSlasherTicket
+    - from: Uninitialized
+      to: Active
+      via: InitializeNcnVaultTicket
+    - from: Active
+      to: Active
+      via: WarmupNcnVaultTicket
+    - from: Active
+      to: Active
+      via: CooldownNcnVaultTicket
+    - from: Active
+      to: Active
+      via: WarmupNcnVaultSlasherTicket
+accountLayout:
+  discriminator: 8a5164c6f3ebf5c2
+  fields:
+    - name: ncn
+      type: Address
+      description: ncn field of NcnVaultTicket
+    - name: vault
+      type: Address
+      description: vault field of NcnVaultTicket
+    - name: index
+      type: pod_u64
+      description: index field of NcnVaultTicket
+    - name: state
+      type: slot_toggle
+      description: state field of NcnVaultTicket
+    - name: bump
+      type: u8
+      description: bump field of NcnVaultTicket
+    - name: reserved
+      type: Array<u8, 263>
+      description: reserved field of NcnVaultTicket
+programId: RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q
+idlInstruction:
+  programId: RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q
+  instructionName: initialize_ncn_vault_slasher_ticket
+  discriminator: fde2669fd0ae5ac9
+  args:
+    - name: max_slashable_per_epoch
+      type: u64
+  accounts:
+    - name: config
+    - name: ncn
+      writable: true
+    - name: vault
+    - name: slasher
+    - name: ncn_vault_ticket
+    - name: ncn_vault_slasher_ticket
+      writable: true
+    - name: admin
+      signer: true
+    - name: payer
+      writable: true
+      signer: true
+    - name: system_program
+constraints:
+  - name: discriminator_check
+    expression: first 8 bytes must equal [138, 81, 100, 198, 243, 235, 245, 194]
+    description: Anchor account discriminator must match
+links:
+  - label: Program
+    url: https://solana.fm/address/RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q

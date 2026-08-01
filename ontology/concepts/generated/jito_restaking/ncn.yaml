@@ -1,0 +1,188 @@
+canonicalName: Ncn
+purpose: On-chain Ncn account defined by jito_restaking program
+category: primitive
+version: 0.0.5
+owner: jito_restaking
+properties:
+  - name: base
+    type: Address
+    required: true
+    description: base field of Ncn
+  - name: admin
+    type: Address
+    required: true
+    description: admin field of Ncn
+  - name: operatorAdmin
+    type: Address
+    required: true
+    description: operator_admin field of Ncn
+  - name: vaultAdmin
+    type: Address
+    required: true
+    description: vault_admin field of Ncn
+  - name: slasherAdmin
+    type: Address
+    required: true
+    description: slasher_admin field of Ncn
+  - name: delegateAdmin
+    type: Address
+    required: true
+    description: delegate_admin field of Ncn
+  - name: metadataAdmin
+    type: Address
+    required: true
+    description: metadata_admin field of Ncn
+  - name: weightTableAdmin
+    type: Address
+    required: true
+    description: weight_table_admin field of Ncn
+  - name: ncnProgramAdmin
+    type: Address
+    required: true
+    description: ncn_program_admin field of Ncn
+  - name: index
+    type: pod_u64
+    required: true
+    description: index field of Ncn
+  - name: operatorCount
+    type: pod_u64
+    required: true
+    description: operator_count field of Ncn
+  - name: vaultCount
+    type: pod_u64
+    required: true
+    description: vault_count field of Ncn
+  - name: slasherCount
+    type: pod_u64
+    required: true
+    description: slasher_count field of Ncn
+  - name: bump
+    type: u8
+    required: true
+    description: bump field of Ncn
+  - name: reserved
+    type: Array<u8, 263>
+    required: true
+    description: reserved field of Ncn
+stateMachine:
+  states:
+    - Uninitialized
+    - Active
+  transitions:
+    - from: Uninitialized
+      to: Active
+      via: InitializeNcn
+    - from: Uninitialized
+      to: Active
+      via: InitializeNcnVaultSlasherTicket
+    - from: Uninitialized
+      to: Active
+      via: InitializeNcnVaultTicket
+    - from: Uninitialized
+      to: Active
+      via: InitializeNcnOperatorState
+    - from: Active
+      to: Active
+      via: WarmupNcnVaultTicket
+    - from: Active
+      to: Active
+      via: CooldownNcnVaultTicket
+    - from: Active
+      to: Active
+      via: NcnWarmupOperator
+    - from: Active
+      to: Active
+      via: NcnCooldownOperator
+    - from: Active
+      to: Active
+      via: OperatorWarmupNcn
+    - from: Active
+      to: Active
+      via: OperatorCooldownNcn
+    - from: Active
+      to: Active
+      via: WarmupNcnVaultSlasherTicket
+    - from: Active
+      to: Active
+      via: CooldownNcnVaultSlasherTicket
+    - from: Active
+      to: Active
+      via: NcnSetAdmin
+    - from: Active
+      to: Active
+      via: NcnSetSecondaryAdmin
+    - from: Active
+      to: Active
+      via: NcnDelegateTokenAccount
+accountLayout:
+  discriminator: 4e6a554c66a8fb3b
+  fields:
+    - name: base
+      type: Address
+      description: base field of Ncn
+    - name: admin
+      type: Address
+      description: admin field of Ncn
+    - name: operatorAdmin
+      type: Address
+      description: operator_admin field of Ncn
+    - name: vaultAdmin
+      type: Address
+      description: vault_admin field of Ncn
+    - name: slasherAdmin
+      type: Address
+      description: slasher_admin field of Ncn
+    - name: delegateAdmin
+      type: Address
+      description: delegate_admin field of Ncn
+    - name: metadataAdmin
+      type: Address
+      description: metadata_admin field of Ncn
+    - name: weightTableAdmin
+      type: Address
+      description: weight_table_admin field of Ncn
+    - name: ncnProgramAdmin
+      type: Address
+      description: ncn_program_admin field of Ncn
+    - name: index
+      type: pod_u64
+      description: index field of Ncn
+    - name: operatorCount
+      type: pod_u64
+      description: operator_count field of Ncn
+    - name: vaultCount
+      type: pod_u64
+      description: vault_count field of Ncn
+    - name: slasherCount
+      type: pod_u64
+      description: slasher_count field of Ncn
+    - name: bump
+      type: u8
+      description: bump field of Ncn
+    - name: reserved
+      type: Array<u8, 263>
+      description: reserved field of Ncn
+programId: RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q
+idlInstruction:
+  programId: RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q
+  instructionName: initialize_ncn
+  discriminator: a92e07b2c8dbd4a8
+  args: []
+  accounts:
+    - name: config
+      writable: true
+    - name: ncn
+      writable: true
+    - name: admin
+      writable: true
+      signer: true
+    - name: base
+      signer: true
+    - name: system_program
+constraints:
+  - name: discriminator_check
+    expression: first 8 bytes must equal [78, 106, 85, 76, 102, 168, 251, 59]
+    description: Anchor account discriminator must match
+links:
+  - label: Program
+    url: https://solana.fm/address/RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q

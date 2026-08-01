@@ -214,6 +214,62 @@ describe("on-chain linkage fields", () => {
     expect(result.errors.some((e) => e.path?.includes("discriminator"))).toBe(true);
   });
 
+  it("loads the IDL-generated concept batch with real layouts and program ids", () => {
+    const concepts = loadConcepts(CONCEPTS_DIR, ONTOLOGY_ROOT);
+
+    // Metaplex Core
+    const asset = concepts.find((c) => c.canonicalName === "AssetV1");
+    expect(asset).toBeDefined();
+    expect(asset!.programId).toBe("CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d");
+    expect(asset!.accountLayout!.fields.length).toBeGreaterThan(0);
+
+    // Candy Machine — 8-byte Anchor discriminator carried through
+    const candy = concepts.find((c) => c.canonicalName === "CandyMachine");
+    expect(candy).toBeDefined();
+    expect(candy!.programId).toBe("CndyV3LdqHUfDLmE5naZjVN8rBZz4tqhdefbAnjHG3JR");
+    expect(candy!.accountLayout!.discriminator).toMatch(/^[0-9a-f]{16}$/);
+
+    // Jito Restaking
+    const ncn = concepts.find((c) => c.canonicalName === "Ncn");
+    expect(ncn).toBeDefined();
+    expect(ncn!.programId).toBe("RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q");
+
+    // Every generated concept passes schema validation alongside the curated set
+    const generated = concepts.filter((c) => c._sourceFile?.includes("generated/"));
+    expect(generated.length).toBe(14);
+    expect(validateAll(concepts).valid).toBe(true);
+  });
+
+  it("accepts variable-length discriminators (native 1-byte tags through Anchor 8-byte)", () => {
+    for (const disc of ["03", "0102", "0102030405060708"]) {
+      const concept: Concept = {
+        canonicalName: "TestNativeTag",
+        purpose: "Native program discriminator tag",
+        category: "token",
+        version: "1.0.0",
+        programId: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        accountLayout: { discriminator: disc, fields: [{ name: "test", type: "u8" }] },
+      };
+      const result = validateConcept(concept);
+      expect(result.valid, `discriminator "${disc}" should validate`).toBe(true);
+    }
+  });
+
+  it("rejects odd-length and oversized discriminators", () => {
+    for (const disc of ["3", "010", "010203040506070809"]) {
+      const concept: Concept = {
+        canonicalName: "TestBadTag",
+        purpose: "Bad discriminator lengths",
+        category: "token",
+        version: "1.0.0",
+        programId: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        accountLayout: { discriminator: disc, fields: [{ name: "test", type: "u8" }] },
+      };
+      const result = validateConcept(concept);
+      expect(result.valid, `discriminator "${disc}" should be rejected`).toBe(false);
+    }
+  });
+
   it("should reject duplicate pdaSeeds names", () => {
     const concept: Concept = {
       canonicalName: "TestPdaSeeds",

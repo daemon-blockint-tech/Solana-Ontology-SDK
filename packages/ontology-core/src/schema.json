@@ -299,8 +299,8 @@
       "properties": {
         "discriminator": {
           "type": "string",
-          "pattern": "^[0-9a-fA-F]{16}$",
-          "description": "8-byte hex discriminator (Anchor style)"
+          "pattern": "^([0-9a-fA-F]{2}){1,8}$",
+          "description": "Hex discriminator/tag: 8 bytes (Anchor style) down to a single byte (native program instruction tags, e.g. SPL Token)"
         },
         "fields": {
           "type": "array",
@@ -350,7 +350,7 @@
         },
         "discriminator": {
           "type": "string",
-          "pattern": "^[0-9a-fA-F]{16}$"
+          "pattern": "^([0-9a-fA-F]{2}){1,8}$"
         },
         "args": {
           "type": "array",
@@ -389,6 +389,36 @@
               "address": {
                 "type": "string",
                 "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$"
+              }
+            }
+          }
+        },
+        "definedTypes": {
+          "type": "array",
+          "description": "Program-defined struct types referenced by args (enables defined<T> encoding without the full IDL)",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "fields"],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "fields": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["name", "type"],
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  }
+                }
               }
             }
           }

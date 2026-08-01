@@ -14,6 +14,24 @@ export interface IdlInstructionDef {
     name: string;
     type: string | { defined?: string; option?: unknown; vec?: unknown; array?: unknown };
   }[];
+  /** Program-defined struct types referenced by args (enables defined<T> encoding). */
+  definedTypes?: { name: string; fields: { name: string; type: string }[] }[];
+}
+
+/**
+ * Registry of program-defined struct types: struct name → fields in borsh
+ * serialization order. Lets {@link encodeBorshValue} encode defined<T> values
+ * without the program's full IDL.
+ */
+export type DefinedTypeRegistry = Record<string, { name: string; type: string }[]>;
+
+/** Build a {@link DefinedTypeRegistry} from an instruction def's definedTypes. */
+export function buildDefinedTypeRegistry(
+  definedTypes: { name: string; fields: { name: string; type: string }[] }[] | undefined,
+): DefinedTypeRegistry {
+  const registry: DefinedTypeRegistry = {};
+  for (const t of definedTypes ?? []) registry[t.name] = t.fields;
+  return registry;
 }
 
 export interface CompiledAccount {
@@ -66,10 +84,14 @@ function parseParametric(type: string): { outer: string; inner: string } | null 
 /**
  * Encode a value to Borsh bytes. Supports all primitives plus the parametric
  * forms option<T>, vec<T>, and array<T,N> (arbitrarily nested). defined<T>
- * (program-specific structs) requires the program's full type registry and is
- * rejected explicitly.
+ * (program-specific structs) encodes field-by-field when the struct is present
+ * in `registry`; without a registry entry it is rejected explicitly.
  */
-export function encodeBorshValue(type: string, value: unknown): Uint8Array {
+export function encodeBorshValue(
+  type: string,
+  value: unknown,
+  registry: DefinedTypeRegistry = {},
+): Uint8Array {
   const parametric = parseParametric(type);
   if (parametric) {
     switch (parametric.outer) {
@@ -77,7 +99,7 @@ export function encodeBorshValue(type: string, value: unknown): Uint8Array {
         if (value === null || value === undefined) {
           return new Uint8Array([0]);
         }
-        const inner = encodeBorshValue(parametric.inner, value);
+        const inner = encodeBorshValue(parametric.inner, value, registry);
         const out = new Uint8Array(1 + inner.length);
         out[0] = 1;
         out.set(inner, 1);
@@ -87,7 +109,7 @@ export function encodeBorshValue(type: string, value: unknown): Uint8Array {
         if (!Array.isArray(value)) {
           throw new Error(`Expected an array for ${type}, got ${typeof value}`);
         }
-        const parts = value.map((v) => encodeBorshValue(parametric.inner, v));
+        const parts = value.map((v) => encodeBorshValue(parametric.inner, v, registry));
         const total = parts.reduce((sum, p) => sum + p.length, 0);
         const out = new Uint8Array(4 + total);
         new DataView(out.buffer).setUint32(0, value.length, true);
@@ -122,7 +144,7 @@ export function encodeBorshValue(type: string, value: unknown): Uint8Array {
             }`,
           );
         }
-        const parts = value.map((v) => encodeBorshValue(elemType, v));
+        const parts = value.map((v) => encodeBorshValue(elemType, v, registry));
         const total = parts.reduce((sum, p) => sum + p.length, 0);
         const out = new Uint8Array(total);
         let offset = 0;
@@ -133,9 +155,37 @@ export function encodeBorshValue(type: string, value: unknown): Uint8Array {
         return out;
       }
       case "defined": {
-        throw new Error(
-          `Cannot encode defined type "${parametric.inner}" — program-specific structs require the program's full IDL type registry. Encode the struct manually or use a full Borsh/Anchor client.`,
-        );
+        const fields = registry[parametric.inner];
+        if (!fields) {
+          const known = Object.keys(registry);
+          throw new Error(
+            `Cannot encode defined type "${parametric.inner}" — it is not in the instruction's defined-type registry` +
+              (known.length > 0 ? ` (known: ${known.join(", ")})` : "") +
+              `. Add it to idlInstruction.definedTypes (regenerate concepts from the program IDL) or encode the struct manually.`,
+          );
+        }
+        if (typeof value !== "object" || value === null || Array.isArray(value)) {
+          throw new Error(
+            `Expected an object for ${type}, got ${Array.isArray(value) ? "array" : typeof value}`,
+          );
+        }
+        const record = value as Record<string, unknown>;
+        const parts: Uint8Array[] = [];
+        for (const field of fields) {
+          const fieldValue = record[field.name];
+          if (fieldValue === undefined && !field.type.startsWith("option<")) {
+            throw new Error(`Missing required field "${field.name}" of struct ${parametric.inner}`);
+          }
+          parts.push(encodeBorshValue(field.type, fieldValue, registry));
+        }
+        const total = parts.reduce((sum, p) => sum + p.length, 0);
+        const out = new Uint8Array(total);
+        let offset = 0;
+        for (const part of parts) {
+          out.set(part, offset);
+          offset += part.length;
+        }
+        return out;
       }
     }
   }
@@ -239,6 +289,7 @@ export function encodeInstructionData(
   discriminator: number[],
   args: { name: string; type: string }[],
   params: Record<string, unknown>,
+  registry: DefinedTypeRegistry = {},
 ): Uint8Array {
   const parts: Uint8Array[] = [new Uint8Array(discriminator)];
 
@@ -248,7 +299,7 @@ export function encodeInstructionData(
     if (value === undefined && !arg.type.startsWith("option<")) {
       throw new Error(`Missing required argument: ${arg.name}`);
     }
-    parts.push(encodeBorshValue(arg.type, value));
+    parts.push(encodeBorshValue(arg.type, value, registry));
   }
 
   // Concatenate all parts
@@ -302,7 +353,12 @@ export function compileInstruction(
     type: idlTypeToString(a.type),
   }));
 
-  const data = encodeInstructionData(def.discriminator, argTypes, params);
+  const data = encodeInstructionData(
+    def.discriminator,
+    argTypes,
+    params,
+    buildDefinedTypeRegistry(def.definedTypes),
+  );
 
   return {
     programId,
